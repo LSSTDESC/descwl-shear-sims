@@ -1,0 +1,8 @@
+language: generic
+sudo: required
+
+install:
+  - echo "hi"
+
+script:
+  - echo "hi again"
