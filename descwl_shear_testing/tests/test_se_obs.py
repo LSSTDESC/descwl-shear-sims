@@ -10,7 +10,7 @@ DIMS = (11, 13)
 @pytest.fixture
 def se_data():
 
-    def psf_function(x, y):
+    def psf_function(*, x, y):
         return galsim.ImageD(np.ones(DIMS) * 6)
 
     data = {
@@ -63,7 +63,7 @@ def test_se_obs_set(attr, val, se_data):
 
 def test_se_obs_psf_call():
 
-    def psf_function(x, y):
+    def psf_function(*, x, y):
         assert x == 10
         assert y == 5
         return 11

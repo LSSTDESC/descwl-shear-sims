@@ -22,7 +22,7 @@ class SEObs(object):
         PSF at a given image pixel location as a `galsim.Image`. Its signature
         should be
 
-            def psf_function(x, y):
+            def psf_function(*, x, y):
                 pass
 
         where `(x, y)` are the column and row image positions at which to
@@ -149,4 +149,4 @@ class SEObs(object):
         psf : galsim.Image
             An image of the PSF (including the image pixel).
         """
-        return self._psf_function(x, y)
+        return self._psf_function(x=x, y=y)
