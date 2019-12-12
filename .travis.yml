@@ -28,7 +28,7 @@ install:
 
     source activate test-env
 
-    pip install -e .
+    pip install --no-deps -e .
 
 script:
   - flake8 descwl_shear_testing
