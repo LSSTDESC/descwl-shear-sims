@@ -26,7 +26,7 @@ for band_ind, band in enumerate(data):
         # do something with obs here
         # obs.image is the image
         # obs.weight is the weight map
-        # obs.psf(x, y) will produce an image of the PSF
+        # obs.get_psf(x, y) will produce an image of the PSF
         # obs.wcs is the galsim WCS object associated with the image
         pass
 ```

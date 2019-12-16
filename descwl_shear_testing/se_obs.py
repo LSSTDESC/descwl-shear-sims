@@ -47,7 +47,7 @@ class SEObs(object):
 
     Methods
     -------
-    psf(x, y)
+    get_psf(x, y)
         Draw the PSF at the given image location.
     """
     def __init__(
@@ -134,7 +134,7 @@ class SEObs(object):
             raise ValueError("The \"or\" mask must be a `galsim.Image` or subclass!")
         self._ormask = ormask
 
-    def psf(self, x, y):
+    def get_psf(self, x, y):
         """Draw the PSF at the given image location.
 
         Parameters

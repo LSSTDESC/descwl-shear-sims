@@ -200,7 +200,7 @@ class Sim(object):
             psf_funcs_galsim, psf_funcs_rendered = self._get_psf_funcs_for_band(band)
 
             band_data[band] = []
-            for epoch, wcs, psf_galsim, psf_rendered in zip(
+            for epoch, wcs, psf_galsim, psf_func in zip(
                     range(self.epochs_per_band), wcs_objects,
                     psf_funcs_galsim, psf_funcs_rendered):
 
@@ -227,7 +227,7 @@ class Sim(object):
                         image=se_image,
                         weight=se_weight,
                         wcs=wcs,
-                        psf_function=psf_rendered,
+                        psf_function=psf_func,
                     )
                 )
 
@@ -322,12 +322,12 @@ class Sim(object):
 
     def _get_psf_funcs_for_band(self, band):
         psf_funcs_galsim = []
-        psf_funcs_rendered = []
+        psf_funcs = []
         for epoch in range(self.epochs_per_band):
             pgf, prf = self._get_psf_funcs_for_band_epoch(band, epoch)
             psf_funcs_galsim.append(pgf)
-            psf_funcs_rendered.append(prf)
-        return psf_funcs_galsim, psf_funcs_rendered
+            psf_funcs.append(prf)
+        return psf_funcs_galsim, psf_funcs
 
     def _get_psf_funcs_for_band_epoch(self, band, epoch):
         # using closures here to capture some local state

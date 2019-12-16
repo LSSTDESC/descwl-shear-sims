@@ -32,7 +32,7 @@ def test_se_obs_smoke(se_data):
     assert np.array_equal(obs.noise.array, np.ones(DIMS) * 3)
     assert np.array_equal(obs.bmask.array, np.ones(DIMS) * 4)
     assert np.array_equal(obs.ormask.array, np.ones(DIMS) * 5)
-    assert np.array_equal(obs.psf(1, 0).array, np.ones(DIMS) * 6)
+    assert np.array_equal(obs.get_psf(1, 0).array, np.ones(DIMS) * 6)
     assert obs.wcs == galsim.PixelScale(0.2)
 
 
@@ -57,7 +57,7 @@ def test_se_obs_set(attr, val, se_data):
     assert attr == 'noise' or np.array_equal(obs.noise.array, np.ones(DIMS) * 3)
     assert attr == 'bmask' or np.array_equal(obs.bmask.array, np.ones(DIMS) * 4)
     assert attr == 'ormask' or np.array_equal(obs.ormask.array, np.ones(DIMS) * 5)
-    assert np.array_equal(obs.psf(1, 0).array, np.ones(DIMS) * 6)
+    assert np.array_equal(obs.get_psf(1, 0).array, np.ones(DIMS) * 6)
     assert attr == 'wcs' or obs.wcs == galsim.PixelScale(0.2)
 
 
@@ -75,7 +75,7 @@ def test_se_obs_psf_call():
         psf_function=psf_function,
     )
 
-    assert obs.psf(10, 5) == 11
+    assert obs.get_psf(10, 5) == 11
 
 
 @pytest.mark.parametrize('attr', ['image', 'weight', 'noise', 'bmask', 'ormask'])
