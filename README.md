@@ -3,6 +3,17 @@
 
 simple simulations for testing weak lensing shear measurement
 
+## Installation
+
+It is best to use `pip` to install
+
+```bash
+pip install .
+```
+
+If you are installing into a `conda` environment, you should add `--no-deps` to the 
+command above and make sure to install the dependencies with `conda`.
+
 ## Example Usage
 
 ```python
