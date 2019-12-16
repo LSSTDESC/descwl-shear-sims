@@ -227,7 +227,7 @@ class Sim(object):
                         image=se_image,
                         weight=se_weight,
                         wcs=wcs,
-                        psf_function=psf_funcs_rendered,
+                        psf_function=psf_rendered,
                     )
                 )
 
