@@ -19,3 +19,14 @@ def test_simple_sim_double_call_raises():
     sim.gen_sim()
     with pytest.raises(RuntimeError):
         sim.gen_sim()
+
+
+def test_simple_sim_psf_smoke():
+    sim = Sim(rng=10)
+    data = sim.gen_sim()
+    assert len(data) == sim.n_bands
+    for band in sim.bands:
+        assert len(data[band]) == sim.epochs_per_band
+        for epoch in range(sim.epochs_per_band):
+            # make sure this call works
+            data[band][epoch].psf(10, 3)
