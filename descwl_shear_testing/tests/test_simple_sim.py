@@ -29,4 +29,4 @@ def test_simple_sim_psf_smoke():
         assert len(data[band]) == sim.epochs_per_band
         for epoch in range(sim.epochs_per_band):
             # make sure this call works
-            data[band][epoch].psf(10, 3)
+            data[band][epoch].get_psf(10, 3)
