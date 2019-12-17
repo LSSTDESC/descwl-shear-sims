@@ -21,7 +21,8 @@ from lsst.meas.base import NoiseReplacerConfig, NoiseReplacer
 from lsst.meas.algorithms import SourceDetectionTask, SourceDetectionConfig
 from lsst.meas.deblender import SourceDeblendTask, SourceDeblendConfig
 
-from descwl_shear_testing.simple_sim import Sim
+from descwl_shear_testing import Sim
+from descwl_shear_testing import CoaddObs
 import argparse
 
 
@@ -211,7 +212,8 @@ def main():
         )
         data = sim.gen_sim()
 
-        coadd_obs = coadd_sim_data(data)
+        coadd_obs = CoaddObs(data)
+        # coadd_obs = coadd_sim_data(data)
 
         psf_sigma = ngmix.moments.fwhm_to_sigma(sim.psf_kws['fwhm'])
         psf_sigma_pixels = psf_sigma/coadd_obs.jacobian.scale
