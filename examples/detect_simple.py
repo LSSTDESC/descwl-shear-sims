@@ -7,6 +7,8 @@
     - run a stub for measurement on deblended images (not doing anything yet)
     - optionally make a plot and overplot detections on the image
 """
+import sys
+import logging
 import galsim
 import numpy as np
 import matplotlib.pyplot as plt
@@ -23,6 +25,8 @@ from lsst.meas.deblender import SourceDeblendTask, SourceDeblendConfig
 
 from descwl_shear_testing import Sim
 from descwl_shear_testing import CoaddObs
+from descwl_shear_testing import SimMEDSifier
+from descwl_shear_testing import SimMetadetect
 import argparse
 
 
@@ -202,6 +206,23 @@ def main():
 
     args = get_args()
     rng = np.random.RandomState(args.seed)
+    meds_config = {}
+    config = {
+        'metacal': {'psf': 'fitgauss'},
+        'psf': {
+            'model': 'gauss',
+            'lm_pars': {},
+            'ntry': 2,
+        },
+        'weight': {
+            'fwhm': 1.2,
+        },
+        'meds': {},
+    }
+
+    logging.basicConfig(stream=sys.stdout)
+    logging.getLogger('descwl_shear_testing').setLevel(
+        getattr(logging, 'INFO'))
 
     for trial in range(args.ntrial):
         print('trial: %d/%d' % (trial+1, args.ntrial))
@@ -212,8 +233,27 @@ def main():
         )
         data = sim.gen_sim()
 
-        coadd_obs = CoaddObs(data)
-        # coadd_obs = coadd_sim_data(data)
+        # faking ngmix MultiBandObsList
+        # note data is an OrderedDict
+        coadd_mbobs = ngmix.MultiBandObsList(
+            meta={'psf_fwhm': sim.psf_kws['fwhm']},
+        )
+        for band in data:
+            coadd_obs = CoaddObs(data[band])
+            obslist = ngmix.ObsList()
+            obslist.append(coadd_obs)
+            coadd_mbobs.append(obslist)
+
+        md =  SimMetadetect(config, coadd_mbobs, rng)
+        md.go()
+
+        continue
+        medsifier = SimMEDSifier(
+            mbobs=coadd_mbobs,
+            meds_config=meds_config,
+            psf_fwhm_arcsec=sim.psf_kws['fwhm'],
+        )  # noqa
+        continue
 
         psf_sigma = ngmix.moments.fwhm_to_sigma(sim.psf_kws['fwhm'])
         psf_sigma_pixels = psf_sigma/coadd_obs.jacobian.scale
