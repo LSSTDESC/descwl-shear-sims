@@ -4,7 +4,7 @@ copied from meas_extensions_ngmix and modified
 import numpy as np
 import ngmix
 import lsst.log
-import lsst.afw.image as afwImage
+import lsst.afw.image as afw_image
 from lsst.pex.exceptions import InvalidParameterError, LogicError
 import lsst.geom as geom
 
@@ -387,12 +387,12 @@ def _get_padded_sub_image(original, bbox):
     region = original.getBBox()
 
     if region.contains(bbox):
-        return original.Factory(original, bbox, afwImage.PARENT, True)
+        return original.Factory(original, bbox, afw_image.PARENT, True)
 
     result = original.Factory(bbox)
     bbox2 = geom.Box2I(bbox)
     bbox2.clip(region)
-    if isinstance(original, afwImage.Exposure):
+    if isinstance(original, afw_image.Exposure):
         result.setPsf(original.getPsf())
         result.setWcs(original.getWcs())
         result.setPhotoCalib(original.getPhotoCalib())
@@ -400,14 +400,14 @@ def _get_padded_sub_image(original, bbox):
         result.image.array[:, :] = 0.0
         result.variance.array[:, :] = float("inf")
         result.mask.array[:, :] = np.uint16(result.mask.getPlaneBitMask("NO_DATA"))
-        subIn = afwImage.MaskedImageF(original.maskedImage, bbox=bbox2,
-                                      origin=afwImage.PARENT, deep=False)
-        result.maskedImage.assign(subIn, bbox=bbox2, origin=afwImage.PARENT)
-    elif isinstance(original, afwImage.ImageI):
+        sub_in = afw_image.MaskedImageF(original.maskedImage, bbox=bbox2,
+                                        origin=afw_image.PARENT, deep=False)
+        result.maskedImage.assign(sub_in, bbox=bbox2, origin=afw_image.PARENT)
+    elif isinstance(original, afw_image.ImageI):
         result.array[:, :] = 0
-        subIn = afwImage.ImageI(original, bbox=bbox2,
-                                origin=afwImage.PARENT, deep=False)
-        result.assign(subIn, bbox=bbox2, origin=afwImage.PARENT)
+        sub_in = afw_image.ImageI(original, bbox=bbox2,
+                                  origin=afw_image.PARENT, deep=False)
+        result.assign(sub_in, bbox=bbox2, origin=afw_image.PARENT)
     else:
         raise ValueError("Image type not supported")
     return result

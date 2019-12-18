@@ -1,6 +1,6 @@
 import logging
-import lsst.afw.table as afwTable
-import lsst.afw.image as afwImage
+import lsst.afw.table as afw_table
+import lsst.afw.image as afw_image
 from lsst.meas.algorithms import SingleGaussianPsf
 import lsst.geom as geom
 from lsst.afw.geom import makeSkyWcs, makeCdMatrix
@@ -73,14 +73,14 @@ class SimMEDSifier(metadetect.detect.MEDSifier):
         ny, nx = self.detim.shape
 
         scale = self.mbobs[0][0].jacobian.scale
-        masked_image = afwImage.MaskedImageF(nx, ny)
+        masked_image = afw_image.MaskedImageF(nx, ny)
         masked_image.image.array[:] = self.detim
 
         var = self.detnoise**2
         masked_image.variance.array[:] = var
         masked_image.mask.array[:] = 0
 
-        exp = afwImage.ExposureF(masked_image)
+        exp = afw_image.ExposureF(masked_image)
 
         # PSF for detection
         psf_sigma = ngmix.moments.fwhm_to_sigma(self.psf_fwhm_arcsec)
@@ -110,7 +110,7 @@ class SimMEDSifier(metadetect.detect.MEDSifier):
         # This schema holds all the measurements that will be run within the stack
         # It needs to be constructed before running anything and passed to
         # algorithms that make additional measurents.
-        schema = afwTable.SourceTable.makeMinimalSchema()
+        schema = afw_table.SourceTable.makeMinimalSchema()
 
         detection_config = SourceDetectionConfig()
         detection_config.reEstimateBackground = False
@@ -121,7 +121,7 @@ class SimMEDSifier(metadetect.detect.MEDSifier):
         deblend_task = SourceDeblendTask(config=deblend_config, schema=schema)
 
         # Detect objects
-        table = afwTable.SourceTable.make(schema)
+        table = afw_table.SourceTable.make(schema)
         result = detection_task.run(table, exposure)
         sources = result.sources
 
@@ -135,7 +135,7 @@ def get_exposure_from_obs(obs):
     ny, nx = obs.image.shape
 
     scale = obs.jacobian.scale
-    masked_image = afwImage.MaskedImageF(nx, ny)
+    masked_image = afw_image.MaskedImageF(nx, ny)
     masked_image.image.array[:] = obs.image
 
     # assuming constant noise
@@ -143,7 +143,7 @@ def get_exposure_from_obs(obs):
     masked_image.variance.array[:] = var
     masked_image.mask.array[:] = 0
 
-    exp = afwImage.ExposureF(masked_image)
+    exp = afw_image.ExposureF(masked_image)
 
     # set WCS
     orientation = 0*geom.degrees

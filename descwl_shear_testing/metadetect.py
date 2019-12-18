@@ -29,7 +29,6 @@ class SimMetadetect(metadetect.Metadetect):
         res = self._add_positions_and_psf(medsifier, res, shear_str)
         return res
 
-
     def _add_positions_and_psf(self, medsifier, res, shear_str):
         """
         TODO add positionis etc.

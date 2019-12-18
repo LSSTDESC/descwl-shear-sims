@@ -205,16 +205,17 @@ class Sim(object):
                     psf_funcs_galsim, psf_funcs_rendered):
 
                 se_image = render_objs_with_psf_shear(
-                        objs=band_objects,
-                        psf_function=psf_galsim,
-                        uv_offsets=uv_offsets,
-                        uv_cen=self._coadd_uv_cen,
-                        wcs=wcs,
-                        img_dim=self.se_dim,
-                        method='auto',
-                        g1=self.g1,
-                        g2=self.g2,
-                        shear_scene=self.shear_scene)
+                    objs=band_objects,
+                    psf_function=psf_galsim,
+                    uv_offsets=uv_offsets,
+                    uv_cen=self._coadd_uv_cen,
+                    wcs=wcs,
+                    img_dim=self.se_dim,
+                    method='auto',
+                    g1=self.g1,
+                    g2=self.g2,
+                    shear_scene=self.shear_scene,
+                )
 
                 se_image += (
                     self._noise_rng.normal(size=(self.se_dim, self.se_dim)) *
