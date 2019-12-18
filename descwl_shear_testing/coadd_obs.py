@@ -43,7 +43,6 @@ class CoaddObs(ngmix.Observation):
                 psf_weight = psf_image*0 + 1.0/psf_err**2
                 psf_cen = (np.array(psf_image.shape)-1.0)/2.0
 
-
                 pos = galsim.PositionD(x=x, y=y)
                 wjac = se_obs.wcs.jacobian(image_pos=pos)
                 wscale, wshear, wtheta, wflip = wjac.getDecomposition()

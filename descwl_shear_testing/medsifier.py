@@ -8,102 +8,10 @@ from lsst.meas.algorithms import SourceDetectionTask, SourceDetectionConfig
 from lsst.meas.deblender import SourceDeblendTask, SourceDeblendConfig
 import ngmix
 import metadetect
-from meds.util import get_image_info_struct
+
+from .mbobs_extractor import MBObsExtractor
 
 LOGGER = logging.getLogger(__name__)
-
-
-class SimMEDSInterface(metadetect.detect.MEDSInterface):
-    def __init__(self, obs, sources):
-        self.obs = obs
-        self._image_types = (
-            'image', 'weight', 'bmask', 'noise')
-        self.sources = sources
-        self._image_info = get_image_info_struct(1, 20)
-        self._set_exposure()
-
-    def get_cutout(self, iobj, icutout, type='image'):
-        """
-        Get a single cutout for the indicated entry
-
-        parameters
-        ----------
-        iobj:
-            Index of the object
-        icutout:
-            Index of the cutout for this object.
-        type: string, optional
-            Cutout type. Default is 'image'.  Allowed
-            values are 'image','weight','seg','bmask'
-
-        returns
-        -------
-        The cutout image
-        """
-
-        self._check_indices(iobj, icutout=icutout)
-
-        if type == 'psf':
-            return self.get_psf(iobj, icutout)
-
-        im = self._get_type_image(type)
-        dims = im.shape
-
-        c = self._cat
-        orow = c['orig_start_row'][iobj, icutout]
-        ocol = c['orig_start_col'][iobj, icutout]
-        bsize = c['box_size'][iobj]
-
-        orow_box, row_box = self._get_clipped_boxes(dims[0], orow, bsize)
-        ocol_box, col_box = self._get_clipped_boxes(dims[1], ocol, bsize)
-
-        read_im = im[orow_box[0]:orow_box[1],
-                     ocol_box[0]:ocol_box[1]]
-
-        subim = np.zeros((bsize, bsize), dtype=im.dtype)
-        subim += defaults.DEFAULT_IMAGE_VALUES[type]
-
-        subim[row_box[0]:row_box[1],
-              col_box[0]:col_box[1]] = read_im
-
-        return subim
-
-    def _set_exposure(self):
-        ny, nx = self.obs.image.shape
-
-        scale = self.obs.jacobian.scale
-        masked_image = afwImage.MaskedImageF(nx, ny)
-        masked_image.image.array[:] = self.detim
-
-        var = self.detnoise**2
-        masked_image.variance.array[:] = var
-        masked_image.mask.array[:] = 0
-
-        exp = afwImage.ExposureF(masked_image)
-
-        # PSF for detection
-        """
-        psf_sigma = ngmix.moments.fwhm_to_sigma(self.psf_fwhm_arcsec)
-        psf_sigma_pixels = psf_sigma/scale
-
-        pny, pnx = self.mbobs[0][0].psf.image.shape
-        exp_psf = SingleGaussianPsf(pny, pnx, psf_sigma_pixels)
-        exp.setPsf(exp_psf)
-        """
-
-        # set WCS
-        orientation = 0*geom.degrees
-
-        cd_matrix = makeCdMatrix(
-            scale=scale*geom.arcseconds,
-            orientation=orientation,
-        )
-        crpix = geom.Point2D(nx/2, ny/2)
-        crval = geom.SpherePoint(0, 0, geom.degrees)
-        wcs = makeSkyWcs(crpix=crpix, crval=crval, cdMatrix=cd_matrix)
-        exp.setWcs(wcs)
-
-        self.exposure = exp
 
 
 class SimMEDSifier(metadetect.detect.MEDSifier):
@@ -125,13 +33,43 @@ class SimMEDSifier(metadetect.detect.MEDSifier):
         LOGGER.info('detecting and deblending')
         self._detect_and_deblend()
 
-    def get_meds(self, band):
-        return SimMEDSInterface(
-            self.mbobs[band],
-            self.sources,
+        LOGGER.info('setting exposure and psf lists')
+        self._set_exposures_and_psfs()
+
+    def get_multiband_meds(self):
+        config = {
+            'stamps': {
+                'min_stamp_size': 32,
+                'max_stamp_size': 128,
+                'sigma_factor': 5,
+                'bits_to_ignore_for_weight': [],
+                'bits_to_null': [],
+            }
+        }
+        return MBObsExtractor(
+            config=config,
+            exposures=self.exposures,
+            sources=self.sources,
+            psfs=self.psfs,
         )
 
+    def _set_exposures_and_psfs(self):
+        exposures = []
+        psfs = []
+        for obslist in self.mbobs:
+            obs = obslist[0]
+            exposure = get_exposure_from_obs(obs)
+            exposures.append(exposure)
+
+            psfs.append(obs.psf.image)
+
+        self.exposures = exposures
+        self.psfs = psfs
+
     def _set_detim_exposure(self):
+        """
+        in this one we set a gaussian psf for detection
+        """
         ny, nx = self.detim.shape
 
         scale = self.mbobs[0][0].jacobian.scale
@@ -191,3 +129,32 @@ class SimMEDSifier(metadetect.detect.MEDSifier):
         deblend_task.run(exposure, sources)
 
         self.sources = sources
+
+
+def get_exposure_from_obs(obs):
+    ny, nx = obs.image.shape
+
+    scale = obs.jacobian.scale
+    masked_image = afwImage.MaskedImageF(nx, ny)
+    masked_image.image.array[:] = obs.image
+
+    # assuming constant noise
+    var = 1.0/obs.weight[0, 0]
+    masked_image.variance.array[:] = var
+    masked_image.mask.array[:] = 0
+
+    exp = afwImage.ExposureF(masked_image)
+
+    # set WCS
+    orientation = 0*geom.degrees
+
+    cd_matrix = makeCdMatrix(
+        scale=scale*geom.arcseconds,
+        orientation=orientation,
+    )
+    crpix = geom.Point2D(nx/2, ny/2)
+    crval = geom.SpherePoint(0, 0, geom.degrees)
+    wcs = makeSkyWcs(crpix=crpix, crval=crval, cdMatrix=cd_matrix)
+    exp.setWcs(wcs)
+
+    return exp

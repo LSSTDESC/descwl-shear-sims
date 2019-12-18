@@ -24,9 +24,8 @@ from lsst.meas.algorithms import SourceDetectionTask, SourceDetectionConfig
 from lsst.meas.deblender import SourceDeblendTask, SourceDeblendConfig
 
 from descwl_shear_testing import Sim
-from descwl_shear_testing import CoaddObs
-from descwl_shear_testing import SimMEDSifier
-from descwl_shear_testing import SimMetadetect
+from descwl_shear_testing.coadd_obs import CoaddObs
+from descwl_shear_testing.metadetect import SimMetadetect
 import argparse
 
 
@@ -194,6 +193,7 @@ def coadd_sim_data(sim_data):
 
 def get_args():
     parser = argparse.ArgumentParser()
+    parser.add_argument('--output', required=True)
     parser.add_argument('--ntrial', type=int, default=1)
     parser.add_argument('--seed', type=int, default=1343)
     parser.add_argument('--noise', type=int, default=180)
@@ -206,8 +206,8 @@ def main():
 
     args = get_args()
     rng = np.random.RandomState(args.seed)
-    meds_config = {}
     config = {
+        'bmask_flags': 0,
         'metacal': {'psf': 'fitgauss'},
         'psf': {
             'model': 'gauss',
@@ -244,27 +244,20 @@ def main():
             obslist.append(coadd_obs)
             coadd_mbobs.append(obslist)
 
-        md =  SimMetadetect(config, coadd_mbobs, rng)
+        md = SimMetadetect(config, coadd_mbobs, rng)
         md.go()
+        res = md.result
+        print(res.keys())
 
-        continue
-        medsifier = SimMEDSifier(
-            mbobs=coadd_mbobs,
-            meds_config=meds_config,
-            psf_fwhm_arcsec=sim.psf_kws['fwhm'],
-        )  # noqa
-        continue
-
-        psf_sigma = ngmix.moments.fwhm_to_sigma(sim.psf_kws['fwhm'])
-        psf_sigma_pixels = psf_sigma/coadd_obs.jacobian.scale
-        exposure = get_exposure(coadd_obs, psf_sigma_pixels)
-
-        sources = detect_and_deblend(exposure)
-        measure_deblended(exposure, sources)
 
         if args.show:
             plt.imshow(coadd_obs.image, interpolation='nearest', cmap='gray')
-
+            plt.scatter(
+                res['noshear']['col'], res['noshear']['row'],
+                c='r', s=0.5,
+            )
+            plt.show()
+            '''
             for record in sources:
                 # Skip parent objects where all children are inserted
                 if record.get('deblend_nChild') != 0:
@@ -277,6 +270,7 @@ def main():
                 plt.scatter([x], [y], c='r', s=0.5)
 
             plt.show()
+            '''
 
 
 if __name__ == '__main__':
