@@ -38,6 +38,7 @@ def main():
     g_mean_1m, _, _ = get_means(data, '1m')
 
     R11 = (g_mean_1p[0] - g_mean_1m[0])/0.02
+    print('R11:', R11)
 
     shear1 = g_mean[0]/R11
     shear1_err = g_std[0]/np.sqrt(num)/R11

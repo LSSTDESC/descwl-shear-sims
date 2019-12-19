@@ -300,10 +300,14 @@ class MBObsExtractor(object):
         jacob = ngmix.Jacobian(
             row=row,
             col=col,
-            dudrow=jmatrix[0, 0],
-            dudcol=jmatrix[0, 1],
-            dvdrow=jmatrix[1, 0],
-            dvdcol=jmatrix[1, 1],
+            dudcol=jmatrix[0, 0],
+            dudrow=jmatrix[0, 1],
+            dvdcol=jmatrix[1, 0],
+            dvdrow=jmatrix[1, 1],
+            # dudrow=jmatrix[0, 0],
+            # dudcol=jmatrix[0, 1],
+            # dvdrow=jmatrix[1, 0],
+            # dvdcol=jmatrix[1, 1],
         )
 
         self.log.debug("jacob: %s" % repr(jacob))
