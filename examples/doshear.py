@@ -11,7 +11,11 @@ def get_args():
 
 
 def get_means(data, stype):
-    w, = np.where(data['shear_type'] == stype)
+    w, = np.where(
+        (data['flags'] == 0)
+        &
+        (data['shear_type'] == stype)
+    )
     g_mean = data['wmom_g'][w].mean(axis=0)
     g_std = data['wmom_g'][w].std(axis=0)
     return g_mean, g_std, w.size
@@ -22,11 +26,11 @@ def main():
 
     # data = fitsio.read(args.fname)
     cols = [
+        'flags',
         'shear_type',
         'wmom_g',
     ]
 
-    print(args.flist)
     data = eu.io.read(args.flist, columns=cols)
 
     g_mean, g_std, num = get_means(data, 'noshear')
