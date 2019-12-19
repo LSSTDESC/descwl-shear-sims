@@ -109,10 +109,13 @@ class MBObsExtractor(object):
             else:
                 psf_im = None
 
-            obs = self._extract_obs(subim, rec, psf_im=psf_im)
-
             obslist = ngmix.ObsList()
-            obslist.append(obs)
+            try:
+                obs = self._extract_obs(subim, rec, psf_im=psf_im)
+                obslist.append(obs)
+            except ngmix.GMixFatalError as err:
+                self.log.info(str(err))
+
             mbobs.append(obslist)
 
         self.log.debug('    stamp shape: %s' % str(mbobs[0][0].image.shape))
