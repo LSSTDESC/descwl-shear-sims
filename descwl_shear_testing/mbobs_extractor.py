@@ -118,7 +118,8 @@ class MBObsExtractor(object):
 
             mbobs.append(obslist)
 
-        self.log.debug('    stamp shape: %s' % str(mbobs[0][0].image.shape))
+        if len(mbobs[0]) > 0:
+            self.log.debug('    stamp shape: %s' % str(mbobs[0][0].image.shape))
 
         return mbobs
 
