@@ -210,7 +210,7 @@ def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--output', required=True)
     parser.add_argument('--ntrial', type=int, default=1)
-    parser.add_argument('--seed', type=int, default=1343)
+    parser.add_argument('--seed', type=int)
     parser.add_argument('--noise', type=float, default=180)
     parser.add_argument('--show', action='store_true')
 
