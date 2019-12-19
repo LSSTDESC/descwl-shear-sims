@@ -14,8 +14,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import ngmix
 
-import lsst.afw.table as afwTable
-import lsst.afw.image as afwImage
+import lsst.afw.table as afw_table
+import lsst.afw.image as afw_image
 from lsst.afw.geom import makeSkyWcs, makeCdMatrix
 import lsst.geom as geom
 from lsst.meas.algorithms import SingleGaussianPsf
@@ -26,6 +26,8 @@ from lsst.meas.deblender import SourceDeblendTask, SourceDeblendConfig
 from descwl_shear_testing import Sim
 from descwl_shear_testing.coadd_obs import CoaddObs
 from descwl_shear_testing.metadetect import SimMetadetect
+import fitsio
+import esutil as eu
 import argparse
 
 
@@ -33,7 +35,7 @@ def make_schema():
     # This schema holds all the measurements that will be run within the stack
     # It needs to be constructed before running anything and passed to
     # algorithms that make additional measurents.
-    schema = afwTable.SourceTable.makeMinimalSchema()
+    schema = afw_table.SourceTable.makeMinimalSchema()
     return schema
 
 
@@ -49,7 +51,7 @@ def detect_and_deblend(exposure):
     deblend_task = SourceDeblendTask(config=deblend_config, schema=schema)
 
     # Detect objects
-    table = afwTable.SourceTable.make(schema)
+    table = afw_table.SourceTable.make(schema)
     result = detection_task.run(table, exposure)
     sources = result.sources
 
@@ -107,14 +109,14 @@ def measure_deblended(exposure, sources):
 def get_exposure(coadd_obs, psf_sigma_pixels):
     ny, nx = coadd_obs.image.shape
 
-    masked_image = afwImage.MaskedImageF(nx, ny)
+    masked_image = afw_image.MaskedImageF(nx, ny)
     masked_image.image.array[:] = coadd_obs.image
 
     var = 1.0/coadd_obs.weight[0, 0]
     masked_image.variance.array[:] = var
     masked_image.mask.array[:] = 0
 
-    exp = afwImage.ExposureF(masked_image)
+    exp = afw_image.ExposureF(masked_image)
 
     # PSF
     pny, pnx = coadd_obs.psf.image.shape
@@ -191,12 +193,25 @@ def coadd_sim_data(sim_data):
     )
 
 
+def make_comb_data(res):
+    add_dt = [('shear_type', 'S7')]
+
+    dlist = []
+    for stype in res.keys():
+        data = res[stype]
+        newdata = eu.numpy_util.add_fields(data, add_dt)
+        newdata['shear_type'] = stype
+        dlist.append(newdata)
+
+    return eu.numpy_util.combine_arrlist(dlist)
+
+
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--output', required=True)
     parser.add_argument('--ntrial', type=int, default=1)
     parser.add_argument('--seed', type=int, default=1343)
-    parser.add_argument('--noise', type=int, default=180)
+    parser.add_argument('--noise', type=float, default=180)
     parser.add_argument('--show', action='store_true')
 
     return parser.parse_args()
@@ -224,7 +239,9 @@ def main():
     logging.getLogger('descwl_shear_testing').setLevel(
         getattr(logging, 'INFO'))
 
+    dlist = []
     for trial in range(args.ntrial):
+        print('-'*70)
         print('trial: %d/%d' % (trial+1, args.ntrial))
         sim = Sim(
             rng=rng,
@@ -247,8 +264,10 @@ def main():
         md = SimMetadetect(config, coadd_mbobs, rng)
         md.go()
         res = md.result
-        print(res.keys())
+        # print(res.keys())
 
+        comb_data = make_comb_data(res)
+        dlist.append(comb_data)
 
         if args.show:
             plt.imshow(coadd_obs.image, interpolation='nearest', cmap='gray')
@@ -271,6 +290,10 @@ def main():
 
             plt.show()
             '''
+
+    data = eu.numpy_util.combine_arrlist(dlist)
+    print('writing:', args.output)
+    fitsio.write(args.output, data, clobber=True)
 
 
 if __name__ == '__main__':

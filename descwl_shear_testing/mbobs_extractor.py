@@ -46,7 +46,7 @@ class MBObsExtractor(object):
         self.sources = sources
         self.psfs = psfs
 
-        self.log = lsst.log.Log.getLogger("meas.extensions.ngmix.MBObsExtractor")
+        self.log = lsst.log.Log.getLogger("MBObsExtractor")
 
         self._verify()
 
@@ -272,6 +272,17 @@ class MBObsExtractor(object):
         xy0 = imobj.getXY0()
 
         orig_cen = imobj.getWcs().skyToPixel(rec.getCoord())
+        if np.isnan(orig_cen.getY()):
+            self.log.debug('falling back on integer location')
+            # fall back to integer pixel location
+            peak = rec.getFootprint().getPeaks()[0]
+            orig_cenI = peak.getI()
+            orig_cen = geom.Point2D(
+                x=orig_cenI.getX(),
+                y=orig_cenI.getY(),
+            )
+            # x, y = peak.getIx(), peak.getIy()
+
         cen = orig_cen - geom.Extent2D(xy0)
         row = cen.getY()
         col = cen.getX()

@@ -1,10 +1,16 @@
 import numpy as np
 import metadetect
 import esutil as eu
+import lsst.log
 from .medsifier import SimMEDSifier
 
 
 class SimMetadetect(metadetect.Metadetect):
+    def __init__(self, *args):
+        super().__init__(*args)
+
+        self.log = lsst.log.Log.getLogger("SimMetadetect")
+
     def _do_detect(self, mbobs):
         psf_fwhm = self.mbobs.meta['psf_fwhm']
         return SimMEDSifier(
@@ -61,11 +67,15 @@ class SimMetadetect(metadetect.Metadetect):
 
         for i, rec in enumerate(sources):
             orig_cen = det_exp.getWcs().skyToPixel(rec.getCoord())
+            if np.isnan(orig_cen.getY()):
+                self.log.debug('falling back on integer location')
+                # fall back to integer pixel location
+                peak = rec.getFootprint().getPeaks()[0]
+                orig_cen = peak.getI()
+
             newres['row'][i] = orig_cen.getY()
             newres['col'][i] = orig_cen.getX()
-            print(rec)
-            print(rec.getCoord())
-            print(orig_cen, newres['row'][i], newres['col'][i])
+            # print(newres['row'][i], newres['col'][i])
         '''
         newres['star_frac'][:] = self.star_frac
         newres['tapebump_frac'][:] = self.tapebump_frac
