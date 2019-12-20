@@ -212,6 +212,7 @@ def get_args():
     parser.add_argument('--ntrial', type=int, default=1)
     parser.add_argument('--seed', type=int)
     parser.add_argument('--noise', type=float, default=180)
+    parser.add_argument('--nepochs', type=int, default=3)
     parser.add_argument('--show', action='store_true')
 
     return parser.parse_args()
@@ -245,7 +246,7 @@ def main():
         print('trial: %d/%d' % (trial+1, args.ntrial))
         sim = Sim(
             rng=rng,
-            epochs_per_band=3,
+            epochs_per_band=args.nepochs,
             noise_per_band=args.noise,
         )
         data = sim.gen_sim()
