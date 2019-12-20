@@ -30,7 +30,7 @@ class CoaddObs(ngmix.Observation):
 
             x, y = 100, 100
 
-            wt = se_obs.weight[0, 0]
+            wt = se_obs.weight.array[0, 0]
             wsum += wt
 
             if ntot == 0:
