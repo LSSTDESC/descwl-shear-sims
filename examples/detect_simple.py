@@ -224,7 +224,10 @@ def main():
     rng = np.random.RandomState(args.seed)
     config = {
         'bmask_flags': 0,
-        'metacal': {'psf': 'fitgauss'},
+        'metacal': {
+            'use_noise_image': True,
+            'psf': 'fitgauss',
+        },
         'psf': {
             'model': 'gauss',
             'lm_pars': {},
@@ -238,7 +241,8 @@ def main():
 
     logging.basicConfig(stream=sys.stdout)
     logging.getLogger('descwl_shear_testing').setLevel(
-        getattr(logging, 'INFO'))
+        getattr(logging, 'INFO')
+    )
 
     dlist = []
     for trial in range(args.ntrial):
