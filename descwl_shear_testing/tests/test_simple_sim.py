@@ -16,6 +16,20 @@ def test_simple_sim_smoke():
             assert epoch_obs.noise is not None
 
 
+def test_simple_sim_noise():
+    sim = Sim(rng=10)
+    data = sim.gen_sim()
+    for band in sim.bands:
+        for epoch in range(sim.epochs_per_band):
+            epoch_obs = data[band][epoch]
+
+            assert epoch_obs.noise is not None
+
+            nstd = epoch_obs.noise.array.var()
+            expected_std = 1/epoch_obs.weight.array[0, 0]
+            assert abs(nstd/expected_std-1) < 0.01
+
+
 def test_simple_sim_double_call_raises():
     sim = Sim(rng=10)
     sim.gen_sim()
