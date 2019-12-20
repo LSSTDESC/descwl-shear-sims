@@ -1,5 +1,5 @@
 import numpy as np
-import esutil as eu
+import fitsio
 import argparse
 
 
@@ -10,38 +10,66 @@ def get_args():
     return parser.parse_args()
 
 
-def get_means(data, stype):
+def get_sums(data, stype):
     w, = np.where(
-        (data['flags'] == 0)
-        &
+        (data['flags'] == 0) &
         (data['shear_type'] == stype)
     )
-    g_mean = data['wmom_g'][w].mean(axis=0)
-    g_std = data['wmom_g'][w].std(axis=0)
-    return g_mean, g_std, w.size
+    g_sum = data['wmom_g'][w].sum(axis=0)
+    g2_sum = (data['wmom_g'][w]**2).sum(axis=0)
+    return g_sum, g2_sum, w.size
 
 
 def main():
     args = get_args()
 
-    # data = fitsio.read(args.fname)
     cols = [
         'flags',
         'shear_type',
         'wmom_g',
     ]
 
-    data = eu.io.read(args.flist, columns=cols)
+    nf = len(args.flist)
 
-    g_mean, g_std, num = get_means(data, 'noshear')
-    g_mean_1p, _, _ = get_means(data, '1p')
-    g_mean_1m, _, _ = get_means(data, '1m')
+    g_sum = np.zeros(2)
+    g2_sum = g_sum.copy()
 
-    R11 = (g_mean_1p[0] - g_mean_1m[0])/0.02
+    g_sum_1p = g_sum.copy()
+    g_sum_1m = g_sum.copy()
+
+    n, n_1p, n_1m = 0, 0, 0
+
+    for i, f in enumerate(args.flist):
+        print('%d/%d %s' % (i+1, nf, f))
+        data = fitsio.read(f, columns=cols)
+
+        tg_sum, tg2_sum, tn = get_sums(data, 'noshear')
+        tg_sum_1p, _, tn_1p = get_sums(data, '1p')
+        tg_sum_1m, _, tn_1m = get_sums(data, '1m')
+
+        g_sum += tg_sum
+        g2_sum += tg2_sum
+        g_sum_1p += tg_sum_1p
+        g_sum_1m += tg_sum_1m
+
+        n += tn
+        n_1p += tn_1p
+        n_1m += tn_1m
+
+    g = g_sum/n
+    g2 = g2_sum/(n-1)
+
+    g_1p = g_sum_1p/n
+    g_1m = g_sum_1m/n
+
+    g_std = np.sqrt(g2 - g**2)
+    g_err = g_std/np.sqrt(n)
+
+    R11 = (g_1p[0] - g_1m[0])/0.02
     print('R11:', R11)
 
-    shear1 = g_mean[0]/R11
-    shear1_err = g_std[0]/np.sqrt(num)/R11
+    shear1 = g[0]/R11
+    shear1_err = g_err[0]/R11
 
     m = shear1/0.02-1
     m_err = shear1_err/0.02
