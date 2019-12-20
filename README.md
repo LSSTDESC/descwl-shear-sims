@@ -45,6 +45,7 @@ The doc strings for the main public APIs are complete. See them for more details
 
 ## measure TODO
 
+- [ ] add tests of measure
 - [ ] do real coadds for image and noise field
 - [ ] run centroiding algorithm in stack rather than using integer positions
 - [ ] run size measurement alg. in stack, to get postage stamp size, rather than using default footprint
