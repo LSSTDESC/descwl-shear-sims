@@ -35,7 +35,9 @@ class CoaddObs(ngmix.Observation):
 
             if ntot == 0:
 
-                image = se_obs.image.array.copy()
+                image = se_obs.image.array.copy()*wt
+                noise = se_obs.noise.array.copy()*wt
+
                 weight = se_obs.weight.array.copy()
 
                 psf_image = se_obs.get_psf(x, y).array
@@ -68,11 +70,13 @@ class CoaddObs(ngmix.Observation):
 
             else:
                 image += se_obs.image.array[:, :]*wt
+                noise += se_obs.noise.array[:, :]*wt
                 weight[:, :] += se_obs.weight.array[:, :]
 
             ntot += 1
 
         image *= 1.0/wsum
+        noise *= 1.0/wsum
 
         psf_obs = ngmix.Observation(
             image=psf_image,
@@ -82,6 +86,7 @@ class CoaddObs(ngmix.Observation):
 
         super().__init__(
             image=image,
+            noise=noise,
             weight=weight,
             bmask=np.zeros(image.shape, dtype='i4'),
             jacobian=jac,
