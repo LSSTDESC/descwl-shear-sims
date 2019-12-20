@@ -91,4 +91,5 @@ class CoaddObs(ngmix.Observation):
             bmask=np.zeros(image.shape, dtype='i4'),
             jacobian=jac,
             psf=psf_obs,
+            store_pixels=False,
         )
