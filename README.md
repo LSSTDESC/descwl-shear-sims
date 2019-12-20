@@ -37,7 +37,7 @@ The doc strings for the main public APIs are complete. See them for more details
 
 ## SIM todo
 
-- [ ] create noise field
+- [x] create noise field
 - [ ] offset and rotate images
 - [ ] complex wcs in image and noise field
 - [ ] spatially varying PSF
@@ -45,7 +45,9 @@ The doc strings for the main public APIs are complete. See them for more details
 
 ## measure TODO
 
-- [ ] add tests of measure
+- [x] add noise field to CoaddObs
+- [ ] add test of CoaddObs, including noise and weight compatibility
+- [ ] add tests of SimMetadetect code
 - [ ] do real coadds for image and noise field
 - [ ] run centroiding algorithm in stack rather than using integer positions
 - [ ] run size measurement alg. in stack, to get postage stamp size, rather than using default footprint
