@@ -24,7 +24,8 @@ install:
       flake8 \
       pytest \
       numpy \
-      galsim
+      galsim \
+      "ngmix>=1.3.7"
 
     source activate test-env
 

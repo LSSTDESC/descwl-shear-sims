@@ -42,3 +42,9 @@ def test_simple_sim_metadetect_smoke():
 
     md = SimMetadetect(config, coadd_mbobs, rng)
     md.go()
+
+    res = md.result
+    keys = list(res.keys())
+    assert len(keys) == 5
+    for k in ['noshear', '1p', '1m', '2p', '2m']:
+        assert k in keys
