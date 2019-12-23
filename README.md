@@ -47,10 +47,11 @@ The doc strings for the main public APIs are complete. See them for more details
 
 - [x] add noise field to CoaddObs
 - [x] add test of CoaddObs, including noise and weight compatibility
-- [ ] add tests of SimMetadetect code
-- [ ] do real coadds for image and noise field
+- [x] add smoke tests of SimMetadetect code
+- [ ] add substantial tests of SimMetadetect code
 - [ ] run centroiding algorithm in stack rather than using integer positions
 - [ ] run size measurement alg. in stack, to get postage stamp size, rather than using default footprint
+- [ ] do real coadds for image and noise field
 - [ ] evaluate stamp size is better, alg. based or footprint based
 - [ ] test with noise field propagated (need to add that in simple sim)
 - [ ] test with deblending and noise replacers
