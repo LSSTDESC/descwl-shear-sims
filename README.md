@@ -38,7 +38,7 @@ The doc strings for the main public APIs are complete. See them for more details
 ## SIM todo
 
 - [x] create noise field
-- [ ] offset and rotate images
+- [ ] offset and rotate images, using Bob's code as an example
 - [ ] complex wcs in image and noise field
 - [ ] spatially varying PSF
 - [ ] defects with correct bit mask values, for image and noise field
