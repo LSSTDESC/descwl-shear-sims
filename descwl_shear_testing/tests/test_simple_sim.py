@@ -25,9 +25,9 @@ def test_simple_sim_noise():
 
             assert epoch_obs.noise is not None
 
-            nstd = epoch_obs.noise.array.var()
-            expected_std = 1/epoch_obs.weight.array[0, 0]
-            assert abs(nstd/expected_std-1) < 0.01
+            nvar = epoch_obs.noise.array.var()
+            expected_var = 1/epoch_obs.weight.array[0, 0]
+            assert abs(nvar/expected_var-1) < 0.01
 
 
 def test_simple_sim_double_call_raises():
