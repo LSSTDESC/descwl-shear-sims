@@ -26,7 +26,8 @@ install:
       numpy \
       galsim \
       esutil \
-      "ngmix>=1.3.7"
+      "ngmix>=1.3.7" \
+      meds
 
     source activate test-env
 
