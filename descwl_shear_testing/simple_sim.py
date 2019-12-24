@@ -99,6 +99,7 @@ class Sim(object):
             gal_kws=None,
             psf_type='gauss',
             psf_kws=None):
+
         self._rng = (
             rng
             if isinstance(rng, np.random.RandomState)
@@ -216,15 +217,20 @@ class Sim(object):
                         g2=self.g2,
                         shear_scene=self.shear_scene)
 
-                se_image += (
-                    self._noise_rng.normal(size=(self.se_dim, self.se_dim)) *
-                    self.noise_per_band[band_ind])
+                se_image += self._generate_noise_image(band_ind)
+
+                # make galsim image with same wcs as se_image but
+                # with pure random noise
+                noise_example = self._generate_noise_image(band_ind)
+                noise_image = se_image.copy()
+                noise_image.array[:, :] = noise_example
 
                 se_weight = se_image.copy() * 0 + 1.0 / self.noise_per_band[band_ind]**2
 
                 band_data[band].append(
                     SEObs(
                         image=se_image,
+                        noise=noise_image,
                         weight=se_weight,
                         wcs=wcs,
                         psf_function=psf_func,
@@ -232,6 +238,25 @@ class Sim(object):
                 )
 
         return band_data
+
+    def _generate_noise_image(self, band_ind):
+        """
+        generate a random noise field for the given band
+
+        Parameters
+        ----------
+        band_ind: int
+            The band index
+
+        Returns
+        -------
+        numpy array
+        """
+
+        return (
+            self._noise_rng.normal(size=(self.se_dim, self.se_dim)) *
+            self.noise_per_band[band_ind]
+        )
 
     def _generate_all_objects(self):
         """Generate all objects in all bands.

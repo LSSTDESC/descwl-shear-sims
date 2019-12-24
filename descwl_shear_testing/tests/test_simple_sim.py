@@ -11,7 +11,23 @@ def test_simple_sim_smoke():
     for band in sim.bands:
         assert len(data[band]) == sim.epochs_per_band
         for epoch in range(sim.epochs_per_band):
-            assert isinstance(data[band][epoch], SEObs)
+            epoch_obs = data[band][epoch]
+            assert isinstance(epoch_obs, SEObs)
+            assert epoch_obs.noise is not None
+
+
+def test_simple_sim_noise():
+    sim = Sim(rng=10)
+    data = sim.gen_sim()
+    for band in sim.bands:
+        for epoch in range(sim.epochs_per_band):
+            epoch_obs = data[band][epoch]
+
+            assert epoch_obs.noise is not None
+
+            nvar = epoch_obs.noise.array.var()
+            expected_var = 1/epoch_obs.weight.array[0, 0]
+            assert abs(nvar/expected_var-1) < 0.01
 
 
 def test_simple_sim_double_call_raises():
