@@ -1,5 +1,5 @@
-# wl-shear-testing-sims
-[![Build Status](https://travis-ci.com/LSSTDESC/wl-shear-testing-sims.svg?branch=master)](https://travis-ci.com/LSSTDESC/wl-shear-testing-sims)
+# descwl-shear-sims
+[![Build Status](https://travis-ci.com/LSSTDESC/descwl-shear-sims.svg?branch=master)](https://travis-ci.com/LSSTDESC/descwl-shear-sims)
 
 simple simulations for testing weak lensing shear measurement
 
@@ -17,7 +17,7 @@ command above and make sure to install the dependencies with `conda`.
 ## Example Usage
 
 ```python
-from descwl_shear_testing.simple_sim import Sim
+from descwl_shear_sims.simple_sim import Sim
 
 data = Sim(rng=10, epochs_per_band=3).gen_sim()
 
