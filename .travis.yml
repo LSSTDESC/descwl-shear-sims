@@ -31,5 +31,5 @@ install:
     pip install --no-deps -e .
 
 script:
-  - flake8 descwl_shear_testing
-  - pytest -vv descwl_shear_testing
+  - flake8 descwl_shear_sims
+  - pytest -vv descwl_shear_sims

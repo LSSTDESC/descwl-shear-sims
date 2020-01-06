@@ -21,7 +21,7 @@ from lsst.meas.base import NoiseReplacerConfig, NoiseReplacer
 from lsst.meas.algorithms import SourceDetectionTask, SourceDetectionConfig
 from lsst.meas.deblender import SourceDeblendTask, SourceDeblendConfig
 
-from descwl_shear_testing.simple_sim import Sim
+from descwl_shear_sims.simple_sim import Sim
 import argparse
 
 
