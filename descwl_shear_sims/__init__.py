@@ -2,4 +2,4 @@
 __version__ = '0.1.0'
 
 from .se_obs import SEObs
-from .simple_sim import Sim
+from .simple_sim import SimpleSim

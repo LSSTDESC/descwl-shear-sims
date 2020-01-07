@@ -15,7 +15,7 @@ from .render_sim import render_objs_with_psf_shear
 LOGGER = logging.getLogger(__name__)
 
 
-class Sim(object):
+class SimpleSim(object):
     """A multi-epoch, multi-band simulation for testing weak lensing shear
     measurements.
 
