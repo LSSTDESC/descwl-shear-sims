@@ -11,8 +11,12 @@ from collections import OrderedDict
 
 from .se_obs import SEObs
 from .render_sim import render_objs_with_psf_shear
+from .util import randsphere
 
 LOGGER = logging.getLogger(__name__)
+
+RA_CEN = 100.0
+DEC_CEN = 45.0
 
 
 class SimpleSim(object):
@@ -176,6 +180,8 @@ class SimpleSim(object):
         self.psf_dim = 53
         self._psf_cen = (self.psf_dim - 1)/2
 
+        self._setup_se_ranges()
+
     def gen_sim(self):
         """Generate a simulation.
 
@@ -332,6 +338,7 @@ class SimpleSim(object):
 
         return _gal
 
+    '''
     def _get_wcs_for_band(self, band):
         # only a simple pixel scale right now
         se_cen = (self.se_dim - 1) / 2
@@ -344,6 +351,7 @@ class SimpleSim(object):
             origin=galsim.PositionD(x=se_cen, y=se_cen),
         )
         return [wcs] * self.epochs_per_band
+    '''
 
     def _get_psf_funcs_for_band(self, band):
         psf_funcs_galsim = []
@@ -375,3 +383,83 @@ class SimpleSim(object):
                 wcs=se_wcs.local(image_pos=image_pos))
 
         return _psf_galsim_func, _psf_render_func
+
+    def _setup_se_ranges(self):
+        """
+        set up position range for input single epoch images
+
+        Currently the offsets are uniform in both directions, with excursions
+        equal to half the coadd size
+        """
+
+        self.coadd_ra, self.coadd_dec = 10, 0
+        cosdec = np.cos(np.radians(self.coadd_dec))
+
+        offset = self.coadd_dim/2*self.scale/3600
+        self.ra_range = [
+            self.coadd_ra - offset*cosdec,
+            self.coadd_ra + offset*cosdec,
+        ]
+        self.dec_range = [
+            self.coadd_dec - offset,
+            self.coadd_dec + offset,
+        ]
+
+    def _get_se_image_pos(self):
+        """
+        random position within ra, dec ranges
+        """
+        rav, decv = randsphere(
+            self._rng,
+            1,
+            ra_range=self.ra_range,
+            dec_range=self.dec_range,
+        )
+        return galsim.CelestialCoord(
+            rav[0]*galsim.degrees,
+            decv[0]*galsim.degrees,
+        )
+
+    def _get_theta(self):
+        """
+        random rotation
+        """
+        return self._rng.uniform(low=0, high=np.pi*2)
+
+    def _get_random_wcs(self):
+        """
+        get a TanWCS for random offsets and random rotation
+        """
+        world_pos = self._get_se_image_pos()
+        theta = self._get_theta()
+
+        c, s = np.cos(theta), np.sin(theta)
+        rot = np.array(((c, -s), (s, c)))
+        vec = np.array([[self.scale, 0], [0, self.scale]])
+
+        cd = np.dot(rot, vec)
+
+        se_cen = (self.se_dim - 1) / 2
+        se_origin = galsim.PositionD(se_cen, se_cen)
+
+        affine = galsim.AffineTransform(
+            cd[0, 0],
+            cd[0, 1],
+            cd[1, 0],
+            cd[1, 1],
+            origin=se_origin,
+        )
+
+        return galsim.TanWCS(affine, world_origin=world_pos)
+
+    def _get_wcs_for_band(self, band):
+        """
+        get wcs for all epochs
+        """
+        wcs_list = []
+
+        for i in range(self.epochs_per_band):
+            wcs = self._get_random_wcs()
+            wcs_list.append(wcs)
+
+        return wcs_list
