@@ -53,6 +53,7 @@ def render_objs_with_psf_shear(
         nrow=img_dim, ncol=img_dim, xmin=0, ymin=0)
 
     jac_wcs = wcs.jacobian(world_pos=wcs.center)
+    center_image_pos = wcs.toImage(wcs.center)
 
     for obj, uv_offset, in zip(objs, uv_offsets):
 
@@ -70,7 +71,7 @@ def render_objs_with_psf_shear(
         # we convert the uv position to xy using the jacobian
         # then from xy we go back to radec on the sphere (world_pos)
         # then we use the local WCS there to render the image
-        pos = jac_wcs.toImage(uv_pos)
+        pos = jac_wcs.toImage(uv_pos) + center_image_pos
         world_pos = wcs.toWorld(pos)
         local_wcs = wcs.local(world_pos=world_pos)
 
