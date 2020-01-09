@@ -30,10 +30,9 @@ def gen_tanwcs(
         The location of the origin of the uv coordinate system in the
         world coordinate system.
     origin : galsim.PositionD
-        The location of the origin of the uv coordinate system in the
-        image coordinate system. Note that the image origin is dithered if
-        requested to keep the uv (and thus world) origin fixed. Units are
-        pixels.
+        The location of the world_origin in the image coordinate system.
+        Note that the image origin is dithered if requested to keep the
+        world origin fixed. Units are pixels.
 
     Returns
     -------
@@ -52,10 +51,10 @@ def gen_tanwcs(
     theta = rng.uniform(
         low=position_angle_range[0],
         high=position_angle_range[1]) / 180.0 * np.pi
-    dither_ra = rng.uniform(
+    dither_u = rng.uniform(
         low=dither_range[0],
-        high=dither_range[1]) * scale / world_origin.dec.cos()
-    dither_dec = rng.uniform(
+        high=dither_range[1]) * scale
+    dither_v = rng.uniform(
         low=dither_range[0],
         high=dither_range[1]) * scale
     costheta = np.cos(theta)
@@ -69,7 +68,11 @@ def gen_tanwcs(
     dvdx = jac_matrix[1, 0]
     dvdy = jac_matrix[1, 1]
 
-    fid_wcs = galsim.TanWCS(
+    LOGGER.debug(
+        'making WCS with g1|g2|scale|theta|du|dv: % f|% f|% f|% f|% f|% f',
+        g1, g2, scale, theta, dither_u, dither_v)
+
+    wcs = galsim.TanWCS(
         affine=galsim.AffineTransform(
             dudx, dudy, dvdx, dvdy,
             origin=origin,
@@ -79,21 +82,19 @@ def gen_tanwcs(
         units=galsim.arcsec,
     )
 
-    dxdy = fid_wcs.toImage(galsim.CelestialCoord(
-        ra=world_origin.ra + dither_ra * galsim.arcsec,
-        dec=world_origin.dec + dither_dec * galsim.arcsec))
-    dxdy -= fid_wcs.toImage(world_origin)
+    jac = wcs.jacobian(world_pos=world_origin).getMatrix()
+    dxdy = np.dot(np.linalg.inv(jac), np.array([dither_u, dither_v]))
 
-    LOGGER.debug(
-        'making WCS with g1|g2|scale|theta|du|dv: % f|% f|% f|% f|% f|% f',
-        g1, g2, scale, theta, dither_ra, dither_dec)
+    new_origin = origin + galsim.PositionD(x=dxdy[0], y=dxdy[1])
 
-    return galsim.TanWCS(
+    wcs = galsim.TanWCS(
         affine=galsim.AffineTransform(
             dudx, dudy, dvdx, dvdy,
-            origin=origin + dxdy,
+            origin=new_origin,
             world_origin=galsim.PositionD(0, 0),
         ),
         world_origin=world_origin,
         units=galsim.arcsec,
     )
+
+    return wcs

@@ -13,7 +13,7 @@ LOGGER = logging.getLogger(__name__)
 
 def render_objs_with_psf_shear(
         *,
-        objs, psf_function, uv_offsets, uv_cen,
+        objs, psf_function, uv_offsets,
         wcs, img_dim, method, g1, g2, shear_scene):
     """Render objects into a scene with some PSF function, shear, and WCS.
 
@@ -27,9 +27,7 @@ def render_objs_with_psf_shear(
     uv_offsets : list of galsim.PositionD
         The offset from the center of the image for each object in u,v. The
         units of u,v are usualy arcseconds.
-    uv_cen : galsim.PositionD
-        The center of the image in u,v. The units of u,v are usualy arcseconds.
-    wcs : galsim.BaseWCS or one if its subclasses
+    wcs : galsim.TanWCS
         The WCS function to use for the image.
     img_dim : int
         The size of the image in pixels.
@@ -54,6 +52,8 @@ def render_objs_with_psf_shear(
     se_im = galsim.ImageD(
         nrow=img_dim, ncol=img_dim, xmin=0, ymin=0)
 
+    jac_wcs = wcs.jacobian(world_pos=wcs.center)
+
     for obj, uv_offset, in zip(objs, uv_offsets):
 
         # shear object and maybe position
@@ -64,11 +64,15 @@ def render_objs_with_psf_shear(
             sdu = uv_offset.x
             sdv = uv_offset.y
 
-        uv_pos = galsim.PositionD(x=sdu + uv_cen.x, y=sdv + uv_cen.y)
+        uv_pos = galsim.PositionD(x=sdu, y=sdv)
 
         # deal with WCS stuff
-        pos = wcs.toImage(uv_pos)
-        local_wcs = wcs.local(world_pos=uv_pos)
+        # we convert the uv position to xy using the jacobian
+        # then from xy we go back to radec on the sphere (world_pos)
+        # then we use the local WCS there to render the image
+        pos = jac_wcs.toImage(uv_pos)
+        world_pos = wcs.toWorld(pos)
+        local_wcs = wcs.local(world_pos=world_pos)
 
         # get the psf
         psf = psf_function(x=pos.x, y=pos.y)
