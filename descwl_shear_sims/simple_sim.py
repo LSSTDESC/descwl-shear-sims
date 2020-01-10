@@ -46,11 +46,11 @@ class Sim(object):
     buff : int, optional
         The width of the buffer region in the coadd image where no objects are
         drawn. Default is 25.
-    ngals_per_arcmin2 : float, optional
+    ngals : float, optional
         The number of objects to simulate per arcminute^2. Default is 80.
     grid_gals : bool, optional
-        If True, `ngal` will be interpreted as the number of galaxies to put on a
-        grid per side.
+        If True, `ngals` will be interpreted as the number of
+        galaxies to put on a grid per side.
     gal_type : str, optional
         A string indicating what kind of galaxy to simulate. Possible options are
 
@@ -115,7 +115,7 @@ class Sim(object):
             scale=0.2,
             coadd_dim=300,
             buff=25,
-            ngals_per_arcmin2=80,
+            ngals=80,
             grid_gals=False,
             gal_type='exp',
             gal_kws=None,
@@ -149,7 +149,7 @@ class Sim(object):
         self.coadd_dim = coadd_dim
         self.buff = buff
 
-        self.ngals_per_arcmin2 = ngals_per_arcmin2
+        self.ngals = ngals
         self.grid_gals = grid_gals
         self.gal_type = gal_type
         self.gal_kws = gal_kws or {'half_light_radius': 0.5}
@@ -201,10 +201,9 @@ class Sim(object):
         # reset nobj to the number in a grid if we are using one
         if self.grid_gals:
             self._gal_grid_ind = 0
-            self._nobj = self.ngal * self.ngal
+            self._nobj = self.ngals * self.ngals
         else:
-            self._nobj = int(
-                self.ngals_per_arcmin2 * self.area_sqr_arcmin)
+            self._nobj = int(self.ngals * self.area_sqr_arcmin)
 
         # we only allow the sim class to be used once
         # so that method outputs can be cached safely as needed
@@ -365,12 +364,12 @@ class Sim(object):
             frac = 1.0 - self.buff * 2 / self.coadd_dim
             _pos_width = self.coadd_dim * frac * 0.5 * self.scale
             yind, xind = np.unravel_index(
-                self._gal_grid_ind, (self.ngal, self.ngal))
-            dg = _pos_width * 2 / self.ngal
+                self._gal_grid_ind, (self.ngals, self.ngals))
+            dg = _pos_width * 2 / self.ngals
             self._gal_grid_ind += 1
             return (
-                yind * dg + dg/2 - self._pos_width,
-                xind * dg + dg/2 - self._pos_width)
+                yind * dg + dg/2 - _pos_width,
+                xind * dg + dg/2 - _pos_width)
         else:
             ra, dec = randsphere(
                 self._rng, 1, ra_range=self._ra_range, dec_range=self._dec_range)
