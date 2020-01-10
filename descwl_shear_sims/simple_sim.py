@@ -75,6 +75,25 @@ class Sim(object):
             'gauss' - no extra options
 
         Default is 'fwhm=0.8'.
+    wcs_kws : dict, optional
+        A dictionary of options for constructing the WCS. These are any of
+
+            position_angle_range : 2-tuple of floats
+                The range of position angles to select from for rotating the image
+                WCS coordinares. In degrees.
+            dither_range : 2-tuple of floats
+                The lowest and highest dither in uv coordinate pixels.
+            scale_frac_std : float
+                The fractional variance in the generated image pixel scale.
+            shear_std : float
+                The standard deviation of the Gaussian shear put into the WCS.
+            ra : float, optional
+                The ra of the center of the image in world coordinates.
+            dec : float, optional
+                The ra of the center of the image in world coordinates.
+
+        The default values will generate a WCS that is at `(ra, dec) = (0, 0)`
+        with a `scale_frac_std=0`, `dither_range=(0,0)`, and `shear_std=0`.
 
     Methods
     -------
@@ -98,7 +117,8 @@ class Sim(object):
             gal_type='exp',
             gal_kws=None,
             psf_type='gauss',
-            psf_kws=None):
+            psf_kws=None,
+            wcs_kws=None):
 
         self._rng = (
             rng
@@ -132,30 +152,41 @@ class Sim(object):
         self.gal_kws = gal_kws or {'half_light_radius': 0.5}
         self.psf_type = psf_type
         self.psf_kws = psf_kws or {'fwhm': 0.8}
-
-        self.area_sqr_arcmin = ((self.coadd_dim - 2*self.buff) * scale / 60)**2
+        self.wcs_kws = wcs_kws or {}
 
         # the SE image could be rotated, so we make it big enough to cover the
         # whole coadd region plus we make sure it is odd
         self.se_dim = int(np.ceil(self.coadd_dim * np.sqrt(2))) + 10
         if self.se_dim % 2 == 0:
             self.se_dim = self.se_dim + 1
+        self._se_cen = (self.se_dim - 1) / 2
 
         # wcs info
-        self._coadd_cen = (self.coadd_dim - 1)/2
-        self._coadd_uv_cen = galsim.PositionD(
-            x=self._coadd_cen * self.scale,
-            y=self._coadd_cen * self.scale)
+        self._world_origin = galsim.CelestialCoord(
+            ra=wcs_kws.get('ra', 0) * galsim.degrees,
+            dec=wcs_kws.get('dec', 0) * galsim.degrees)
+        self._se_origin = galsim.PositionD(x=self._se_cen, y=self._se_cen)
 
+        # we now build a coadd WCS to determine where we should draw locations
+        # for objects in the sky
+        self._coadd_cen = (self.coadd_dim - 1) / 2
+        self._coadd_wcs = galsim.TanWCS(
+            affine=galsim.AffineTransform(
+                self.scale, 0, 0, self.scale,
+                origin=galsim.PositionD(x=self._coadd_cen, y=self._coadd_cen),
+                world_origin=galsim.PositionD(x=0, y=0)
+            ),
+            world_origin=self._world_origin,
+            units=galsim.arcsec
+        )
+        
         # frac of a single dimension that is used for drawing objects
         frac = 1.0 - self.buff * 2 / self.coadd_dim
+        self.area_sqr_arcmin = ((self.coadd_dim - 2*self.buff) * scale / 60)**2
 
         # half of the width of center of the patch that has objects
         # object locations should be in [-pos_width, +pos_width] below
         self._pos_width = self.coadd_dim * frac * 0.5 * self.scale
-
-        # used later to draw objects
-        self._shear_mat = galsim.Shear(g1=self.g1, g2=self.g2).getMatrix()
 
         # reset nobj to the number in a grid if we are using one
         if self.grid_gals:
@@ -209,7 +240,6 @@ class Sim(object):
                         objs=band_objects,
                         psf_function=psf_galsim,
                         uv_offsets=uv_offsets,
-                        uv_cen=self._coadd_uv_cen,
                         wcs=wcs,
                         img_dim=self.se_dim,
                         method='auto',
