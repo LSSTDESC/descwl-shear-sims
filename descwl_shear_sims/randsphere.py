@@ -4,6 +4,8 @@ import numpy as np
 def randsphere(rng, num, ra_range=None, dec_range=None):
     """Generate random points on the sphere, possibly on a subset of it.
 
+    Routine due to Erin Sheldon.
+
     Parameters
     ----------
     num: integer
