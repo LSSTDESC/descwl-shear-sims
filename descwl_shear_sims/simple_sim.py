@@ -11,6 +11,8 @@ from collections import OrderedDict
 
 from .se_obs import SEObs
 from .render_sim import render_objs_with_psf_shear
+from .gen_tanwcs import gen_tanwcs
+from .randsphere import randsphere
 
 LOGGER = logging.getLogger(__name__)
 
@@ -44,11 +46,11 @@ class Sim(object):
     buff : int, optional
         The width of the buffer region in the coadd image where no objects are
         drawn. Default is 25.
-    ngals_per_arcmin2 : float, optional
+    ngals : float, optional
         The number of objects to simulate per arcminute^2. Default is 80.
     grid_gals : bool, optional
-        If True, `ngal` will be interpreted as the number of galaxies to put on a
-        grid per side.
+        If True, `ngals` will be interpreted as the number of
+        galaxies to put on a grid per side.
     gal_type : str, optional
         A string indicating what kind of galaxy to simulate. Possible options are
 
@@ -75,6 +77,26 @@ class Sim(object):
             'gauss' - no extra options
 
         Default is 'fwhm=0.8'.
+    wcs_kws : dict, optional
+        A dictionary of options for constructing the WCS. These are any of
+
+            position_angle_range : 2-tuple of floats
+                The range of position angles to select from for rotating the image
+                WCS coordinares. In degrees.
+            dither_range : 2-tuple of floats
+                The lowest and highest dither in uv coordinate pixels.
+            scale_frac_std : float
+                The fractional variance in the generated image pixel scale.
+            shear_std : float
+                The standard deviation of the Gaussian shear put into the WCS.
+            ra : float, optional
+                The ra of the center of the image in world coordinates.
+            dec : float, optional
+                The ra of the center of the image in world coordinates.
+
+        The default values will generate a WCS that is at `(ra, dec) = (180, 0)`
+        with `position_angle_range=(0,0)`, `scale_frac_std=0`, `dither_range=(0,0)`,
+        and `shear_std=0`.
 
     Methods
     -------
@@ -93,12 +115,13 @@ class Sim(object):
             scale=0.2,
             coadd_dim=300,
             buff=25,
-            ngals_per_arcmin2=80,
+            ngals=80,
             grid_gals=False,
             gal_type='exp',
             gal_kws=None,
             psf_type='gauss',
-            psf_kws=None):
+            psf_kws=None,
+            wcs_kws=None):
 
         self._rng = (
             rng
@@ -126,44 +149,61 @@ class Sim(object):
         self.coadd_dim = coadd_dim
         self.buff = buff
 
-        self.ngals_per_arcmin2 = ngals_per_arcmin2
+        self.ngals = ngals
         self.grid_gals = grid_gals
         self.gal_type = gal_type
         self.gal_kws = gal_kws or {'half_light_radius': 0.5}
         self.psf_type = psf_type
         self.psf_kws = psf_kws or {'fwhm': 0.8}
-
-        self.area_sqr_arcmin = ((self.coadd_dim - 2*self.buff) * scale / 60)**2
+        self.wcs_kws = wcs_kws or {}
 
         # the SE image could be rotated, so we make it big enough to cover the
         # whole coadd region plus we make sure it is odd
         self.se_dim = int(np.ceil(self.coadd_dim * np.sqrt(2))) + 10
         if self.se_dim % 2 == 0:
             self.se_dim = self.se_dim + 1
+        self._se_cen = (self.se_dim - 1) / 2
 
+        ######################################
         # wcs info
-        self._coadd_cen = (self.coadd_dim - 1)/2
-        self._coadd_uv_cen = galsim.PositionD(
-            x=self._coadd_cen * self.scale,
-            y=self._coadd_cen * self.scale)
+        self._world_ra = self.wcs_kws.get('ra', 180)
+        self._world_dec = self.wcs_kws.get('dec', 0)
+        self._world_origin = galsim.CelestialCoord(
+            ra=self._world_ra * galsim.degrees,
+            dec=self._world_dec * galsim.degrees)
+        self._se_origin = galsim.PositionD(x=self._se_cen, y=self._se_cen)
 
-        # frac of a single dimension that is used for drawing objects
-        frac = 1.0 - self.buff * 2 / self.coadd_dim
+        # coadd WCS to determine where we should draw locations
+        # for objects in the sky
+        self._coadd_cen = (self.coadd_dim - 1) / 2
+        self._coadd_origin = galsim.PositionD(x=self._coadd_cen, y=self._coadd_cen)
+        self._coadd_wcs = galsim.TanWCS(
+            affine=galsim.AffineTransform(
+                self.scale, 0, 0, self.scale,
+                origin=galsim.PositionD(x=self._coadd_cen, y=self._coadd_cen),
+                world_origin=galsim.PositionD(x=0, y=0)
+            ),
+            world_origin=self._world_origin,
+            units=galsim.arcsec
+        )
+        self._coadd_jac = self._coadd_wcs.jacobian(
+            world_pos=self._world_origin).getMatrix()
+        self._ra_range, self._dec_range = self._get_patch_ranges()
 
-        # half of the width of center of the patch that has objects
-        # object locations should be in [-pos_width, +pos_width] below
-        self._pos_width = self.coadd_dim * frac * 0.5 * self.scale
-
-        # used later to draw objects
-        self._shear_mat = galsim.Shear(g1=self.g1, g2=self.g2).getMatrix()
+        self.area_sqr_arcmin = (
+            # factor of 60 to arcmin
+            (self._ra_range[1] - self._ra_range[0]) * 60 *
+            # factor of 180 * 60 / pi to go from radians to arcmin
+            180 * 60 / np.pi * (np.sin(self._dec_range[1] / 180.0 * np.pi) -
+                                np.sin(self._dec_range[0] / 180.0 * np.pi)))
+        LOGGER.info('area is %f arcmin**2', self.area_sqr_arcmin)
 
         # reset nobj to the number in a grid if we are using one
         if self.grid_gals:
             self._gal_grid_ind = 0
-            self._nobj = self.ngal * self.ngal
+            self._nobj = self.ngals * self.ngals
         else:
-            self._nobj = int(
-                self.ngals_per_arcmin2 * self.area_sqr_arcmin)
+            self._nobj = int(self.ngals * self.area_sqr_arcmin)
 
         # we only allow the sim class to be used once
         # so that method outputs can be cached safely as needed
@@ -175,6 +215,26 @@ class Sim(object):
         # info about coadd PSF image
         self.psf_dim = 53
         self._psf_cen = (self.psf_dim - 1)/2
+
+    def _get_patch_ranges(self):
+        ra = []
+        dec = []
+        edges = [self.buff, self.coadd_dim - self.buff]
+        for x in edges:
+            for y in edges:
+                sky = self._coadd_wcs.toWorld(galsim.PositionD(x=x, y=y))
+                ra.append(sky.ra.deg)
+                dec.append(sky.dec.deg)
+
+        # make sure ra_range bounds self._world_ra
+        ra_range = np.array([np.min(ra), np.max(ra)])
+        if ra_range[1] < self._world_ra:
+            # max is min and min needs to go up by 360
+            ra_range = np.array([ra_range[1], ra_range[0] + 360])
+        elif ra_range[0] > self._world_ra:
+            # min is max and max needs to go down by 360
+            ra_range = np.array([ra_range[1] - 360, ra_range[0]])
+        return ra_range, np.array([np.min(dec), np.max(dec)])
 
     def gen_sim(self):
         """Generate a simulation.
@@ -209,7 +269,6 @@ class Sim(object):
                         objs=band_objects,
                         psf_function=psf_galsim,
                         uv_offsets=uv_offsets,
-                        uv_cen=self._coadd_uv_cen,
                         wcs=wcs,
                         img_dim=self.se_dim,
                         method='auto',
@@ -298,18 +357,28 @@ class Sim(object):
         """Return an offset from the center of the image in the (u, v) plane
         of the coadd."""
         if self.grid_gals:
+            # half of the width of center of the patch that has objects
+            # object locations should be in [-pos_width, +pos_width] below
+            # we are making a grid in (u,v) as opposed to ra-dec so the spacing
+            # is even
+            frac = 1.0 - self.buff * 2 / self.coadd_dim
+            _pos_width = self.coadd_dim * frac * 0.5 * self.scale
             yind, xind = np.unravel_index(
-                self._gal_grid_ind, (self.ngal, self.ngal))
-            dg = self._pos_width * 2 / self.ngal
+                self._gal_grid_ind, (self.ngals, self.ngals))
+            dg = _pos_width * 2 / self.ngals
             self._gal_grid_ind += 1
             return (
-                yind * dg + dg/2 - self._pos_width,
-                xind * dg + dg/2 - self._pos_width)
+                yind * dg + dg/2 - _pos_width,
+                xind * dg + dg/2 - _pos_width)
         else:
-            return self._rng.uniform(
-                low=-self._pos_width,
-                high=self._pos_width,
-                size=2)
+            ra, dec = randsphere(
+                self._rng, 1, ra_range=self._ra_range, dec_range=self._dec_range)
+            wpos = galsim.CelestialCoord(
+                ra=ra[0] * galsim.degrees, dec=dec[0] * galsim.degrees)
+            ipos = self._coadd_wcs.toImage(wpos)
+            dpos = ipos - self._coadd_origin
+            dudv = np.dot(self._coadd_jac, np.array([dpos.x, dpos.y]))
+            return dudv
 
     def _get_nobj(self):
         # grids have a fixed number of objects, otherwise we use a varying number
@@ -333,17 +402,24 @@ class Sim(object):
         return _gal
 
     def _get_wcs_for_band(self, band):
-        # only a simple pixel scale right now
-        se_cen = (self.se_dim - 1) / 2
-        wcs = galsim.AffineTransform(
-            dudx=self.scale,
-            dudy=0,
-            dvdx=0,
-            dvdy=self.scale,
-            world_origin=self._coadd_uv_cen,
-            origin=galsim.PositionD(x=se_cen, y=se_cen),
-        )
-        return [wcs] * self.epochs_per_band
+        if not hasattr(self, '_band_wcs_objs'):
+            wcs_kws = dict(
+                position_angle_range=self.wcs_kws.get('position_angle_range', (0, 0)),
+                dither_range=self.wcs_kws.get('dither_range', (0, 0)),
+                scale_frac_std=self.wcs_kws.get('scale_frac_std', 0),
+                shear_std=self.wcs_kws.get('shear_std', 0),
+                scale=self.scale,
+                world_origin=self._world_origin,
+                origin=self._se_origin,
+                rng=self._rng)
+
+            self._band_wcs_objs = {}
+            for band in self.bands:
+                self._band_wcs_objs[band] = []
+                for _ in range(self.epochs_per_band):
+                    self._band_wcs_objs[band].append(gen_tanwcs(**wcs_kws))
+
+        return self._band_wcs_objs[band]
 
     def _get_psf_funcs_for_band(self, band):
         psf_funcs_galsim = []
