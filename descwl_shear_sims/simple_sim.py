@@ -177,7 +177,7 @@ class Sim(object):
         # for objects in the sky
         self._coadd_cen = (self.coadd_dim - 1) / 2
         self._coadd_origin = galsim.PositionD(x=self._coadd_cen, y=self._coadd_cen)
-        self._coadd_wcs = galsim.TanWCS(
+        self.coadd_wcs = galsim.TanWCS(
             affine=galsim.AffineTransform(
                 self.scale, 0, 0, self.scale,
                 origin=galsim.PositionD(x=self._coadd_cen, y=self._coadd_cen),
@@ -186,7 +186,7 @@ class Sim(object):
             world_origin=self._world_origin,
             units=galsim.arcsec
         )
-        self._coadd_jac = self._coadd_wcs.jacobian(
+        self._coadd_jac = self.coadd_wcs.jacobian(
             world_pos=self._world_origin).getMatrix()
         self._ra_range, self._dec_range = self._get_patch_ranges()
 
@@ -222,7 +222,7 @@ class Sim(object):
         edges = [self.buff, self.coadd_dim - self.buff]
         for x in edges:
             for y in edges:
-                sky = self._coadd_wcs.toWorld(galsim.PositionD(x=x, y=y))
+                sky = self.coadd_wcs.toWorld(galsim.PositionD(x=x, y=y))
                 ra.append(sky.ra.deg)
                 dec.append(sky.dec.deg)
 
@@ -375,7 +375,7 @@ class Sim(object):
                 self._rng, 1, ra_range=self._ra_range, dec_range=self._dec_range)
             wpos = galsim.CelestialCoord(
                 ra=ra[0] * galsim.degrees, dec=dec[0] * galsim.degrees)
-            ipos = self._coadd_wcs.toImage(wpos)
+            ipos = self.coadd_wcs.toImage(wpos)
             dpos = ipos - self._coadd_origin
             dudv = np.dot(self._coadd_jac, np.array([dpos.x, dpos.y]))
             return dudv
