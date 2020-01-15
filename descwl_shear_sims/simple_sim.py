@@ -506,7 +506,7 @@ class Sim(object):
         _gal = OrderedDict()
         for band in self.bands:
             obj = galsim.Exponential(
-                **self.gal_kws
+                **self._final_gal_kws
             ).withFlux(flux)
             _gal[band] = obj
 
