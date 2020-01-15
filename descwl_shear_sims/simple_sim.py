@@ -3,8 +3,12 @@
 Copied from https://github.com/beckermr/metadetect-coadding-sims under BSD
 and cleaned up a fair bit.
 """
+import os
 import logging
+import copy
+import functools
 
+import fitsio
 import galsim
 import numpy as np
 from collections import OrderedDict
@@ -15,6 +19,16 @@ from .gen_tanwcs import gen_tanwcs
 from .randsphere import randsphere
 
 LOGGER = logging.getLogger(__name__)
+
+GAL_KWS_DEFAULTS = {
+    'exp': {'half_light_radius': 0.5},
+    'wldeblend': {'ngals_factor': 0.4},
+}
+
+
+@functools.lru_cache(maxsize=8)
+def _cached_catalog_read(fname):
+    return fitsio.read(fname)
 
 
 class Sim(object):
@@ -55,6 +69,7 @@ class Sim(object):
         A string indicating what kind of galaxy to simulate. Possible options are
 
             'exp' : simple exponential disks
+            'wldeblend' : use the LSSTDESC WeakLensingDeblending package
 
         Default is 'exp'.
     gal_kws : dict, optional
@@ -62,8 +77,19 @@ class Sim(object):
         galaxy type. Possible entries per galaxy type are
 
             'exp' - any of the keywords to `galsim.Exponential`
+                Default is 'half_light_radius=0.5'.
 
-        Default is 'half_light_radius=0.5'.
+            'wldeblend' - any of the following keywords
+                'catalog' : str
+                    A path to the catalog to draw from. If this keyword is not
+                    given, you need to have the one square degree catsim catalog
+                    in the current working directory or in the directory given by
+                    the environment variable 'CATSIM_DIR'.
+                'ngals_factor' : float
+                    A factor by which to cut down the catsim catalog. The
+                    Default for this is 0.4 in order to better match LSST
+                    depths and number densities.
+
     psf_type : str, optional
         A string indicating the kind of PSF. Possible options are
 
@@ -152,7 +178,12 @@ class Sim(object):
         self.ngals = ngals
         self.grid_gals = grid_gals
         self.gal_type = gal_type
-        self.gal_kws = gal_kws or {'half_light_radius': 0.5}
+
+        self.gal_kws = gal_kws or {}
+        gal_kws_defaults = copy.deepcopy(GAL_KWS_DEFAULTS[self.gal_type])
+        gal_kws_defaults.update(self.gal_kws)
+        self._final_gal_kws = gal_kws_defaults
+
         self.psf_type = psf_type
         self.psf_kws = psf_kws or {'fwhm': 0.8}
         self.wcs_kws = wcs_kws or {}
@@ -198,23 +229,100 @@ class Sim(object):
                                 np.sin(self._dec_range[0] / 180.0 * np.pi)))
         LOGGER.info('area is %f arcmin**2', self.area_sqr_arcmin)
 
+        # info about coadd PSF image
+        self.psf_dim = 53
+        self._psf_cen = (self.psf_dim - 1)/2
+
+        # now we call any extra init for wldeblend
+        # this call will reset some things above
+        self._ngals_factor = 1.0
+        self._extra_init_for_wldeblend()
+
         # reset nobj to the number in a grid if we are using one
         if self.grid_gals:
             self._gal_grid_ind = 0
             self._nobj = self.ngals * self.ngals
         else:
-            self._nobj = int(self.ngals * self.area_sqr_arcmin)
+            self._nobj = int(
+                self.ngals
+                * self.area_sqr_arcmin
+                * self._ngals_factor)
 
         # we only allow the sim class to be used once
         # so that method outputs can be cached safely as needed
         # this attribute gets set to True after it is used
         self.called = False
 
+        LOGGER.debug('simulating bands: %s', self.bands)
         LOGGER.info('simulating %d bands', self.n_bands)
 
-        # info about coadd PSF image
-        self.psf_dim = 53
-        self._psf_cen = (self.psf_dim - 1)/2
+    def _extra_init_for_wldeblend(self):
+        # guard the import here
+        import descwl
+
+        # make sure to find the proper catalog
+        if 'catalog' not in self._final_gal_kws:
+            fname = os.path.join(
+                os.environ.get('CATSIM_DIR', '.'),
+                'OneDegSq.fits')
+        else:
+            fname = self._final_gal_kws['catalog']
+
+        self._wldeblend_cat = _cached_catalog_read(fname)
+        self._wldeblend_cat['pa_disk'] = self.rng.uniform(
+            low=0.0, high=360.0, size=self._wldeblend_cat.size)
+        self._wldeblend_cat['pa_bulge'] = self._wldeblend_cat['pa_disk']
+
+        self._surveys = {}
+        self._builders = {}
+        noises = []
+        for band in self.bands:
+            # make the survey and code to build galaxies from it
+            pars = descwl.survey.Survey.get_defaults(
+                survey_name='LSST',
+                filter_band=band)
+
+            pars['survey_name'] = 'LSST'
+            pars['filter_band'] = band
+            pars['pixel_scale'] = self.scale
+
+            # note in the way we call the descwl package, the image width
+            # and height is not actually used
+            pars['image_width'] = self.coadd_dim
+            pars['image_height'] = self.coadd_dim
+
+            # some versions take in the PSF and will complain if it is not
+            # given
+            try:
+                _svy = descwl.survey.Survey(**pars)
+            except Exception:
+                pars['psf_model'] = None
+                _svy = descwl.survey.Survey(**pars)
+
+            self._surveys[band] = _svy
+            self._builders[band] = descwl.model.GalaxyBuilder(
+                survey=self._surveys[band],
+                no_disk=False,
+                no_bulge=False,
+                no_agn=False,
+                verbose_model=False)
+
+            noises.append(np.sqrt(self._surveys[band].mean_sky_level))
+
+        self.noise_per_band = np.array(noises)
+        self.noise_per_epoch = self.noise_per_band * np.sqrt(self.epochs_per_band)
+
+        # when we sample from the catalog, we need to pull the right number
+        # of objects. Since the default catalog is one square degree
+        # and we fill a fraction of the image, we need to set the
+        # base source density `ngal`. This is in units of number per
+        # square arcminute.
+        self.ngals = self._wldeblend_cat.size / (60 * 60)
+        LOGGER.info('catalog density: %f per sqr arcmin', self.ngal)
+
+        # we use a factor to make sure the depth matches that in
+        # the real data
+        self._ngals_factor = self._final_gal_kws['ngals_factor']
 
     def _get_patch_ranges(self):
         ra = []
@@ -314,7 +422,7 @@ class Sim(object):
 
         return (
             self._noise_rng.normal(size=(self.se_dim, self.se_dim)) *
-            self.noise_per_band[band_ind]
+            self.noise_per_epoch[band_ind]
         )
 
     def _generate_all_objects(self):
@@ -345,6 +453,8 @@ class Sim(object):
             # get the galaxy
             if self.gal_type == 'exp':
                 gals = self._get_gal_exp()
+            elif self.gal_type == 'wldeblend':
+                gals = self._get_gal_wldeblend()
             else:
                 raise ValueError('gal_type "%s" not valid!' % self.gal_type)
 
@@ -398,6 +508,23 @@ class Sim(object):
                 **self.gal_kws
             ).withFlux(flux)
             _gal[band] = obj
+
+        return _gal
+
+    def _get_gal_wldeblend(self):
+        """Return an OrderedDict keyed on band with the galsim object for
+        a given exp gal."""
+
+        _gal = OrderedDict()
+
+        rind = self._rng.choice(self._wldeblend_cat.size)
+        angle = self._rng.uniform() * 360
+
+        for band in self.bands:
+            _gal[band] = self._builders[band].from_catalog(
+                self._wldeblend_cat[rind], 0, 0,
+                self._surveys[band].filter_band).model.rotate(
+                    angle * galsim.degrees)
 
         return _gal
 
