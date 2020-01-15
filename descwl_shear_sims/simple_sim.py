@@ -254,8 +254,7 @@ class Sim(object):
         # this attribute gets set to True after it is used
         self.called = False
 
-        LOGGER.debug('simulating bands: %s', self.bands)
-        LOGGER.info('simulating %d bands', self.n_bands)
+        LOGGER.info('simulating bands: %s', self.bands)
 
     def _extra_init_for_wldeblend(self):
         # guard the import here
