@@ -22,7 +22,7 @@ LOGGER = logging.getLogger(__name__)
 
 GAL_KWS_DEFAULTS = {
     'exp': {'half_light_radius': 0.5},
-    'wldeblend': {'ngals_factor': 0.4},
+    'wldeblend': {'ngals_factor': 1.0},
 }
 
 
@@ -87,7 +87,7 @@ class Sim(object):
                     the environment variable 'CATSIM_DIR'.
                 'ngals_factor' : float
                     A factor by which to cut down the catsim catalog. The
-                    Default for this is 0.4 in order to better match LSST
+                    Default for this is 1.0 in order to better match LSST
                     depths and number densities.
 
     psf_type : str, optional
@@ -269,7 +269,7 @@ class Sim(object):
             fname = self._final_gal_kws['catalog']
 
         self._wldeblend_cat = _cached_catalog_read(fname)
-        self._wldeblend_cat['pa_disk'] = self.rng.uniform(
+        self._wldeblend_cat['pa_disk'] = self._rng.uniform(
             low=0.0, high=360.0, size=self._wldeblend_cat.size)
         self._wldeblend_cat['pa_bulge'] = self._wldeblend_cat['pa_disk']
 
@@ -318,7 +318,7 @@ class Sim(object):
         # base source density `ngal`. This is in units of number per
         # square arcminute.
         self.ngals = self._wldeblend_cat.size / (60 * 60)
-        LOGGER.info('catalog density: %f per sqr arcmin', self.ngal)
+        LOGGER.info('catalog density: %f per sqr arcmin', self.ngals)
 
         # we use a factor to make sure the depth matches that in
         # the real data
