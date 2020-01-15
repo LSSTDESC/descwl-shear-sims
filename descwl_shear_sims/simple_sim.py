@@ -393,7 +393,10 @@ class Sim(object):
                 noise_image = se_image.copy()
                 noise_image.array[:, :] = noise_example
 
-                se_weight = se_image.copy() * 0 + 1.0 / self.noise_per_epoch[band_ind]**2
+                se_weight = (
+                    se_image.copy() * 0
+                    + 1.0 / self.noise_per_epoch[band_ind]**2
+                )
 
                 band_data[band].append(
                     SEObs(
