@@ -24,7 +24,9 @@ install:
       flake8 \
       pytest \
       numpy \
-      galsim
+      galsim \
+      lsstdesc.weaklensingdeblending \
+      fitsio
 
     source activate test-env
 
