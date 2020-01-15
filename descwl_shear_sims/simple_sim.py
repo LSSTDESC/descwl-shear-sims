@@ -236,7 +236,8 @@ class Sim(object):
         # now we call any extra init for wldeblend
         # this call will reset some things above
         self._ngals_factor = 1.0
-        self._extra_init_for_wldeblend()
+        if self.gal_type == 'wldeblend':
+            self._extra_init_for_wldeblend()
 
         # reset nobj to the number in a grid if we are using one
         if self.grid_gals:
