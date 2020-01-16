@@ -484,7 +484,7 @@ class Sim(object):
                 'mean_cosmic_rays': 1,
             }
             defaults.update(self.cosmic_rays_kws)
-            defaults['mean_cosmic_rays'] = int(
+            defaults['mean_cosmic_rays'] = (
                 defaults['mean_cosmic_rays']
                 / area_factor
             )
@@ -501,7 +501,7 @@ class Sim(object):
                 'mean_bad_cols': 1,
             }
             defaults.update(self.bad_columns_kws)
-            defaults['mean_bad_cols'] = int(
+            defaults['mean_bad_cols'] = (
                 defaults['mean_bad_cols']
                 / np.sqrt(area_factor)
             )
