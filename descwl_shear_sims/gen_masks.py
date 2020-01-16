@@ -6,8 +6,9 @@ import numpy as np
 
 
 def generate_cosmic_rays(
-        shape, mean_cosmic_rays=1,
-        min_length=10, max_length=30, rng=None):
+        *, shape, mean_cosmic_rays=1, min_length=10, max_length=30,
+        rng=None,
+):
     """Generate a binary mask w/ cosmic rays.
 
     This routine generates cosmic rays by choosing a random
@@ -75,14 +76,15 @@ def generate_cosmic_rays(
 
 
 def generate_bad_columns(
-        shape, mean_bad_cols=1,
+        *, shape, mean_bad_cols=1,
         widths=(1, 2, 5, 10), p=(0.8, 0.1, 0.075, 0.025),
         min_length_frac=(1, 1, 0.25, 0.25),
         max_length_frac=(1, 1, 0.75, 0.75),
         gap_prob=(0.30, 0.30, 0, 0),
         min_gap_frac=(0.1, 0.1, 0, 0),
         max_gap_frac=(0.3, 0.3, 0, 0),
-        rng=None):
+        rng=None,
+):
     """Generate a binary mask w/ bad columns.
 
     Parameters

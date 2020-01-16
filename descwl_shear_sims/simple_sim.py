@@ -17,6 +17,7 @@ from .se_obs import SEObs
 from .render_sim import render_objs_with_psf_shear
 from .gen_tanwcs import gen_tanwcs
 from .randsphere import randsphere
+from .gen_masks import generate_cosmic_rays, generate_bad_columns
 
 LOGGER = logging.getLogger(__name__)
 
@@ -24,6 +25,10 @@ GAL_KWS_DEFAULTS = {
     'exp': {'half_light_radius': 0.5},
     'wldeblend': {'ngals_factor': 1.0},
 }
+
+# default mask bits
+COSMIC_RAY = np.int64(2**0)
+BAD_COLUMN = np.int64(2**1)
 
 
 @functools.lru_cache(maxsize=8)
@@ -123,6 +128,50 @@ class Sim(object):
         The default values will generate a WCS that is at `(ra, dec) = (180, 0)`
         with `position_angle_range=(0,0)`, `scale_frac_std=0`, `dither_range=(0,0)`,
         and `shear_std=0`.
+    cosmic_rays : bool, optional
+        If `True` then add cosmic rays, otherwise do not. Default is `False`.
+    cosmic_rays_kws : dict, optional
+        A dictionary of options for generating cosmic rays
+
+            mean_cosmic_rays : int, optional
+                The mean number of cosmic rays.
+            min_length : int, optional
+                The minimum length of the track.
+            max_length : int, optional
+                The maximum length of the track.
+
+        See descwl_shear_sims.gen_masks.generate_cosmic_rays for the defaults.
+        The imput value for `mean_cosmic_rays` is scaled by the area of
+        the SE image relative to the final coadd area without buffers.
+    bad_columns : bool, optional
+        If `True` then add bad columns, otherwise do not. Default is `False`.
+    bad_columns_kws : dict, optional
+        A dictionary of options for generating bad columns
+
+            mean_bad_cols : float, optional
+                The mean of the Poisson distribution for the total number of
+                bad columns to generate.
+            widths : n-tuple of ints, optional
+                The possible widths of the bad columns.
+            p : n-tuple of floats, optional
+                The frequency of each of the bad column widths.
+            min_length_frac : n-tuple of floats, optional
+                The minimum fraction of the image the bad column spans. There should be
+                one entry per bad column width in `widths`.
+            max_length_frac : n-tuple of floats, optional
+                The maximum fraction of the image the bad column spans. There should be
+                one entry per bad column width in `widths`.
+            gap_prob : n-tuple of floats, optional
+                The probability that the bad column has a gap in it. There should be
+                one entry per bad column width in `widths`.
+            min_gap_frac : n-tuple of floats, optional
+                The minimum fraction of the image that the gap spans. There should be
+                one entry per bad column width in `widths`.
+            max_gap_frac : n-tuple of floats, optional
+                The maximum fraction of the image that the gap spans. There should be
+                one entry per bad column width in `widths`.
+
+        See descwl_shear_sims.gen_masks.generate_bad_columns for the defaults.
 
     Methods
     -------
@@ -130,25 +179,29 @@ class Sim(object):
         Generate a simulation.
     """
     def __init__(
-            self, *,
-            rng,
-            epochs_per_band=10,
-            noise_per_band=180,
-            bands=('r', 'i', 'z'),
-            g1=0.02,
-            g2=0.0,
-            shear_scene=True,
-            scale=0.2,
-            coadd_dim=350,
-            buff=50,
-            ngals=80,
-            grid_gals=False,
-            gal_type='exp',
-            gal_kws=None,
-            psf_type='gauss',
-            psf_kws=None,
-            wcs_kws=None):
-
+        self, *,
+        rng,
+        epochs_per_band=10,
+        noise_per_band=180,
+        bands=('r', 'i', 'z'),
+        g1=0.02,
+        g2=0.0,
+        shear_scene=True,
+        scale=0.2,
+        coadd_dim=350,
+        buff=50,
+        ngals=80,
+        grid_gals=False,
+        gal_type='exp',
+        gal_kws=None,
+        psf_type='gauss',
+        psf_kws=None,
+        wcs_kws=None,
+        cosmic_rays=False,
+        cosmic_rays_kws=None,
+        bad_columns=False,
+        bad_columns_kws=None,
+    ):
         self._rng = (
             rng
             if isinstance(rng, np.random.RandomState)
@@ -187,6 +240,11 @@ class Sim(object):
         self.psf_type = psf_type
         self.psf_kws = psf_kws or {'fwhm': 0.8}
         self.wcs_kws = wcs_kws or {}
+
+        self.cosmic_rays = cosmic_rays
+        self.cosmic_rays_kws = cosmic_rays_kws or {}
+        self.bad_columns = bad_columns
+        self.bad_columns_kws = bad_columns_kws or {}
 
         # the SE image could be rotated, so we make it big enough to cover the
         # whole coadd region plus we make sure it is odd
@@ -386,6 +444,9 @@ class Sim(object):
 
                 se_image += self._generate_noise_image(band_ind)
 
+                # put this after to make sure bad cols are totally dark
+                bmask, se_image = self._generate_mask_plane(se_image)
+
                 # make galsim image with same wcs as se_image but
                 # with pure random noise
                 noise_example = self._generate_noise_image(band_ind)
@@ -404,10 +465,62 @@ class Sim(object):
                         weight=se_weight,
                         wcs=wcs,
                         psf_function=psf_func,
+                        bmask=bmask,
                     )
                 )
 
         return band_data
+
+    def _generate_mask_plane(self, se_image):
+        shape = se_image.array.shape
+        bmask = np.zeros(se_image.array.shape, dtype=np.int64)
+
+        area_factor = (
+            (self.coadd_dim - 2 * self.buff)**2
+            / self.se_dim**2)
+
+        if self.cosmic_rays:
+            defaults = {
+                'mean_cosmic_rays': 1,
+            }
+            defaults.update(self.cosmic_rays_kws)
+            defaults['mean_cosmic_rays'] = int(
+                defaults['mean_cosmic_rays']
+                / area_factor
+            )
+            msk = generate_cosmic_rays(
+                shape=shape,
+                rng=self._rng,
+                **defaults,
+            )
+            bmask[msk] |= COSMIC_RAY
+            se_image.array[msk] = 1e18
+
+        if self.bad_columns:
+            defaults = {
+                'mean_bad_cols': 1,
+            }
+            defaults.update(self.bad_columns_kws)
+            defaults['mean_bad_cols'] = int(
+                defaults['mean_bad_cols']
+                / np.sqrt(area_factor)
+            )
+            msk = generate_bad_columns(
+                shape=shape,
+                rng=self._rng,
+                **defaults,
+            )
+            bmask[msk] |= BAD_COLUMN
+            se_image.array[msk] = 0.0
+
+        return (
+            galsim.Image(
+                bmask,
+                bounds=se_image.bounds,
+                wcs=se_image.wcs,
+                dtype=np.int32),
+            se_image,
+        )
 
     def _generate_noise_image(self, band_ind):
         """
