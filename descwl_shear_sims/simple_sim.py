@@ -51,6 +51,9 @@ def _check_bits_against_stack():
             "the DM stack could not be imported to check the simulation "
             "bit mask flags")
 
+# do this here
+_check_bits_against_stack()
+
 
 @functools.lru_cache(maxsize=8)
 def _cached_catalog_read(fname):
@@ -223,9 +226,6 @@ class Sim(object):
         bad_columns=False,
         bad_columns_kws=None,
     ):
-        # do this right at the top
-        _check_bits_against_stack()
-
         self._rng = (
             rng
             if isinstance(rng, np.random.RandomState)
