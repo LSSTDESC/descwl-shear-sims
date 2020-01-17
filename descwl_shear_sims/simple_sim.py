@@ -51,6 +51,7 @@ def _check_bits_against_stack():
             "the DM stack could not be imported to check the simulation "
             "bit mask flags")
 
+
 # do this here
 _check_bits_against_stack()
 
