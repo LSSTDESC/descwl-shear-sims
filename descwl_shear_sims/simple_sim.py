@@ -26,9 +26,9 @@ GAL_KWS_DEFAULTS = {
     'wldeblend': {'ngals_factor': 1.0},
 }
 
-# default mask bits
-COSMIC_RAY = np.int64(2**0)
-BAD_COLUMN = np.int64(2**1)
+# default mask bits from the stack
+BAD_COLUMN = np.int64(2**0)
+COSMIC_RAY = np.int64(2**3)
 
 
 @functools.lru_cache(maxsize=8)
