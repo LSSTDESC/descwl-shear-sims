@@ -7,6 +7,7 @@ import os
 import logging
 import copy
 import functools
+import warnings
 
 import fitsio
 import galsim
@@ -29,6 +30,26 @@ GAL_KWS_DEFAULTS = {
 # default mask bits from the stack
 BAD_COLUMN = np.int64(2**0)
 COSMIC_RAY = np.int64(2**3)
+
+
+# double check they match the stack
+def _check_bits_against_stack():
+    try:
+        import lsst.afw.image as afw_image
+
+        mask = afw_image.Mask()
+        cr_val = 2**mask.getMaskPlane('CR')
+        mask = afw_image.Mask()
+        bad_val = 2**mask.getMaskPlane('BAD')
+
+        if cr_val != COSMIC_RAY or bad_val != BAD_COLUMN:
+            warnings.warn(
+                "simulation bit mask flags do not match those of the DM stack")
+
+    except ImportError:
+        warnings.warn(
+            "the DM stack could not be imported to check the simulation "
+            "bit mask flags")
 
 
 @functools.lru_cache(maxsize=8)
@@ -202,6 +223,9 @@ class Sim(object):
         bad_columns=False,
         bad_columns_kws=None,
     ):
+        # do this right at the top
+        _check_bits_against_stack()
+
         self._rng = (
             rng
             if isinstance(rng, np.random.RandomState)
