@@ -22,11 +22,14 @@ class SEObs(object):
         PSF at a given image pixel location as a `galsim.Image`. Its signature
         should be
 
-            def psf_function(*, x, y):
+            def psf_function(*, x, y, center_psf):
                 pass
 
         where `(x, y)` are the column and row image positions at which to
-        draw the PSF.
+        draw the PSF. The `center_psf` keyword, if `True`, should draw the PSF
+        on a pixel center at the center of an odd image. Otherwise the PSF should
+        have the same subpixel offset as implied by the position (i.e.,
+        `x-int(x+0.5)`, `y-int(y+0.5)`).
     noise : galsim.Image, optional
         A noise field associated with the image.
     bmask : galsim.Image, optional
@@ -47,7 +50,7 @@ class SEObs(object):
 
     Methods
     -------
-    get_psf(x, y)
+    get_psf(x, y, center_psf=False)
         Draw the PSF at the given image location.
     """
     def __init__(
@@ -134,7 +137,7 @@ class SEObs(object):
             raise ValueError("The \"or\" mask must be a `galsim.Image` or subclass!")
         self._ormask = ormask
 
-    def get_psf(self, x, y):
+    def get_psf(self, x, y, center_psf=False):
         """Draw the PSF at the given image location.
 
         Parameters
@@ -143,10 +146,15 @@ class SEObs(object):
             The column/x position at which to draw the PSF.
         y : float
             The row/y position at which to draw the PSF.
+        center_psf : bool, optional
+            If True, the PSF model at (x, y) will be drawn with its center
+            on the central pixel of the image. Otherwise, the PSF is drawn with
+            the center having the same subpixel offset as implied by the input
+            position (i.e., `x-int(x+0.5)` and `y-int(y+0.5)`).
 
         Returns
         -------
         psf : galsim.Image
             An image of the PSF (including the image pixel).
         """
-        return self._psf_function(x=x, y=y)
+        return self._psf_function(x=x, y=y, center_psf=center_psf)

@@ -10,7 +10,7 @@ DIMS = (11, 13)
 @pytest.fixture
 def se_data():
 
-    def psf_function(*, x, y):
+    def psf_function(*, x, y, center_psf=False):
         return galsim.ImageD(np.ones(DIMS) * 6)
 
     data = {
@@ -61,11 +61,13 @@ def test_se_obs_set(attr, val, se_data):
     assert attr == 'wcs' or obs.wcs == galsim.PixelScale(0.2)
 
 
-def test_se_obs_psf_call():
+@pytest.mark.parametrize('center', [True, False])
+def test_se_obs_psf_call(center):
 
-    def psf_function(*, x, y):
+    def psf_function(*, x, y, center_psf):
         assert x == 10
         assert y == 5
+        assert center_psf == center
         return 11
 
     obs = SEObs(
@@ -75,7 +77,7 @@ def test_se_obs_psf_call():
         psf_function=psf_function,
     )
 
-    assert obs.get_psf(10, 5) == 11
+    assert obs.get_psf(10, 5, center_psf=center) == 11
 
 
 @pytest.mark.parametrize('attr', ['image', 'weight', 'noise', 'bmask', 'ormask'])
