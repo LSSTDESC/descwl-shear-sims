@@ -20,15 +20,19 @@ install:
     conda create -q -n test-env \
       python=3.7 \
       pip \
-      setuptools \
+      setuptools
+
+    source activate test-env
+
+    conda install -q -c stackvana stackvana
+
+    conda install -q \
       flake8 \
       pytest \
       numpy \
       galsim \
       lsstdesc.weaklensingdeblending \
       fitsio
-
-    source activate test-env
 
     pip install --no-deps -e .
 
