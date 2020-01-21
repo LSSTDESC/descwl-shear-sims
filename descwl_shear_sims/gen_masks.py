@@ -4,6 +4,32 @@ https://github.com/beckermr/metadetect-coadding-sims/blob/master/coadd_mdetsims/
 """
 import numpy as np
 
+from .lsst_bits import EDGE
+
+
+def generate_basic_mask(*, shape, edge_width):
+    """
+    generate a basic mask with edges marked
+
+    Parameters
+    ----------
+    shape: tuple
+        2-element tuple for shape of bitmask
+    edge_width: int
+        Width of border to marked EDGE
+    """
+
+    ny, nx = shape
+    bmask = np.zeros(shape, dtype=np.int64)
+
+    ew = edge_width
+    bmask[0:ew, :] = EDGE
+    bmask[ny-ew:, :] = EDGE
+    bmask[:, 0:ew] = EDGE
+    bmask[:, nx-ew:] = EDGE
+
+    return bmask
+
 
 def generate_cosmic_rays(
         *, shape, mean_cosmic_rays=1, min_length=10, max_length=30,

@@ -18,7 +18,14 @@ from .se_obs import SEObs
 from .render_sim import render_objs_with_psf_shear
 from .gen_tanwcs import gen_tanwcs
 from .randsphere import randsphere
-from .gen_masks import generate_cosmic_rays, generate_bad_columns
+from .gen_masks import (
+    generate_basic_mask,
+    generate_cosmic_rays,
+    generate_bad_columns,
+)
+
+# default mask bits from the stack
+from .lsst_bits import BAD_COLUMN, COSMIC_RAY, EDGE
 
 LOGGER = logging.getLogger(__name__)
 
@@ -26,10 +33,6 @@ GAL_KWS_DEFAULTS = {
     'exp': {'half_light_radius': 0.5},
     'wldeblend': {'ngals_factor': 1.0},
 }
-
-# default mask bits from the stack
-BAD_COLUMN = np.int64(2**0)
-COSMIC_RAY = np.int64(2**3)
 
 
 # double check they match the stack
@@ -39,10 +42,12 @@ def _check_bits_against_stack():
 
         mask = afw_image.Mask()
         cr_val = 2**mask.getMaskPlane('CR')
-        mask = afw_image.Mask()
         bad_val = 2**mask.getMaskPlane('BAD')
+        edge_val = 2**mask.getMaskPlane('EDGE')
 
-        if cr_val != COSMIC_RAY or bad_val != BAD_COLUMN:
+        if (cr_val != COSMIC_RAY or
+                bad_val != BAD_COLUMN or
+                edge_val != EDGE):
             warnings.warn(
                 "simulation bit mask flags do not match those of the DM stack")
 
@@ -90,6 +95,8 @@ class Sim(object):
     buff : int, optional
         The width of the buffer region in the coadd image where no objects are
         drawn. Default is 50.
+    edge_width:  int
+        Width of boundary to be marked as EDGE in the bitmask
     ngals : float, optional
         The number of objects to simulate per arcminute^2. Default is 80.
     grid_gals : bool, optional
@@ -215,6 +222,7 @@ class Sim(object):
         scale=0.2,
         coadd_dim=350,
         buff=50,
+        edge_width=15,
         ngals=80,
         grid_gals=False,
         gal_type='exp',
@@ -252,6 +260,8 @@ class Sim(object):
         self.scale = scale
         self.coadd_dim = coadd_dim
         self.buff = buff
+        self.edge_width = edge_width
+        assert edge_width >= 2, 'edge width must be >= 2'
 
         self.ngals = ngals
         self.grid_gals = grid_gals
@@ -497,8 +507,9 @@ class Sim(object):
         return band_data
 
     def _generate_mask_plane(self, se_image):
+
         shape = se_image.array.shape
-        bmask = np.zeros(se_image.array.shape, dtype=np.int64)
+        bmask = generate_basic_mask(shape=shape, edge_width=self.edge_width)
 
         area_factor = (
             (self.coadd_dim - 2 * self.buff)**2
