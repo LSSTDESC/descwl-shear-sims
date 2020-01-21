@@ -69,7 +69,7 @@ class Sim(object):
         The width of the buffer region in the coadd image where no objects are
         drawn. Default is 50.
     edge_width:  int
-        Width of boundary to be marked as EDGE in the bitmask
+        Width of boundary to be marked as EDGE in the bitmask, default 5
     ngals : float, optional
         The number of objects to simulate per arcminute^2. Default is 80.
     grid_gals : bool, optional
