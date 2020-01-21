@@ -222,7 +222,7 @@ class Sim(object):
         scale=0.2,
         coadd_dim=350,
         buff=50,
-        edge_width=15,
+        edge_width=5,
         ngals=80,
         grid_gals=False,
         gal_type='exp',
