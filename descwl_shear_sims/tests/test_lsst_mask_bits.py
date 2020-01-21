@@ -6,7 +6,7 @@ try:
 except ImportError:
     HAVE_STACK = False
 
-from ..simple_sim import (
+from ..lsst_bits import (
     COSMIC_RAY,
     BAD_COLUMN,
     EDGE,
