@@ -283,7 +283,9 @@ class Sim(object):
 
         # the SE image could be rotated, so we make it big enough to cover the
         # whole coadd region plus we make sure it is odd
-        self.se_dim = int(np.ceil(self.coadd_dim * np.sqrt(2))) + 10
+        self.se_dim = (
+            int(np.ceil(self.coadd_dim * np.sqrt(2))) + 10 + 2*edge_width
+        )
         if self.se_dim % 2 == 0:
             self.se_dim = self.se_dim + 1
         self._se_cen = (self.se_dim - 1) / 2
