@@ -7,7 +7,6 @@ import os
 import logging
 import copy
 import functools
-import warnings
 
 import fitsio
 import galsim
@@ -25,7 +24,7 @@ from .gen_masks import (
 )
 
 # default mask bits from the stack
-from .lsst_bits import BAD_COLUMN, COSMIC_RAY, EDGE
+from .lsst_bits import BAD_COLUMN, COSMIC_RAY
 
 LOGGER = logging.getLogger(__name__)
 
@@ -33,32 +32,6 @@ GAL_KWS_DEFAULTS = {
     'exp': {'half_light_radius': 0.5},
     'wldeblend': {'ngals_factor': 1.0},
 }
-
-
-# double check they match the stack
-def _check_bits_against_stack():
-    try:
-        import lsst.afw.image as afw_image
-
-        mask = afw_image.Mask()
-        cr_val = 2**mask.getMaskPlane('CR')
-        bad_val = 2**mask.getMaskPlane('BAD')
-        edge_val = 2**mask.getMaskPlane('EDGE')
-
-        if (cr_val != COSMIC_RAY or
-                bad_val != BAD_COLUMN or
-                edge_val != EDGE):
-            warnings.warn(
-                "simulation bit mask flags do not match those of the DM stack")
-
-    except ImportError:
-        warnings.warn(
-            "the DM stack could not be imported to check the simulation "
-            "bit mask flags")
-
-
-# do this here
-_check_bits_against_stack()
 
 
 @functools.lru_cache(maxsize=8)
