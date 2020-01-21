@@ -14,10 +14,10 @@ from ..lsst_bits import EDGE
 
 def test_generate_basic_mask():
     n = 100
-    edge_width = 15
+    edge_width = 5
     bmask = generate_basic_mask(shape=(n, n), edge_width=edge_width)
 
-    expected_count = 15*n*4 - 15*15*4
+    expected_count = edge_width*n*4 - edge_width**2*4
     w = np.where(bmask == EDGE)
     assert w[0].size == expected_count
 
