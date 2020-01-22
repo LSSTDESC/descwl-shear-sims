@@ -34,6 +34,7 @@ def generate_basic_mask(*, shape, edge_width):
 def generate_cosmic_rays(
         *, shape, mean_cosmic_rays=1, min_length=10, max_length=30,
         rng=None,
+        thick=False,
 ):
     """Generate a binary mask w/ cosmic rays.
 
@@ -63,6 +64,8 @@ def generate_cosmic_rays(
     rng : np.random.RandomState or None, optional
         An RNG to use. If none is provided, a new `np.random.RandomState`
         state instance will be created.
+    thick: bool
+        If thick, make the cosmics thicker.  Default False.
 
     Returns
     -------
@@ -87,11 +90,13 @@ def generate_cosmic_rays(
             _x = int(x + 0.5)
             _y = int(y + 0.5)
             if _y >= 0 and _y < msk.shape[0] and _x >= 0 and _x < msk.shape[1]:
-                if _x_prev is not None and _y_prev is not None:
-                    if _x_prev != _x:
-                        msk[_y, _x_prev] = 1
-                    if _y_prev != _y:
-                        msk[_y_prev, _x] = 1
+                if thick:
+                    if _x_prev is not None and _y_prev is not None:
+                        if _x_prev != _x:
+                            msk[_y, _x_prev] = 1
+                        if _y_prev != _y:
+                            msk[_y_prev, _x] = 1
+
                 msk[_y, _x] = 1
                 _x_prev = _x
                 _y_prev = _y
