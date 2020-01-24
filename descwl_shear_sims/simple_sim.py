@@ -187,7 +187,7 @@ class Sim(object):
         self, *,
         rng,
         epochs_per_band=10,
-        noise_per_band=180,
+        noise_per_band=100,
         bands=('r', 'i', 'z'),
         g1=0.02,
         g2=0.0,
