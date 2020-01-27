@@ -10,6 +10,7 @@ def test_gen_tanwcs_smoke():
         ra=20 * galsim.degrees,
         dec=-10 * galsim.degrees)
     origin = galsim.PositionD(x=10, y=11)
+    psf_origin = galsim.PositionD(x=10, y=11)
     gen_tanwcs(
         rng=np.random.RandomState(seed=seed),
         position_angle_range=(0, 360),
@@ -18,7 +19,9 @@ def test_gen_tanwcs_smoke():
         scale_frac_std=0.1,
         shear_std=0.1,
         world_origin=world_origin,
-        origin=origin)
+        origin=origin,
+        psf_origin=psf_origin,
+    )
 
 
 def test_gen_tanwcs_dither():
@@ -27,7 +30,8 @@ def test_gen_tanwcs_dither():
         ra=20 * galsim.degrees,
         dec=-10 * galsim.degrees)
     origin = galsim.PositionD(x=10, y=11)
-    wcs = gen_tanwcs(
+    psf_origin = galsim.PositionD(x=10, y=11)
+    wcs, psf_wcs = gen_tanwcs(
         rng=np.random.RandomState(seed=seed),
         position_angle_range=(0, 360),
         dither_range=(-0.5, 0.5),
@@ -35,7 +39,9 @@ def test_gen_tanwcs_dither():
         scale_frac_std=0.1,
         shear_std=0.1,
         world_origin=world_origin,
-        origin=origin)
+        origin=origin,
+        psf_origin=psf_origin,
+    )
 
     rng = np.random.RandomState(seed=seed)
     # we have to call the RNG in the right order
@@ -52,6 +58,9 @@ def test_gen_tanwcs_dither():
     assert np.allclose(wcs.crpix[0], origin.x + dxdy[0])
     assert np.allclose(wcs.crpix[1], origin.y + dxdy[1])
 
+    assert np.allclose(psf_wcs.crpix[0], origin.x + dxdy[0])
+    assert np.allclose(psf_wcs.crpix[1], origin.y + dxdy[1])
+
 
 def test_gen_tanwcs_jacobian():
     seed = 42
@@ -59,7 +68,8 @@ def test_gen_tanwcs_jacobian():
         ra=20 * galsim.degrees,
         dec=-10 * galsim.degrees)
     origin = galsim.PositionD(x=10, y=11)
-    wcs = gen_tanwcs(
+    psf_origin = galsim.PositionD(x=10, y=11)
+    wcs, psf_wcs = gen_tanwcs(
         rng=np.random.RandomState(seed=seed),
         position_angle_range=(0, 360),
         dither_range=(-0.5, 0.5),
@@ -67,7 +77,9 @@ def test_gen_tanwcs_jacobian():
         scale_frac_std=0.1,
         shear_std=0.1,
         world_origin=world_origin,
-        origin=origin)
+        origin=origin,
+        psf_origin=psf_origin,
+    )
 
     rng = np.random.RandomState(seed=seed)
     g1 = rng.normal() * 0.1
@@ -77,18 +89,20 @@ def test_gen_tanwcs_jacobian():
 
     # at the center of the tangent plane, the local WCS should match the
     # input affine WCS
-    jac_wcs = wcs.jacobian(world_pos=wcs.center)
-    _scale, _shear, _theta, _ = jac_wcs.getDecomposition()
 
-    assert np.allclose(_shear.g1, g1)
-    assert np.allclose(_shear.g2, g2)
-    assert np.allclose(_scale, scale)
-    assert np.allclose(_theta / galsim.degrees, theta)
+    for twcs in [wcs, psf_wcs]:
+        jac_wcs = twcs.jacobian(world_pos=twcs.center)
+        _scale, _shear, _theta, _ = jac_wcs.getDecomposition()
+
+        assert np.allclose(_shear.g1, g1)
+        assert np.allclose(_shear.g2, g2)
+        assert np.allclose(_scale, scale)
+        assert np.allclose(_theta / galsim.degrees, theta)
 
 
 def test_gen_tanwcs_seed():
     seed = 42
-    wcs1 = gen_tanwcs(
+    wcs1, psf_wcs1 = gen_tanwcs(
         rng=np.random.RandomState(seed=seed),
         position_angle_range=(0, 360),
         dither_range=(-0.5, 0.5),
@@ -98,9 +112,11 @@ def test_gen_tanwcs_seed():
         world_origin=galsim.CelestialCoord(
             ra=20 * galsim.degrees,
             dec=-10 * galsim.degrees),
-        origin=galsim.PositionD(x=10, y=11))
+        origin=galsim.PositionD(x=10, y=11),
+        psf_origin = galsim.PositionD(x=10, y=11),
+    )
 
-    wcs2 = gen_tanwcs(
+    wcs2, psf_wcs2 = gen_tanwcs(
         rng=np.random.RandomState(seed=seed),
         position_angle_range=(0, 360),
         dither_range=(-0.5, 0.5),
@@ -110,7 +126,12 @@ def test_gen_tanwcs_seed():
         world_origin=galsim.CelestialCoord(
             ra=20 * galsim.degrees,
             dec=-10 * galsim.degrees),
-        origin=galsim.PositionD(x=10, y=11))
+        origin=galsim.PositionD(x=10, y=11),
+        psf_origin = galsim.PositionD(x=10, y=11),
+    )
 
     assert wcs1 == wcs2
     assert str(wcs1) == str(wcs2)
+
+    assert psf_wcs1 == psf_wcs2
+    assert str(psf_wcs1) == str(psf_wcs2)

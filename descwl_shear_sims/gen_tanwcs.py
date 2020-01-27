@@ -8,7 +8,7 @@ LOGGER = logging.getLogger(__name__)
 def gen_tanwcs(
         *, rng, position_angle_range, dither_range,
         scale, scale_frac_std, shear_std,
-        world_origin, origin):
+        world_origin, origin, psf_origin):
     """Generate a random TanWCS.
 
     Parameters
@@ -33,6 +33,10 @@ def gen_tanwcs(
         The location of the world_origin in the image coordinate system.
         Note that the image origin is dithered if requested to keep the
         world origin fixed. Units are pixels.
+    psf_origin : galsim.PositionD
+        The location of the world_origin in the psf image coordinate system.
+        Note that the image origin is dithered if requested to keep the world
+        origin fixed. Units are pixels.
 
     Returns
     -------
@@ -62,7 +66,7 @@ def gen_tanwcs(
     jac_matrix = scale * np.dot(
         galsim.Shear(g1=g1, g2=g2).getMatrix(),
         np.array([[costheta, -sintheta], [sintheta, costheta]])
-        )
+    )
     dudx = jac_matrix[0, 0]
     dudy = jac_matrix[0, 1]
     dvdx = jac_matrix[1, 0]
@@ -86,6 +90,7 @@ def gen_tanwcs(
     dxdy = np.dot(np.linalg.inv(jac), np.array([dither_u, dither_v]))
 
     new_origin = origin + galsim.PositionD(x=dxdy[0], y=dxdy[1])
+    new_psf_origin = psf_origin + galsim.PositionD(x=dxdy[0], y=dxdy[1])
 
     wcs = galsim.TanWCS(
         affine=galsim.AffineTransform(
@@ -96,5 +101,14 @@ def gen_tanwcs(
         world_origin=world_origin,
         units=galsim.arcsec,
     )
+    psf_wcs = galsim.TanWCS(
+        affine=galsim.AffineTransform(
+            dudx, dudy, dvdx, dvdy,
+            origin=new_psf_origin,
+            world_origin=galsim.PositionD(0, 0),
+        ),
+        world_origin=world_origin,
+        units=galsim.arcsec,
+    )
 
-    return wcs
+    return wcs, psf_wcs

@@ -232,6 +232,7 @@ class Sim(object):
 
         self.scale = scale
         self.coadd_dim = coadd_dim
+        self.coadd_dims = (self.coadd_dim, )*2
         self.buff = buff
         self.edge_width = edge_width
         assert edge_width >= 2, 'edge width must be >= 2'
@@ -285,6 +286,7 @@ class Sim(object):
             world_origin=self._world_origin,
             units=galsim.arcsec
         )
+
         self._coadd_jac = self.coadd_wcs.jacobian(
             world_pos=self._world_origin).getMatrix()
         self._ra_range, self._dec_range = self._get_patch_ranges()
@@ -298,8 +300,28 @@ class Sim(object):
         LOGGER.info('area is %f arcmin**2', self.area_sqr_arcmin)
 
         # info about coadd PSF image
-        self.psf_dim = 53
+        self.coadd_psf_dim = 31
+        # self.psf_dim = 53
+        self.psf_dim = (
+            int(np.ceil(self.coadd_psf_dim * np.sqrt(2))) + 5
+        )
+        if self.psf_dim % 2 == 0:
+            self.psf_dim = self.psf_dim + 1
+
+        self.coadd_psf_dims = (self.coadd_psf_dim, )*2
         self._psf_cen = (self.psf_dim - 1)/2
+        self._coadd_psf_cen = (self.coadd_psf_dim - 1)/2
+        self._psf_origin = galsim.PositionD(x=self._psf_cen, y=self._psf_cen)
+
+        self.coadd_psf_wcs = galsim.TanWCS(
+            affine=galsim.AffineTransform(
+                self.scale, 0, 0, self.scale,
+                origin=galsim.PositionD(x=self._coadd_psf_cen, y=self._coadd_psf_cen),
+                world_origin=galsim.PositionD(x=0, y=0)
+            ),
+            world_origin=self._world_origin,
+            units=galsim.arcsec
+        )
 
         # now we call any extra init for wldeblend
         # this call will reset some things above
@@ -657,23 +679,37 @@ class Sim(object):
 
     def _get_wcs_for_band(self, band):
         if not hasattr(self, '_band_wcs_objs'):
-            wcs_kws = dict(
-                position_angle_range=self.wcs_kws.get('position_angle_range', (0, 0)),
-                dither_range=self.wcs_kws.get('dither_range', (0, 0)),
-                scale_frac_std=self.wcs_kws.get('scale_frac_std', 0),
-                shear_std=self.wcs_kws.get('shear_std', 0),
-                scale=self.scale,
-                world_origin=self._world_origin,
-                origin=self._se_origin,
-                rng=self._rng)
-
-            self._band_wcs_objs = {}
-            for band in self.bands:
-                self._band_wcs_objs[band] = []
-                for _ in range(self.epochs_per_band):
-                    self._band_wcs_objs[band].append(gen_tanwcs(**wcs_kws))
+            self._make_all_wcs()
 
         return self._band_wcs_objs[band]
+
+    def _get_psf_wcs_for_band(self, band):
+        if not hasattr(self, '_band_wcs_objs'):
+            self._make_all_wcs()
+
+        return self._band_psf_wcs_objs[band]
+
+    def _make_all_wcs(self):
+        wcs_kws = dict(
+            position_angle_range=self.wcs_kws.get('position_angle_range', (0, 0)),
+            dither_range=self.wcs_kws.get('dither_range', (0, 0)),
+            scale_frac_std=self.wcs_kws.get('scale_frac_std', 0),
+            shear_std=self.wcs_kws.get('shear_std', 0),
+            scale=self.scale,
+            world_origin=self._world_origin,
+            origin=self._se_origin,
+            rng=self._rng,
+        )
+        wcs_kws['psf_origin'] = self._psf_origin
+        self._band_wcs_objs = {}
+        self._band_psf_wcs_objs = {}
+        for band in self.bands:
+            self._band_wcs_objs[band] = []
+            self._band_psf_wcs_objs[band] = []
+            for _ in range(self.epochs_per_band):
+                wcs, psf_wcs = gen_tanwcs(**wcs_kws)
+                self._band_wcs_objs[band].append(wcs)
+                self._band_psf_wcs_objs[band].append(psf_wcs)
 
     def _get_psf_funcs_for_band(self, band):
         psf_funcs_galsim = []
@@ -687,7 +723,8 @@ class Sim(object):
     def _get_psf_funcs_for_band_epoch(self, band, epoch):
         # using closures here to capture some local state
         # we could make separate objects, but this seems lighter and easier
-        se_wcs = self._get_wcs_for_band(band)[epoch]
+        # se_wcs = self._get_wcs_for_band(band)[epoch]
+        psf_wcs = self._get_psf_wcs_for_band(band)[epoch]
 
         def _psf_galsim_func(*, x, y):
             if self.psf_type == 'gauss':
@@ -697,7 +734,7 @@ class Sim(object):
                 raise ValueError('psf_type "%s" not valid!' % self.psf_type)
 
         def _psf_render_func(*, x, y, center_psf):
-            image_pos = galsim.PositionD(x=x, y=y)
+            # image_pos = galsim.PositionD(x=x, y=y)
             psf = _psf_galsim_func(x=x, y=y)
             if center_psf:
                 offset = None
@@ -706,10 +743,13 @@ class Sim(object):
                     x=x-int(x+0.5),
                     y=y-int(y+0.5),
                 )
-            return psf.drawImage(
+            psf_image = psf.drawImage(
                 nx=self.psf_dim,
                 ny=self.psf_dim,
                 offset=offset,
-                wcs=se_wcs.local(image_pos=image_pos))
+                wcs=psf_wcs,
+                # wcs=se_wcs.local(image_pos=image_pos),
+            )
+            return psf_image
 
         return _psf_galsim_func, _psf_render_func
