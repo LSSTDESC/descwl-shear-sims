@@ -113,7 +113,7 @@ def test_gen_tanwcs_seed():
             ra=20 * galsim.degrees,
             dec=-10 * galsim.degrees),
         origin=galsim.PositionD(x=10, y=11),
-        psf_origin = galsim.PositionD(x=10, y=11),
+        psf_origin=galsim.PositionD(x=10, y=11),
     )
 
     wcs2, psf_wcs2 = gen_tanwcs(
@@ -127,7 +127,7 @@ def test_gen_tanwcs_seed():
             ra=20 * galsim.degrees,
             dec=-10 * galsim.degrees),
         origin=galsim.PositionD(x=10, y=11),
-        psf_origin = galsim.PositionD(x=10, y=11),
+        psf_origin=galsim.PositionD(x=10, y=11),
     )
 
     assert wcs1 == wcs2
