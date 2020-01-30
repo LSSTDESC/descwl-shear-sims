@@ -696,7 +696,7 @@ class Sim(object):
             else:
                 raise ValueError('psf_type "%s" not valid!' % self.psf_type)
 
-        def _psf_render_func(*, x, y, center_psf):
+        def _psf_render_func(*, x, y, center_psf, get_offset=False):
             image_pos = galsim.PositionD(x=x, y=y)
             psf = _psf_galsim_func(x=x, y=y)
             if center_psf:
@@ -706,10 +706,15 @@ class Sim(object):
                     x=x-int(x+0.5),
                     y=y-int(y+0.5),
                 )
-            return psf.drawImage(
+            gsimage = psf.drawImage(
                 nx=self.psf_dim,
                 ny=self.psf_dim,
                 offset=offset,
-                wcs=se_wcs.local(image_pos=image_pos))
+                wcs=se_wcs.local(image_pos=image_pos),
+            )
+            if get_offset:
+                return gsimage, offset
+            else:
+                return gsimage
 
         return _psf_galsim_func, _psf_render_func

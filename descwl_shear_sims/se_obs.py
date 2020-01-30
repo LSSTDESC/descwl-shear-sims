@@ -137,7 +137,7 @@ class SEObs(object):
             raise ValueError("The \"or\" mask must be a `galsim.Image` or subclass!")
         self._ormask = ormask
 
-    def get_psf(self, x, y, center_psf=False):
+    def get_psf(self, x, y, center_psf=False, get_offset=False):
         """Draw the PSF at the given image location.
 
         Parameters
@@ -151,10 +151,17 @@ class SEObs(object):
             on the central pixel of the image. Otherwise, the PSF is drawn with
             the center having the same subpixel offset as implied by the input
             position (i.e., `x-int(x+0.5)` and `y-int(y+0.5)`).
+        get_offse: bool
+            If True, return the offset used when drawing the psf.
 
         Returns
         -------
         psf : galsim.Image
             An image of the PSF (including the image pixel).
         """
-        return self._psf_function(x=x, y=y, center_psf=center_psf)
+        return self._psf_function(
+            x=x,
+            y=y,
+            center_psf=center_psf,
+            get_offset=get_offset,
+        )
