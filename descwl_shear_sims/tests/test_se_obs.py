@@ -10,8 +10,13 @@ DIMS = (11, 13)
 @pytest.fixture
 def se_data():
 
-    def psf_function(*, x, y, center_psf=False):
-        return galsim.ImageD(np.ones(DIMS) * 6)
+    def psf_function(*, x, y, center_psf=False, get_offset=False):
+        im = galsim.ImageD(np.ones(DIMS) * 6)
+        if get_offset:
+            offset = galsim.PositionD(x=0.0, y=0.0)
+            return im, offset
+        else:
+            return im
 
     data = {
         'image': galsim.ImageD(np.ones(DIMS)),
@@ -34,6 +39,8 @@ def test_se_obs_smoke(se_data):
     assert np.array_equal(obs.ormask.array, np.ones(DIMS) * 5)
     assert np.array_equal(obs.get_psf(1, 0).array, np.ones(DIMS) * 6)
     assert obs.wcs == galsim.PixelScale(0.2)
+
+    im, offset = obs.get_psf(1, 0, get_offset=True)
 
 
 @pytest.mark.parametrize('attr,val', [
@@ -60,11 +67,15 @@ def test_se_obs_set(attr, val, se_data):
     assert np.array_equal(obs.get_psf(1, 0).array, np.ones(DIMS) * 6)
     assert attr == 'wcs' or obs.wcs == galsim.PixelScale(0.2)
 
+    im, offset = obs.get_psf(1, 0, get_offset=True)
+    assert offset.x == 0.0
+    assert offset.y == 0.0
+
 
 @pytest.mark.parametrize('center', [True, False])
 def test_se_obs_psf_call(center):
 
-    def psf_function(*, x, y, center_psf):
+    def psf_function(*, x, y, center_psf, get_offset=False):
         assert x == 10
         assert y == 5
         assert center_psf == center

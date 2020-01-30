@@ -67,6 +67,12 @@ def test_simple_sim_psf_center():
     assert np.allclose(psf2nc.array, psf2nc.array.T)
     assert np.allclose(psf2nc.array, psf1.array)
 
+    x = 10.2
+    y = 3.75
+    _, offset = se_obs.get_psf(x, y, center_psf=False, get_offset=True)
+    assert offset.x == x - int(x+0.5)
+    assert offset.y == y - int(y+0.5)
+
     if False:
         import matplotlib.pyplot as plt
         fig, axs = plt.subplots(nrows=1, ncols=2, figsize=(16, 8))
