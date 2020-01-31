@@ -83,3 +83,42 @@ def test_simple_sim_psf_center():
         axs[1].set_title('centered')
 
         assert False
+
+
+def test_simple_sim_psf_shape():
+    """
+    test we get roughly the right psf shape out. cannot expect detailed
+    agreement due to pixelization
+    """
+    import galsim
+
+    shear = galsim.Shear(g1=0.2, g2=-0.2)
+    sim = Sim(
+        rng=10,
+        psf_kws={'g1': shear.g1, 'g2': shear.g2},
+    )
+    data = sim.gen_sim()
+    se_obs = data[sim.bands[0]][0]
+
+    psf = se_obs.get_psf(10, 3, center_psf=True).array
+
+    cen = (np.array(psf.shape)-1)/2
+    ny, nx = psf.shape
+    rows, cols = np.mgrid[
+        0:ny,
+        0:nx,
+    ]
+
+    rows = rows - cen[0]
+    cols = cols - cen[1]
+
+    mrr = (rows**2 * psf).sum()
+    mcc = (cols**2 * psf).sum()
+    mrc = (rows * cols * psf).sum()
+
+    T = mrr + mcc  # noqa
+    e1 = (mcc - mrr)/T
+    e2 = 2*mrc/T
+
+    assert abs(e1 - shear.e1) < 0.01
+    assert abs(e2 - shear.e2) < 0.01
