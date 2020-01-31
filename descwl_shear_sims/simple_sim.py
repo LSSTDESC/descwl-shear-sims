@@ -32,6 +32,9 @@ GAL_KWS_DEFAULTS = {
     'exp': {'half_light_radius': 0.5},
     'wldeblend': {'ngals_factor': 1.0},
 }
+PSF_KWS_DEFAULTS = {
+    'gauss': {'fwhm': 0.8},
+}
 
 
 @functools.lru_cache(maxsize=8)
@@ -246,7 +249,12 @@ class Sim(object):
         self._final_gal_kws = gal_kws_defaults
 
         self.psf_type = psf_type
-        self.psf_kws = psf_kws or {'fwhm': 0.8}
+        self.psf_kws = copy.deepcopy(PSF_KWS_DEFAULTS[self.psf_type])
+        if psf_kws is not None:
+            self.psf_kws.update(psf_kws)
+        self.psf_g1 = self.psf_kws.pop('psf_g1', 0.0)
+        self.psf_g2 = self.psf_kws.pop('psf_g2', 0.0)
+
         self.wcs_kws = wcs_kws or {}
 
         self.cosmic_rays = cosmic_rays
@@ -691,7 +699,12 @@ class Sim(object):
 
         def _psf_galsim_func(*, x, y):
             if self.psf_type == 'gauss':
-                psf = galsim.Gaussian(**self.psf_kws).withFlux(1.0)
+                psf = galsim.Gaussian(**self.psf_kws).withFlux(
+                    1.0,
+                ).shear(
+                    g1=self.psf_g1,
+                    g2=self.psf_g2,
+                )
                 return psf
             else:
                 raise ValueError('psf_type "%s" not valid!' % self.psf_type)
