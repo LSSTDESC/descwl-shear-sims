@@ -117,8 +117,8 @@ def test_simple_sim_psf_shape():
     mrc = (rows * cols * psf).sum()
 
     T = mrr + mcc  # noqa
-    e1 = (mrr - mcc)/T
+    e1 = (mcc - mrr)/T
     e2 = 2*mrc/T
 
-    assert (e1 - shear.e1) < 0.01
-    assert (e2 - shear.e2) < 0.01
+    assert abs(e1 - shear.e1) < 0.01
+    assert abs(e2 - shear.e2) < 0.01
