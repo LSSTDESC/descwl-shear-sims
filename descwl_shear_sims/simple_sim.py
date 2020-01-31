@@ -252,8 +252,8 @@ class Sim(object):
         self.psf_kws = copy.deepcopy(PSF_KWS_DEFAULTS[self.psf_type])
         if psf_kws is not None:
             self.psf_kws.update(psf_kws)
-        self.psf_g1 = self.psf_kws.pop('psf_g1', 0.0)
-        self.psf_g2 = self.psf_kws.pop('psf_g2', 0.0)
+        self.psf_g1 = self.psf_kws.pop('g1', 0.0)
+        self.psf_g2 = self.psf_kws.pop('g2', 0.0)
 
         self.wcs_kws = wcs_kws or {}
 

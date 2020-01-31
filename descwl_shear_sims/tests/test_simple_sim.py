@@ -95,7 +95,7 @@ def test_simple_sim_psf_shape():
     shear = galsim.Shear(g1=0.2, g2=-0.2)
     sim = Sim(
         rng=10,
-        psf_kws={'psf_g1': shear.g1, 'psf_g2': shear.g2},
+        psf_kws={'g1': shear.g1, 'g2': shear.g2},
     )
     data = sim.gen_sim()
     se_obs = data[sim.bands[0]][0]
