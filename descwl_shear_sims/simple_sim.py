@@ -68,9 +68,9 @@ class Sim(object):
         The overall pixel scale of the images. Default is 0.2 arcsec.
     coadd_dim : int, optional
         The total dimension of the coadd image. Default is 351.  An odd default
-        is chosen for the default, along with that of the single epoch images,
-        so that the grids will match perfectly in the case of no
-        dithers/rotations etc.  However, odd dimensions are not required.
+        is chosen, along with that of the single epoch images, so that the
+        grids will match perfectly in the case of no dithers/rotations etc.
+        However, odd dimensions are not required.
     buff : int, optional
         The width of the buffer region in the coadd image where no objects are
         drawn. Default is 50.
