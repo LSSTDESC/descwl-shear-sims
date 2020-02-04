@@ -129,7 +129,6 @@ def test_simple_sim_se_shape():
     test we get roughly the right psf shape out. cannot expect detailed
     agreement due to pixelization
     """
-    import galsim
 
     se_dim = 500
     sim = Sim(rng=10, se_dim=se_dim)
