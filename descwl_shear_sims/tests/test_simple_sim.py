@@ -122,3 +122,20 @@ def test_simple_sim_psf_shape():
 
     assert abs(e1 - shear.e1) < 0.01
     assert abs(e2 - shear.e2) < 0.01
+
+
+def test_simple_sim_se_shape():
+    """
+    test we get roughly the right psf shape out. cannot expect detailed
+    agreement due to pixelization
+    """
+    import galsim
+
+    se_dim = 500
+    sim = Sim(rng=10, se_dim=se_dim)
+    data = sim.gen_sim()
+
+    for band, bdata in data.items():
+        for se_obs in bdata:
+            s = se_obs.image.array.shape
+            assert s[0] == se_dim and s[1] == se_dim
