@@ -143,7 +143,7 @@ class PowerSpectrumPSF(object):
 
         return psf
 
-    def getPSF(self, pos):
+    def getPSF(self, pos):  # noqa: N802
         """Get a PSF model at a given position.
 
         Parameters
