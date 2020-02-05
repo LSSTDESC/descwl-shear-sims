@@ -276,7 +276,7 @@ class Sim(object):
 
         if se_dim is not None:
             self.se_dim = int(se_dim)
-            assert self.se_dim >= default_se_dim 
+            assert self.se_dim >= default_se_dim
         else:
             # the SE image could be rotated, so we make it big enough to cover the
             # whole coadd region plus we make sure it is odd
