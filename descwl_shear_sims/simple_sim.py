@@ -761,11 +761,10 @@ class Sim(object):
                 kws = copy.deepcopy(self.psf_kws)
                 g1 = kws.pop('g1')
                 g2 = kws.pop('g2')
-                psf = galsim.Gaussian(**self.psf_kws).shear(
-                    g1=g1,
-                    g2=g2,
-                ).withFlux(
-                    1.0,
+                psf = (
+                    galsim.Gaussian(**kws)
+                    .shear(g1=g1, g2=g2)
+                    .withFlux(1.0)
                 )
                 return psf
             elif self.psf_type == 'ps':
