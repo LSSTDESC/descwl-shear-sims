@@ -22,6 +22,7 @@ from .gen_masks import (
     generate_cosmic_rays,
     generate_bad_columns,
 )
+from .ps_psf import PowerSpectrumPSF
 
 # default mask bits from the stack
 from .lsst_bits import BAD_COLUMN, COSMIC_RAY
@@ -33,7 +34,8 @@ GAL_KWS_DEFAULTS = {
     'wldeblend': {'ngals_factor': 1.0},
 }
 PSF_KWS_DEFAULTS = {
-    'gauss': {'fwhm': 0.8},
+    'gauss': {'fwhm': 0.8, 'g1': 0.0, 'g2': 0.0},
+    'ps': {},  # the defaults for the ps PSF are in the class
 }
 
 
@@ -113,15 +115,38 @@ class Sim(object):
         A string indicating the kind of PSF. Possible options are
 
             'gauss' : a Gaussian PSF
+            'ps' : an approximate spatially varying PSF constructed with a
+                power spectrum model
 
         Default is 'gauss'.
     psf_kws : dict, optional
         A dictionary of options for constructing the PSF. These vary per
-        psf type. Possible entries per psf type are 'fwhm' plus
+        psf type. Possible entries per psf type are
 
-            'gauss' - no extra options
+            'gauss' - any of the following keywords
+                'fwhm': float, optional
+                    The FWHM of the Gaussian. Default is 0.8.
+                'g1': float, optional
+                    The shape of the PSF on the 1-axis. Default is 0.
+                'g2': float, optional
+                    The shape of the PSF on the 2-axis. Default is 0.
 
-        Default is 'fwhm=0.8'.
+            'ps' - any of the following keywords
+                trunc : float
+                    The truncation scale for the shape/magnification power spectrum
+                    used to generate the PSF variation. Default is 1.
+                noise_level : float, optional
+                    If not `None`, generate a noise field to add to the PSF images with
+                    desired noise. A value of 1e-2 generates a PSF image with an
+                    effective signal-to-noise of ~250. Default is none
+                variation_factor : float, optional
+                    This factor is used internally to scale the overall variance in the
+                    PSF shape power spectra and the change in the PSF size across the
+                    image. Setting this factor greater than 1 results in more variation
+                    and less than 1 results in less variation. Default is 10.
+                median_seeing : float, optional
+                    The approximate median seeing for the PSF. Default is 0.8.
+
     wcs_kws : dict, optional
         A dictionary of options for constructing the WCS. These are any of
 
@@ -259,8 +284,6 @@ class Sim(object):
         self.psf_kws = copy.deepcopy(PSF_KWS_DEFAULTS[self.psf_type])
         if psf_kws is not None:
             self.psf_kws.update(psf_kws)
-        self.psf_g1 = self.psf_kws.pop('g1', 0.0)
-        self.psf_g2 = self.psf_kws.pop('g2', 0.0)
 
         self.wcs_kws = wcs_kws or {}
 
@@ -699,6 +722,22 @@ class Sim(object):
 
         return self._band_wcs_objs[band]
 
+    def _init_ps_psfs(self):
+        if not hasattr(self, '_ps_psf_objs'):
+            self._ps_psf_objs = {}
+            for band in self.bands:
+                self._ps_psf_objs[band] = []
+                for _ in range(self.epochs_per_band):
+                    self._ps_psf_objs[band].append(
+                        PowerSpectrumPSF(
+                            rng=self._rng,
+                            im_width=self.se_dim,
+                            buff=self.se_dim/2,
+                            scale=self.scale,
+                            **self.psf_kws,
+                        )
+                    )
+
     def _get_psf_funcs_for_band(self, band):
         psf_funcs_galsim = []
         psf_funcs = []
@@ -711,17 +750,26 @@ class Sim(object):
     def _get_psf_funcs_for_band_epoch(self, band, epoch):
         # using closures here to capture some local state
         # we could make separate objects, but this seems lighter and easier
+
+        if self.psf_type == 'ps':
+            self._init_ps_psfs()
+
         se_wcs = self._get_wcs_for_band(band)[epoch]
 
         def _psf_galsim_func(*, x, y):
             if self.psf_type == 'gauss':
-                psf = galsim.Gaussian(**self.psf_kws).withFlux(
+                kws = copy.deepcopy(self.psf_kws)
+                g1 = kws.pop('g1')
+                g2 = kws.pop('g2')
+                psf = galsim.Gaussian(**self.psf_kws).shear(
+                    g1=g1,
+                    g2=g2,
+                ).withFlux(
                     1.0,
-                ).shear(
-                    g1=self.psf_g1,
-                    g2=self.psf_g2,
                 )
                 return psf
+            elif self.psf_type == 'ps':
+                return self._ps_psf_objs[band][epoch].getPSF(galsim.PositionD(x=x, y=y))
             else:
                 raise ValueError('psf_type "%s" not valid!' % self.psf_type)
 
