@@ -73,6 +73,9 @@ class Sim(object):
         drawn. Default is 50.
     edge_width:  int
         Width of boundary to be marked as EDGE in the bitmask, default 5
+    se_dim: int
+        Dimensions of the single epoch image.  If None (the default) the
+        size is chosen to encompass the coadd for small dithers.
     ngals : float, optional
         The number of objects to simulate per arcminute^2. Default is 80.
     grid_gals : bool, optional
@@ -199,6 +202,7 @@ class Sim(object):
         coadd_dim=350,
         buff=50,
         edge_width=5,
+        se_dim=None,
         ngals=80,
         grid_gals=False,
         gal_type='exp',
@@ -264,11 +268,20 @@ class Sim(object):
 
         # the SE image could be rotated, so we make it big enough to cover the
         # whole coadd region plus we make sure it is odd
-        self.se_dim = (
+        default_se_dim = (
             int(np.ceil(self.coadd_dim * np.sqrt(2))) + 10 + 2*edge_width
         )
-        if self.se_dim % 2 == 0:
-            self.se_dim = self.se_dim + 1
+        if default_se_dim % 2 == 0:
+            default_se_dim += 1
+
+        if se_dim is not None:
+            self.se_dim = int(se_dim)
+            assert self.se_dim >= default_se_dim
+        else:
+            # the SE image could be rotated, so we make it big enough to cover the
+            # whole coadd region plus we make sure it is odd
+            self.se_dim = default_se_dim
+
         self._se_cen = (self.se_dim - 1) / 2
 
         ######################################
