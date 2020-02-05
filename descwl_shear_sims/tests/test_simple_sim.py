@@ -130,7 +130,7 @@ def test_simple_sim_se_shape():
     agreement due to pixelization
     """
 
-    se_dim = 500
+    se_dim = 1024
     sim = Sim(rng=10, se_dim=se_dim)
     data = sim.gen_sim()
 

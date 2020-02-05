@@ -266,17 +266,21 @@ class Sim(object):
         self.bad_columns = bad_columns
         self.bad_columns_kws = bad_columns_kws or {}
 
+        # the SE image could be rotated, so we make it big enough to cover the
+        # whole coadd region plus we make sure it is odd
+        default_se_dim = (
+            int(np.ceil(self.coadd_dim * np.sqrt(2))) + 10 + 2*edge_width
+        )
+        if default_se_dim % 2 == 0:
+            default_se_dim += 1
+
         if se_dim is not None:
             self.se_dim = int(se_dim)
-            assert self.se_dim > 2*edge_width
+            assert self.se_dim >= default_se_dim 
         else:
             # the SE image could be rotated, so we make it big enough to cover the
             # whole coadd region plus we make sure it is odd
-            self.se_dim = (
-                int(np.ceil(self.coadd_dim * np.sqrt(2))) + 10 + 2*edge_width
-            )
-            if self.se_dim % 2 == 0:
-                self.se_dim = self.se_dim + 1
+            self.se_dim = default_se_dim
 
         self._se_cen = (self.se_dim - 1) / 2
 
