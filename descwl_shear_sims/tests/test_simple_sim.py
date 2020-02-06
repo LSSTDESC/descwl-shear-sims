@@ -138,3 +138,22 @@ def test_simple_sim_se_shape():
         for se_obs in bdata:
             s = se_obs.image.array.shape
             assert s[0] == se_dim and s[1] == se_dim
+
+
+def test_simple_sim_se_ps_psf():
+    sim = Sim(rng=10, psf_type='ps', psf_kws={'noise_level': 0})
+    data = sim.gen_sim()
+
+    for band, bdata in data.items():
+        for se_obs in bdata:
+            psf1 = se_obs.get_psf(10, 3)
+            psf2 = se_obs.get_psf(500, 100)
+            assert not np.allclose(psf1.array, psf2.array)
+
+            if False:
+                import matplotlib.pyplot as plt
+                fig, axs = plt.subplots(nrows=1, ncols=3, figsize=(12, 4))
+                axs[0].imshow(psf1.array)
+                axs[1].imshow(psf2.array)
+                axs[2].imshow(psf1.array - psf2.array)
+                assert False
