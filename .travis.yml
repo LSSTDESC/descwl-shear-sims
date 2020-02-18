@@ -32,6 +32,7 @@ install:
       numpy \
       galsim \
       numba \
+      ngmix \
       lsstdesc.weaklensingdeblending \
       fitsio
 
