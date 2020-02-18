@@ -6,6 +6,11 @@ BAD_COLUMN = np.int64(2**0)
 COSMIC_RAY = np.int64(2**3)
 EDGE = np.int64(2**4)
 
+# these are not official values, as far as I know
+# the stack doesn't mark such things (ES 2020-02-18)
+STAR = np.int64(2**10)
+BLEED = np.int64(2**11)
+
 
 # double check they match the stack
 def _check_bits_against_stack():

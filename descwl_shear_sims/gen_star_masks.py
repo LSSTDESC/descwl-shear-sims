@@ -4,6 +4,8 @@ import galsim
 import ngmix
 from .randsphere import randcap
 
+from .lsst_bits import STAR, BLEED
+
 
 class StarMasks(object):
     """
@@ -42,8 +44,6 @@ class StarMasks(object):
     bleed_length_fac: float
         The bleed length is this factor times the *diameter* of the circular
         star mask
-    value: int
-        Value to put in mask
     """
     def __init__(self, *,
                  rng,
@@ -54,11 +54,8 @@ class StarMasks(object):
                  radmean=3,
                  radstd=5,
                  radmin=3,
-                 radmax=100,
-                 bleed_length_fac=2,
-                 value=1):
-
-        self.value = value
+                 radmax=500,
+                 bleed_length_fac=2):
 
         area = np.pi*radius_degrees**2
         count = rng.poisson(lam=density*area)
@@ -73,24 +70,15 @@ class StarMasks(object):
             radius=radius_degrees,
         )
 
-        rpdf = ngmix.priors.LogNormal(radmean, radstd, rng=rng)
+        rpdf_ub = ngmix.priors.LogNormal(radmean, radstd, rng=rng)
+        rpdf = ngmix.priors.Bounded1D(rpdf_ub, (radmin, radmax))
 
-        nstars = stars.size
-
-        for i in range(nstars):
-            stars['radius'][i] = get_star_mask_rad(
-                pdf=rpdf,
-                radmin=radmin,
-                radmax=radmax,
-            )
-            stars['bleed_width'][i] = get_bleed_width(
-                rng=rng,
-                star_mask_rad=stars['radius'][i],
-            )
-            stars['bleed_length'][i] = get_bleed_length(
-                star_mask_rad=stars['radius'][i],
-                bleed_length_fac=bleed_length_fac,
-            )
+        stars['radius'] = rpdf.sample(size=count)
+        stars['bleed_width'] = get_bleed_width(stars['radius'])
+        stars['bleed_length'] = get_bleed_length(
+            star_mask_rad=stars['radius'],
+            bleed_length_fac=bleed_length_fac,
+        )
 
     def set_mask(self, *, mask, wcs):
         """
@@ -109,16 +97,15 @@ class StarMasks(object):
 
         stars = self.stars
 
+        xvals, yvals = wcs.radecToxy(
+            stars['ra'], stars['dec'], galsim.degrees,
+        )
+
         ny, nx = mask.shape
         nstars = 0
         for i in range(stars.size):
-            skypos = galsim.CelestialCoord(
-                ra=stars['ra'][i]*galsim.degrees,
-                dec=stars['dec'][i]*galsim.degrees,
-            )
-            impos = wcs.toImage(skypos) - wcs.origin
-            x = impos.x
-            y = impos.y
+            x = xvals[i]
+            y = yvals[i]
             if (x >= 0 and x < nx and y >= 0 and y < ny):
 
                 add_star_and_bleed(
@@ -128,7 +115,6 @@ class StarMasks(object):
                     radius=stars['radius'][i],
                     bleed_width=stars['bleed_width'][i],
                     bleed_length=stars['bleed_length'][i],
-                    value=self.value,
                 )
                 nstars += 1
 
@@ -151,8 +137,7 @@ def add_star_and_bleed(*,
                        x, y,
                        radius,
                        bleed_width,
-                       bleed_length,
-                       value):
+                       bleed_length):
     """
     Add a circular star mask and bleed trail mask to
     the input mask image
@@ -169,15 +154,12 @@ def add_star_and_bleed(*,
         Width of bleed in pixels
     bleed_length: float
         Length of bleed in pixels
-    value: int
-        Value to "or" with the mask values
     """
     add_star(
         mask=mask,
         x=x,
         y=y,
         radius=radius,
-        value=value,
     )
 
     add_bleed(
@@ -186,31 +168,22 @@ def add_star_and_bleed(*,
         y=y,
         width=bleed_width,
         length=bleed_length,
-        value=value,
     )
 
 
-def get_star_mask_rad(*, pdf, radmin, radmax):
-    """
-    Draw clipped values for the radius from the input pdf
-    """
-    while True:
-        radius = pdf.sample()
-        if radmin < radius < radmax:
-            break
-
-    return radius
-
-
-def get_bleed_width(*, rng, star_mask_rad):
+def get_bleed_width(star_mask_rad):
     """
     width is always odd
     """
 
-    if star_mask_rad > 10:
-        return 3
-    else:
-        return 1
+    width = np.zeros(star_mask_rad.size, dtype='i4')
+    width[:] = 1
+
+    w, = np.where(star_mask_rad > 10)
+    if w.size > 0:
+        width[w] = 3
+
+    return width
 
 
 def get_bleed_length(*, star_mask_rad, bleed_length_fac):
@@ -218,19 +191,18 @@ def get_bleed_length(*, star_mask_rad, bleed_length_fac):
     length is always odd
     """
     diameter = star_mask_rad*2
-    length = int(bleed_length_fac*diameter)
+    length = (bleed_length_fac*diameter).astype('i4')
 
-    if length % 2 == 0:
-        length -= 1
+    w, = np.where((length % 2) == 0)
+    if w.size > 0:
+        length[w] -= 1
 
-    if length < 0:
-        length = 1
-
+    length.clip(min=1, out=length)
     return length
 
 
 @njit
-def add_star(*, mask, x, y, radius, value):
+def add_star(*, mask, x, y, radius):
     """
     Add a circular star mask to the input mask image
 
@@ -242,8 +214,6 @@ def add_star(*, mask, x, y, radius, value):
         The center position of the circle
     radius: float
         Radius of circle in pixels
-    value: int
-        Value to "or" with the mask values
     """
 
     radius2 = radius**2
@@ -264,11 +234,11 @@ def add_star(*, mask, x, y, radius, value):
             if rad > radius2:
                 continue
 
-            mask[iy, ix] |= value
+            mask[iy, ix] |= STAR
 
 
 @njit
-def add_bleed(*, mask, x, y, width, length, value):
+def add_bleed(*, mask, x, y, width, length):
     """
     Add a bleed trail mask to the input mask image
 
@@ -282,8 +252,6 @@ def add_bleed(*, mask, x, y, width, length, value):
         Width of bleed in pixels
     length: float
         Length of bleed in pixels
-    value: int
-        Value to "or" with the mask values
     """
 
     ny, nx = mask.shape
@@ -304,4 +272,4 @@ def add_bleed(*, mask, x, y, width, length, value):
         for ix in range(xmin, xmax+1):
             if ix < 0 or ix > (nx-1):
                 continue
-            mask[iy, ix] |= value
+            mask[iy, ix] |= BLEED
