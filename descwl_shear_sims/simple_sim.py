@@ -213,6 +213,32 @@ class Sim(object):
                 one entry per bad column width in `widths`.
 
         See descwl_shear_sims.gen_masks.generate_bad_columns for the defaults.
+    stars: bool, optional
+        If `True` then add star and bleed trail masks. Default is `False`.
+    stars_kws : dict, optional
+        A dictionary of options for generating star and bleed trail masks
+
+            radius_degrees: float
+                Stars will be generated in a disk with this radius around
+                the coadd center, default 5 degrees
+            density: float
+                Number of saturated stars per square degree, default 200
+            radmean: float
+                Mean star mask radius in pixels for log normal distribution,
+                default 3
+            radstd: float
+                Radius standard deviation in pixels for log normal distribution,
+                default 5
+            radmin: float
+                Minimum radius in pixels of star masks.  The log normal values
+                will be clipped to more than this value.  Default 3
+            radmax: float
+                Maximum radius in pixels of star masks.  The log normal values
+                will be clipped to less than this value. Default 500
+            bleed_length_fac: float
+                The bleed length is this factor times the *diameter* of the
+                circular star mask, default 2
+
 
     Methods
     -------

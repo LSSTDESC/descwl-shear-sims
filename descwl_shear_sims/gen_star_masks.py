@@ -26,24 +26,25 @@ class StarMasks(object):
     center_dec: float
         Stars will be generated in a disk around this point
     radius_degrees: float
-        Stars will be in a disk with this radius
+        Stars will be generated in a disk with this radius around the coadd
+        center, default 5 degrees
     density: float
-        Number of saturated stars per square degree
-    pixel_scale: float
-        pixel scale in arcsec/pixel
+        Number of saturated stars per square degree, default 200
     radmean: float
-        Mean star mask radius in pixels for log normal distribution
+        Mean star mask radius in pixels for log normal distribution,
+        default 3
     radstd: float
-        Radius standard deviation in pixels for log normal distribution
+        Radius standard deviation in pixels for log normal distribution,
+        default 5
     radmin: float
         Minimum radius in pixels of star masks.  The log normal values
-        will be clipped to more than this value
+        will be clipped to more than this value. Default 3
     radmax: float
         Maximum radius in pixels of star masks.  The log normal values
-        will be clipped to less than this value
+        will be clipped to less than this value. Default 500.
     bleed_length_fac: float
         The bleed length is this factor times the *diameter* of the circular
-        star mask
+        star mask, default 2
     """
     def __init__(self, *,
                  rng,
