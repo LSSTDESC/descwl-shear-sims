@@ -4,7 +4,7 @@ import galsim
 import ngmix
 from .randsphere import randcap
 
-from .lsst_bits import STAR, BLEED
+from .lsst_bits import SAT
 
 
 class StarMasks(object):
@@ -52,11 +52,11 @@ class StarMasks(object):
                  center_dec,
                  radius_degrees=5,
                  density=200,
-                 radmean=3,
+                 radmean=1,
                  radstd=5,
-                 radmin=3,
-                 radmax=500,
-                 bleed_length_fac=2):
+                 radmin=1,
+                 radmax=20,
+                 bleed_length_fac=4):
 
         area = np.pi*radius_degrees**2
         count = rng.poisson(lam=density*area)
@@ -235,7 +235,7 @@ def add_star(*, mask, x, y, radius):
             if rad > radius2:
                 continue
 
-            mask[iy, ix] |= STAR
+            mask[iy, ix] |= SAT
 
 
 @njit
@@ -273,4 +273,4 @@ def add_bleed(*, mask, x, y, width, length):
         for ix in range(xmin, xmax+1):
             if ix < 0 or ix > (nx-1):
                 continue
-            mask[iy, ix] |= BLEED
+            mask[iy, ix] |= SAT
