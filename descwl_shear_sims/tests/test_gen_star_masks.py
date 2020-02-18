@@ -1,7 +1,7 @@
 import numpy as np
 
 from ..gen_star_masks import StarMasks
-from ..lsst_bits import STAR, BLEED
+from ..lsst_bits import SAT
 from ..simple_sim import Sim
 
 
@@ -48,9 +48,7 @@ def test_star_mask_works():
     nstars = star_masks.set_mask(mask=mask, wcs=wcs)
     assert nstars > 0
 
-    w = np.where((mask & STAR) != 0)
-    assert w[0].size > 0
-    w = np.where((mask & BLEED) != 0)
+    w = np.where((mask & SAT) != 0)
     assert w[0].size > 0
 
 
@@ -72,9 +70,7 @@ def test_star_mask_keywords():
     se_obs = data['r'][0]
     mask = se_obs.bmask.array
 
-    w = np.where((mask & STAR) != 0)
-    assert w[0].size > 0
-    w = np.where((mask & BLEED) != 0)
+    w = np.where((mask & SAT) != 0)
     assert w[0].size > 0
 
 
@@ -98,7 +94,7 @@ def test_star_mask_repeatable():
         se_obs = data['r'][0]
         mask = se_obs.bmask.array
 
-        w = np.where(((mask & STAR) != 0) | ((mask & BLEED) != 0))
+        w = np.where((mask & SAT) != 0)
 
         if trial == 1:
             nmarked = w[0].size
