@@ -10,6 +10,9 @@ from ..simple_sim import Sim
 
 
 def test_star_mask_smoke():
+    """
+    make sure we can generate star masks
+    """
     rng = np.random.RandomState(2342)
     ra = 200.0
     dec = 15.0
@@ -22,6 +25,9 @@ def test_star_mask_smoke():
 
 
 def test_star_mask_works():
+    """
+    test star masking, adding them directly to existing mask image
+    """
     rng = np.random.RandomState(234)
     sim = Sim(
         rng=rng,
@@ -45,6 +51,30 @@ def test_star_mask_works():
     mask = se_obs.bmask.array
     nstars = star_masks.set_mask(mask=mask, wcs=wcs)
     assert nstars > 0
+
+    w = np.where((mask & STAR) != 0)
+    assert w[0].size > 0
+    w = np.where((mask & BLEED) != 0)
+    assert w[0].size > 0
+
+
+def test_star_mask_keywords():
+    """
+    test star masking using the keyword to the sim
+    """
+    rng = np.random.RandomState(234)
+    sim = Sim(
+        rng=rng,
+        bands=['r'],
+        epochs_per_band=1,
+        stars=True,
+        stars_kws={'density': 10000},
+    )
+
+    data = sim.gen_sim()
+
+    se_obs = data['r'][0]
+    mask = se_obs.bmask.array
 
     w = np.where((mask & STAR) != 0)
     assert w[0].size > 0
