@@ -3,6 +3,7 @@ import warnings
 
 # default mask bits from the stack
 BAD_COLUMN = np.int64(2**0)
+SAT = np.int64(2**1)
 COSMIC_RAY = np.int64(2**3)
 EDGE = np.int64(2**4)
 
@@ -17,14 +18,15 @@ def _check_bits_against_stack():
     try:
         import lsst.afw.image as afw_image
 
-        mask = afw_image.Mask()
-        cr_val = 2**mask.getMaskPlane('CR')
-        bad_val = 2**mask.getMaskPlane('BAD')
-        edge_val = 2**mask.getMaskPlane('EDGE')
+        sat_val = afw_image.Mask.getPlaneBitMask('SAT')
+        cr_val = afw_image.Mask.getPlaneBitMask('CR')
+        bad_val = afw_image.Mask.getPlaneBitMask('BAD')
+        edge_val = afw_image.Mask.getPlaneBitMask('EDGE')
 
         if (cr_val != COSMIC_RAY or
                 bad_val != BAD_COLUMN or
-                edge_val != EDGE):
+                edge_val != EDGE or
+                sat_val != SAT):
             warnings.warn(
                 "simulation bit mask flags do not match those of the DM stack")
 
