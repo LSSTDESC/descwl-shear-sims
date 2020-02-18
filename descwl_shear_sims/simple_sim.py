@@ -22,6 +22,8 @@ from .gen_masks import (
     generate_cosmic_rays,
     generate_bad_columns,
 )
+from .gen_star_masks import StarMasks
+
 from .ps_psf import PowerSpectrumPSF
 
 # default mask bits from the stack
@@ -242,6 +244,8 @@ class Sim(object):
         cosmic_rays_kws=None,
         bad_columns=False,
         bad_columns_kws=None,
+        stars=False,
+        stars_kws=None,
     ):
         self._rng = (
             rng
@@ -318,6 +322,16 @@ class Sim(object):
             ra=self._world_ra * galsim.degrees,
             dec=self._world_dec * galsim.degrees)
         self._se_origin = galsim.PositionD(x=self._se_cen, y=self._se_cen)
+
+        self.stars = stars
+        self.stars_kws = stars_kws or {}
+        if self.stars:
+            self._star_masks = StarMasks(
+                rng=self._rng,
+                center_ra=self._world_ra,
+                center_dec=self._world_dec,
+                **self.stars_kws
+            )
 
         # coadd WCS to determine where we should draw locations
         # for objects in the sky
@@ -502,7 +516,9 @@ class Sim(object):
                 se_image += self._generate_noise_image(band_ind)
 
                 # put this after to make sure bad cols are totally dark
-                bmask, se_image = self._generate_mask_plane(se_image)
+                bmask, se_image = self._generate_mask_plane(
+                    se_image=se_image, wcs=wcs,
+                )
 
                 # make galsim image with same wcs as se_image but
                 # with pure random noise
@@ -528,7 +544,7 @@ class Sim(object):
 
         return band_data
 
-    def _generate_mask_plane(self, se_image):
+    def _generate_mask_plane(self, *, se_image, wcs):
 
         shape = se_image.array.shape
         bmask = generate_basic_mask(shape=shape, edge_width=self.edge_width)
@@ -570,6 +586,9 @@ class Sim(object):
             )
             bmask[msk] |= BAD_COLUMN
             se_image.array[msk] = 0.0
+
+        if self.stars:
+            self._star_masks.set_mask(mask=bmask, wcs=wcs)
 
         return (
             galsim.Image(
