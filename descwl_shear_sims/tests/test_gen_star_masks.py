@@ -1,7 +1,3 @@
-"""
-copy-paste from my (beckermr) personal code here
-https://github.com/beckermr/metadetect-coadding-sims
-"""
 import numpy as np
 
 from ..gen_star_masks import StarMasks
@@ -80,3 +76,31 @@ def test_star_mask_keywords():
     assert w[0].size > 0
     w = np.where((mask & BLEED) != 0)
     assert w[0].size > 0
+
+
+def test_star_mask_repeatable():
+    """
+    test star masking using the keyword to the sim
+    """
+
+    for trial in (1, 2):
+        rng = np.random.RandomState(234)
+        sim = Sim(
+            rng=rng,
+            bands=['r'],
+            epochs_per_band=1,
+            stars=True,
+            stars_kws={'density': 10000},
+        )
+
+        data = sim.gen_sim()
+
+        se_obs = data['r'][0]
+        mask = se_obs.bmask.array
+
+        w = np.where(((mask & STAR) != 0) | ((mask & BLEED) != 0))
+
+        if trial == 1:
+            nmarked = w[0].size
+        else:
+            assert w[0].size == nmarked
