@@ -31,6 +31,7 @@ install:
       pytest \
       numpy \
       galsim \
+      numba \
       lsstdesc.weaklensingdeblending \
       fitsio
 
