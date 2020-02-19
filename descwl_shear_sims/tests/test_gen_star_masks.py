@@ -2,7 +2,10 @@ import numpy as np
 
 from ..gen_star_masks import StarMasks
 from ..lsst_bits import SAT
-from ..simple_sim import Sim
+from ..simple_sim import (
+    Sim,
+    SAT_VAL,
+)
 
 
 def test_star_mask_smoke():
@@ -45,7 +48,14 @@ def test_star_mask_works():
     se_obs = data['r'][0]
     wcs = se_obs.wcs
     mask = se_obs.bmask.array
-    nstars = star_masks.set_mask(mask=mask, wcs=wcs)
+    image = se_obs.image.array
+    xvals, yvals = star_masks.set_mask_and_image(
+        mask=mask,
+        image=image,
+        wcs=wcs,
+        sat_val=SAT_VAL,
+    )
+    nstars = xvals.size
     assert nstars > 0
 
     w = np.where((mask & SAT) != 0)
@@ -61,8 +71,8 @@ def test_star_mask_keywords():
         rng=rng,
         bands=['r'],
         epochs_per_band=1,
-        stars=True,
-        stars_kws={'density': 10000},
+        sat_stars=True,
+        sat_stars_kws={'density': 10000},
     )
 
     data = sim.gen_sim()
@@ -85,8 +95,8 @@ def test_star_mask_repeatable():
             rng=rng,
             bands=['r'],
             epochs_per_band=1,
-            stars=True,
-            stars_kws={'density': 10000},
+            sat_stars=True,
+            sat_stars_kws={'density': 10000},
         )
 
         data = sim.gen_sim()

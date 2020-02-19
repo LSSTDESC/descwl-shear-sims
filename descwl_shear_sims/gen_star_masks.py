@@ -81,9 +81,10 @@ class StarMasks(object):
             bleed_length_fac=bleed_length_fac,
         )
 
-    def set_mask(self, *, mask, wcs):
+    def set_mask_and_image(self, *, mask, image, wcs, sat_val):
         """
         set bits in the input mask for contained stars
+        set fake saturation region in the image
 
         Currently only stars for which the center is in
         the image are marked
@@ -92,8 +93,12 @@ class StarMasks(object):
         ----------
         mask: array
             Array of integer type
+        image: array
+            Image array
         wcs: wcs object
             A wcs object with the sky2image method
+        sat_val: float
+            Value for saturation
         """
 
         stars = self.stars
@@ -103,7 +108,7 @@ class StarMasks(object):
         )
 
         ny, nx = mask.shape
-        nstars = 0
+        keep = np.zeros(stars.size, dtype='bool')
         for i in range(stars.size):
             x = xvals[i]
             y = yvals[i]
@@ -111,15 +116,20 @@ class StarMasks(object):
 
                 add_star_and_bleed(
                     mask=mask,
+                    image=image,
                     x=x,
                     y=y,
                     radius=stars['radius'][i],
                     bleed_width=stars['bleed_width'][i],
                     bleed_length=stars['bleed_length'][i],
+                    sat_val=sat_val,
                 )
-                nstars += 1
+                keep[i] = True
 
-        return nstars
+        xvals = xvals[keep]
+        yvals = yvals[keep]
+
+        return xvals, yvals
 
 
 def make_star_struct(size=1):
@@ -135,10 +145,12 @@ def make_star_struct(size=1):
 
 def add_star_and_bleed(*,
                        mask,
+                       image,
                        x, y,
                        radius,
                        bleed_width,
-                       bleed_length):
+                       bleed_length,
+                       sat_val):
     """
     Add a circular star mask and bleed trail mask to
     the input mask image
@@ -155,20 +167,26 @@ def add_star_and_bleed(*,
         Width of bleed in pixels
     bleed_length: float
         Length of bleed in pixels
+    sat_val: float
+        Value for saturation
     """
     add_star(
         mask=mask,
+        image=image,
         x=x,
         y=y,
         radius=radius,
+        sat_val=sat_val,
     )
 
     add_bleed(
         mask=mask,
+        image=image,
         x=x,
         y=y,
         width=bleed_width,
         length=bleed_length,
+        sat_val=sat_val,
     )
 
 
@@ -203,7 +221,7 @@ def get_bleed_length(*, star_mask_rad, bleed_length_fac):
 
 
 @njit
-def add_star(*, mask, x, y, radius):
+def add_star(*, mask, image, x, y, radius, sat_val):
     """
     Add a circular star mask to the input mask image
 
@@ -236,10 +254,11 @@ def add_star(*, mask, x, y, radius):
                 continue
 
             mask[iy, ix] |= SAT
+            image[iy, ix] = sat_val
 
 
 @njit
-def add_bleed(*, mask, x, y, width, length):
+def add_bleed(*, mask, image, x, y, width, length, sat_val):
     """
     Add a bleed trail mask to the input mask image
 
@@ -253,6 +272,8 @@ def add_bleed(*, mask, x, y, width, length):
         Width of bleed in pixels
     length: float
         Length of bleed in pixels
+    sat_val: float
+        Value for saturation
     """
 
     ny, nx = mask.shape
@@ -274,3 +295,4 @@ def add_bleed(*, mask, x, y, width, length):
             if ix < 0 or ix > (nx-1):
                 continue
             mask[iy, ix] |= SAT
+            image[iy, ix] = sat_val

@@ -40,6 +40,9 @@ PSF_KWS_DEFAULTS = {
     'ps': {},  # the defaults for the ps PSF are in the class
 }
 
+# TODO get a realistic value
+SAT_VAL = 1.e18
+
 
 @functools.lru_cache(maxsize=8)
 def _cached_catalog_read(fname):
@@ -213,9 +216,9 @@ class Sim(object):
                 one entry per bad column width in `widths`.
 
         See descwl_shear_sims.gen_masks.generate_bad_columns for the defaults.
-    stars: bool, optional
+    sat_stars: bool, optional
         If `True` then add star and bleed trail masks. Default is `False`.
-    stars_kws : dict, optional
+    sat_stars_kws : dict, optional
         A dictionary of options for generating star and bleed trail masks
 
             radius_degrees: float
@@ -270,8 +273,8 @@ class Sim(object):
         cosmic_rays_kws=None,
         bad_columns=False,
         bad_columns_kws=None,
-        stars=False,
-        stars_kws=None,
+        sat_stars=False,
+        sat_stars_kws=None,
     ):
         self._rng = (
             rng
@@ -349,14 +352,14 @@ class Sim(object):
             dec=self._world_dec * galsim.degrees)
         self._se_origin = galsim.PositionD(x=self._se_cen, y=self._se_cen)
 
-        self.stars = stars
-        self.stars_kws = stars_kws or {}
-        if self.stars:
+        self.sat_stars = sat_stars
+        self.sat_stars_kws = sat_stars_kws or {}
+        if self.sat_stars:
             self._star_masks = StarMasks(
                 rng=self._rng,
                 center_ra=self._world_ra,
                 center_dec=self._world_dec,
-                **self.stars_kws
+                **self.sat_stars_kws
             )
 
         # coadd WCS to determine where we should draw locations
@@ -594,7 +597,7 @@ class Sim(object):
                 **defaults,
             )
             bmask[msk] |= COSMIC_RAY
-            se_image.array[msk] = 1e18
+            se_image.array[msk] = SAT_VAL
 
         if self.bad_columns:
             defaults = {
@@ -613,8 +616,13 @@ class Sim(object):
             bmask[msk] |= BAD_COLUMN
             se_image.array[msk] = 0.0
 
-        if self.stars:
-            self._star_masks.set_mask(mask=bmask, wcs=wcs)
+        if self.sat_stars:
+            self._star_masks.set_mask_and_image(
+                mask=bmask,
+                image=se_image.array,
+                wcs=wcs,
+                sat_val=SAT_VAL,
+            )
 
         return (
             galsim.Image(
