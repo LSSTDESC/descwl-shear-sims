@@ -54,7 +54,7 @@ class StarMasks(object):
                  density=200,
                  radmean=1,
                  radstd=5,
-                 radmin=1,
+                 radmin=2,
                  radmax=20,
                  bleed_length_fac=4):
 
@@ -235,22 +235,22 @@ def add_star(*, mask, image, x, y, radius, sat_val):
         Radius of circle in pixels
     """
 
+    intx = int(x)
+    inty = int(y)
+
     radius2 = radius**2
     ny, nx = mask.shape
 
     for iy in range(ny):
-        y2 = (y-iy)**2
+        y2 = (inty-iy)**2
         if y2 > radius2:
             continue
 
         for ix in range(nx):
-            x2 = (x-ix)**2
-            if x2 > radius2:
-                continue
+            x2 = (intx-ix)**2
+            rad2 = x2 + y2
 
-            rad = x2 + y2
-
-            if rad > radius2:
+            if rad2 > radius2:
                 continue
 
             mask[iy, ix] |= SAT
@@ -281,11 +281,15 @@ def add_bleed(*, mask, image, x, y, width, length, sat_val):
     xpad = (width-1)//2
     ypad = (length-1)//2
 
-    xmin = x - xpad
-    xmax = x + xpad
+    intx = int(x)
+    inty = int(y)
 
-    ymin = y - ypad
-    ymax = y + ypad
+    xpad = 0
+    xmin = intx - xpad
+    xmax = intx + xpad
+
+    ymin = inty - ypad
+    ymax = inty + ypad
 
     for iy in range(ymin, ymax+1):
         if iy < 0 or iy > (ny-1):
