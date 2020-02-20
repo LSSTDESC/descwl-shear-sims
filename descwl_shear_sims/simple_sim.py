@@ -427,9 +427,7 @@ class Sim(object):
                 * self._ngals_factor
             )
 
-        self.stars = stars
-        if self.stars:
-            self._setup_stars(stars_kws=stars_kws)
+        self._setup_stars(stars=stars, stars_kws=stars_kws)
 
         # we only allow the sim class to be used once
         # so that method outputs can be cached safely as needed
@@ -438,11 +436,16 @@ class Sim(object):
 
         LOGGER.info('simulating bands: %s', self.bands)
 
-    def _setup_stars(self, *, stars_kws):
+    def _setup_stars(self, *, stars, stars_kws):
         if self.grid_gals:
             raise ValueError('no grid gals when there are stars')
 
-        self.stars_kws = stars_kws or {}
+        self.stars = stars
+        if stars_kws is not None:
+            self.stars_kws = copy.deepcopy(stars_kws)
+        else:
+            self.stars_kws = {}
+
         stars_kws_defaults = copy.deepcopy(STARS_KWS_DEFAULTS)
         self.stars_kws.update(stars_kws_defaults)
 

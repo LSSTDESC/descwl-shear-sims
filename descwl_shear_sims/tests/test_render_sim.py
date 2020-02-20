@@ -19,8 +19,21 @@ def test_render_sim_smoke():
     g1 = 0.0
     g2 = 0.0
     shear_scene = False
-    world_origin = galsim.CelestialCoord(ra=0 * galsim.degrees, dec=0 * galsim.degrees)
-    objs = [galsim.Exponential(half_light_radius=5.5)]
+    world_origin = galsim.CelestialCoord(
+        ra=0 * galsim.degrees,
+        dec=0 * galsim.degrees,
+    )
+    objs = [
+        {
+            'obj': galsim.Exponential(half_light_radius=5.5),
+            'type': 'galaxy',
+        },
+        {
+            'obj': galsim.Gaussian(half_light_radius=1.0e-4),
+            'type': 'star',
+        },
+
+    ]
 
     def _psf_function(*, x, y):
         assert np.allclose(x, img_cen)
@@ -44,7 +57,7 @@ def test_render_sim_smoke():
         g1=g1, g2=g2, shear_scene=shear_scene)
 
     expected_img = galsim.Convolve(
-        objs[0], galsim.Gaussian(fwhm=0.9)
+        objs[0]['obj'], galsim.Gaussian(fwhm=0.9)
     ).drawImage(
         nx=img_dim, ny=img_dim, scale=scale)
 
@@ -60,8 +73,16 @@ def test_render_sim_centered_shear_scene(shear_scene):
     g1 = 0.5
     g2 = -0.2
     world_origin = galsim.CelestialCoord(
-        ra=10 * galsim.degrees, dec=30 * galsim.degrees)
-    objs = [galsim.Exponential(half_light_radius=5.5)]
+        ra=10 * galsim.degrees,
+        dec=30 * galsim.degrees,
+    )
+
+    objs = [
+        {
+            'obj': galsim.Exponential(half_light_radius=5.5),
+            'type': 'galaxy',
+        },
+    ]
 
     def _psf_function(*, x, y):
         assert np.allclose(x, img_cen)
@@ -85,7 +106,7 @@ def test_render_sim_centered_shear_scene(shear_scene):
         g1=g1, g2=g2, shear_scene=shear_scene)
 
     expected_img = galsim.Convolve(
-        objs[0].shear(g1=g1, g2=g2), galsim.Gaussian(fwhm=0.9)
+        objs[0]['obj'].shear(g1=g1, g2=g2), galsim.Gaussian(fwhm=0.9)
     ).drawImage(
         nx=img_dim, ny=img_dim, wcs=wcs.local(world_pos=world_origin))
 
@@ -103,7 +124,12 @@ def test_render_sim_shear_scene(shear_scene):
     g2 = -0.2
     world_origin = galsim.CelestialCoord(
         ra=10 * galsim.degrees, dec=30 * galsim.degrees)
-    objs = [galsim.Exponential(half_light_radius=5.5)]
+    objs = [
+        {
+            'obj': galsim.Exponential(half_light_radius=5.5),
+            'type': 'galaxy',
+        }
+    ]
 
     def _psf_function(*, x, y):
         return galsim.Gaussian(fwhm=0.9)
@@ -139,7 +165,7 @@ def test_render_sim_shear_scene(shear_scene):
 
     obj_world_pos = wcs.toWorld(offset + origin)
     expected_img = galsim.Convolve(
-        objs[0].shear(g1=g1, g2=g2),
+        objs[0]['obj'].shear(g1=g1, g2=g2),
         galsim.Gaussian(fwhm=0.9)
     ).drawImage(
         nx=img_dim, ny=img_dim, offset=offset,
