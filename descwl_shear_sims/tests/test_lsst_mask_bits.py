@@ -10,6 +10,7 @@ from ..lsst_bits import (
     COSMIC_RAY,
     BAD_COLUMN,
     EDGE,
+    SAT,
 )
 
 
@@ -23,3 +24,6 @@ def test_lsst_mask_bits():
 
     edge_val = 2**afw_image.Mask.getMaskPlane('EDGE')
     assert edge_val == EDGE
+
+    sat_val = 2**afw_image.Mask.getMaskPlane('SAT')
+    assert sat_val == SAT

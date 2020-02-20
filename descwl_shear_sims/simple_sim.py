@@ -22,6 +22,8 @@ from .gen_masks import (
     generate_cosmic_rays,
     generate_bad_columns,
 )
+from .gen_star_masks import StarMasks
+
 from .ps_psf import PowerSpectrumPSF
 
 # default mask bits from the stack
@@ -37,6 +39,9 @@ PSF_KWS_DEFAULTS = {
     'gauss': {'fwhm': 0.8, 'g1': 0.0, 'g2': 0.0},
     'ps': {},  # the defaults for the ps PSF are in the class
 }
+
+# TODO get a realistic value
+SAT_VAL = 1.e18
 
 
 @functools.lru_cache(maxsize=8)
@@ -211,6 +216,32 @@ class Sim(object):
                 one entry per bad column width in `widths`.
 
         See descwl_shear_sims.gen_masks.generate_bad_columns for the defaults.
+    sat_stars: bool, optional
+        If `True` then add star and bleed trail masks. Default is `False`.
+    sat_stars_kws : dict, optional
+        A dictionary of options for generating star and bleed trail masks
+
+            radius_degrees: float
+                Stars will be generated in a disk with this radius around
+                the coadd center, default 5 degrees
+            density: float
+                Number of saturated stars per square degree, default 200
+            radmean: float
+                Mean star mask radius in pixels for log normal distribution,
+                default 3
+            radstd: float
+                Radius standard deviation in pixels for log normal distribution,
+                default 5
+            radmin: float
+                Minimum radius in pixels of star masks.  The log normal values
+                will be clipped to more than this value.  Default 3
+            radmax: float
+                Maximum radius in pixels of star masks.  The log normal values
+                will be clipped to less than this value. Default 500
+            bleed_length_fac: float
+                The bleed length is this factor times the *diameter* of the
+                circular star mask, default 2
+
 
     Methods
     -------
@@ -242,6 +273,8 @@ class Sim(object):
         cosmic_rays_kws=None,
         bad_columns=False,
         bad_columns_kws=None,
+        sat_stars=False,
+        sat_stars_kws=None,
     ):
         self._rng = (
             rng
@@ -318,6 +351,16 @@ class Sim(object):
             ra=self._world_ra * galsim.degrees,
             dec=self._world_dec * galsim.degrees)
         self._se_origin = galsim.PositionD(x=self._se_cen, y=self._se_cen)
+
+        self.sat_stars = sat_stars
+        self.sat_stars_kws = sat_stars_kws or {}
+        if self.sat_stars:
+            self._star_masks = StarMasks(
+                rng=self._rng,
+                center_ra=self._world_ra,
+                center_dec=self._world_dec,
+                **self.sat_stars_kws
+            )
 
         # coadd WCS to determine where we should draw locations
         # for objects in the sky
@@ -502,7 +545,9 @@ class Sim(object):
                 se_image += self._generate_noise_image(band_ind)
 
                 # put this after to make sure bad cols are totally dark
-                bmask, se_image = self._generate_mask_plane(se_image)
+                bmask, se_image = self._generate_mask_plane(
+                    se_image=se_image, wcs=wcs,
+                )
 
                 # make galsim image with same wcs as se_image but
                 # with pure random noise
@@ -528,7 +573,7 @@ class Sim(object):
 
         return band_data
 
-    def _generate_mask_plane(self, se_image):
+    def _generate_mask_plane(self, *, se_image, wcs):
 
         shape = se_image.array.shape
         bmask = generate_basic_mask(shape=shape, edge_width=self.edge_width)
@@ -552,7 +597,7 @@ class Sim(object):
                 **defaults,
             )
             bmask[msk] |= COSMIC_RAY
-            se_image.array[msk] = 1e18
+            se_image.array[msk] = SAT_VAL
 
         if self.bad_columns:
             defaults = {
@@ -570,6 +615,14 @@ class Sim(object):
             )
             bmask[msk] |= BAD_COLUMN
             se_image.array[msk] = 0.0
+
+        if self.sat_stars:
+            self._star_masks.set_mask_and_image(
+                mask=bmask,
+                image=se_image.array,
+                wcs=wcs,
+                sat_val=SAT_VAL,
+            )
 
         return (
             galsim.Image(
