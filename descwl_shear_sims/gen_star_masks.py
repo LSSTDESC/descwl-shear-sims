@@ -32,19 +32,19 @@ class StarMasks(object):
         Number of saturated stars per square degree, default 200
     radmean: float
         Mean star mask radius in pixels for log normal distribution,
-        default 3
+        default 1
     radstd: float
         Radius standard deviation in pixels for log normal distribution,
         default 5
     radmin: float
         Minimum radius in pixels of star masks.  The log normal values
-        will be clipped to more than this value. Default 3
+        will be clipped to more than this value. Default 2
     radmax: float
         Maximum radius in pixels of star masks.  The log normal values
-        will be clipped to less than this value. Default 500.
+        will be clipped to less than this value. Default 20.
     bleed_length_fac: float
         The bleed length is this factor times the *diameter* of the circular
-        star mask, default 2
+        star mask, default 4
     """
     def __init__(self, *,
                  rng,
