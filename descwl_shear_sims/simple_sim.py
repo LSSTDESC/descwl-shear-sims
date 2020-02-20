@@ -35,6 +35,11 @@ GAL_KWS_DEFAULTS = {
     'exp': {'half_light_radius': 0.5},
     'wldeblend': {'ngals_factor': 1.0},
 }
+STARS_KWS_DEFAULTS = {
+    'type': 'fixed',
+    'density': 20,  # per squar arcmin
+}
+
 PSF_KWS_DEFAULTS = {
     'gauss': {'fwhm': 0.8, 'g1': 0.0, 'g2': 0.0},
     'ps': {},  # the defaults for the ps PSF are in the class
@@ -42,6 +47,8 @@ PSF_KWS_DEFAULTS = {
 
 # TODO get a realistic value
 SAT_VAL = 1.e18
+EXP_GAL_MAG = 18.0
+FIXED_STAR_MAG = 18.0
 
 
 @functools.lru_cache(maxsize=8)
@@ -216,6 +223,16 @@ class Sim(object):
                 one entry per bad column width in `widths`.
 
         See descwl_shear_sims.gen_masks.generate_bad_columns for the defaults.
+
+    stars: bool, optional
+    stars_kws: dict, optional
+        A dictionary of options for generating stars
+
+            type: type of star, for now just "fixed" is allowed, which
+                means a fixed brightness at mag 19 with the same mean
+                number as the number of galaxies
+            density: number per square arcmin, default 20
+
     sat_stars: bool, optional
         If `True` then add star and bleed trail masks. Default is `False`.
     sat_stars_kws : dict, optional
@@ -273,6 +290,8 @@ class Sim(object):
         cosmic_rays_kws=None,
         bad_columns=False,
         bad_columns_kws=None,
+        stars=False,
+        stars_kws=None,
         sat_stars=False,
         sat_stars_kws=None,
     ):
@@ -405,7 +424,12 @@ class Sim(object):
             self._nobj = int(
                 self.ngals
                 * self.area_sqr_arcmin
-                * self._ngals_factor)
+                * self._ngals_factor
+            )
+
+        self.stars = stars
+        if self.stars:
+            self._setup_stars(stars_kws=stars_kws)
 
         # we only allow the sim class to be used once
         # so that method outputs can be cached safely as needed
@@ -413,6 +437,24 @@ class Sim(object):
         self.called = False
 
         LOGGER.info('simulating bands: %s', self.bands)
+
+    def _setup_stars(self, *, stars_kws):
+        if self.grid_gals:
+            raise ValueError('no grid gals when there are stars')
+
+        self.stars_kws = stars_kws or {}
+        stars_kws_defaults = copy.deepcopy(STARS_KWS_DEFAULTS)
+        self.stars_kws.update(stars_kws_defaults)
+
+        self._nstars = int(
+            self.stars_kws['density'] * self.area_sqr_arcmin,
+        )
+
+    def _get_nstars(self):
+        if self.stars:
+            return self._rng.poisson(self._nstars)
+        else:
+            return 0
 
     def _extra_init_for_wldeblend(self):
         # guard the import here
@@ -518,13 +560,19 @@ class Sim(object):
             raise RuntimeError("A `Sim` object can only be called once!")
         self.called = True
 
-        all_objects, uv_offsets = self._generate_all_objects()
+        all_gal_data, uv_offsets_gals = self._generate_gals()
+        all_star_data, uv_offsets_stars = self._generate_stars()
+
+        all_data = all_gal_data + all_star_data
+        uv_offsets = uv_offsets_gals + uv_offsets_stars
 
         band_data = OrderedDict()
         for band_ind, band in enumerate(self.bands):
-            band_objects = [o[band] for o in all_objects]
+            band_objs = [o[band] for o in all_data]
+
             wcs_objects = self._get_wcs_for_band(band)
-            psf_funcs_galsim, psf_funcs_rendered = self._get_psf_funcs_for_band(band)
+            psf_funcs_galsim, psf_funcs_rendered = \
+                self._get_psf_funcs_for_band(band)
 
             band_data[band] = []
             for epoch, wcs, psf_galsim, psf_func in zip(
@@ -532,15 +580,16 @@ class Sim(object):
                     psf_funcs_galsim, psf_funcs_rendered):
 
                 se_image = render_objs_with_psf_shear(
-                        objs=band_objects,
-                        psf_function=psf_galsim,
-                        uv_offsets=uv_offsets,
-                        wcs=wcs,
-                        img_dim=self.se_dim,
-                        method='auto',
-                        g1=self.g1,
-                        g2=self.g2,
-                        shear_scene=self.shear_scene)
+                    objs=band_objs,
+                    uv_offsets=uv_offsets,
+                    psf_function=psf_galsim,
+                    wcs=wcs,
+                    img_dim=self.se_dim,
+                    method='auto',
+                    g1=self.g1,
+                    g2=self.g2,
+                    shear_scene=self.shear_scene,
+                )
 
                 se_image += self._generate_noise_image(band_ind)
 
@@ -652,8 +701,8 @@ class Sim(object):
             self.noise_per_epoch[band_ind]
         )
 
-    def _generate_all_objects(self):
-        """Generate all objects in all bands.
+    def _generate_gals(self):
+        """Generate all galaxies in all bands.
 
         Returns
         -------
@@ -664,14 +713,14 @@ class Sim(object):
             A list of the uv-plane offsets in the world coordinates for each
             galaxy.
         """
-        all_band_obj = []
-        uv_offsets = []
 
         nobj = self._get_nobj()
 
-        LOGGER.info('drawing %d objects for a %f square arcmin patch',
+        LOGGER.info('drawing %d galaxies for a %f square arcmin patch',
                     nobj, self.area_sqr_arcmin)
 
+        all_data = []
+        uv_offsets = []
         for i in range(nobj):
             # unsheared offset from center of uv image
             du, dv = self._get_dudv()
@@ -679,16 +728,53 @@ class Sim(object):
 
             # get the galaxy
             if self.gal_type == 'exp':
-                gals = self._get_gal_exp()
+                gal_data = self._get_gal_exp()
             elif self.gal_type == 'wldeblend':
-                gals = self._get_gal_wldeblend()
+                gal_data = self._get_gal_wldeblend()
             else:
                 raise ValueError('gal_type "%s" not valid!' % self.gal_type)
 
-            all_band_obj.append(gals)
+            all_data.append(gal_data)
             uv_offsets.append(duv)
 
-        return all_band_obj, uv_offsets
+        return all_data, uv_offsets
+
+    def _generate_stars(self):
+        """Generate all stars in all bands.
+
+        Returns
+        -------
+        all_band_obj : list of OrderedDicts
+            A list the length of the number of stars with an OrderedDict
+            for each object holding each stars galsim object in each band.
+        uv_offsets : list of galsim.PositionD
+            A list of the uv-plane offsets in the world coordinates for each
+            star.
+        """
+
+        star_type = self.stars_kws['type']
+        nstars = self._get_nstars()
+
+        LOGGER.info('drawing %d stars for a %f square arcmin patch',
+                    nstars, self.area_sqr_arcmin)
+
+        all_data = []
+        uv_offsets = []
+        for i in range(nstars):
+            # unsheared offset from center of uv image
+            du, dv = self._get_dudv()
+            duv = galsim.PositionD(x=du, y=dv)
+
+            # get the star as an dict by band
+            if star_type == 'fixed':
+                star_data = self._get_star_fixed()
+            else:
+                raise ValueError('star type "%s" not valid!' % star_type)
+
+            all_data.append(star_data)
+            uv_offsets.append(duv)
+
+        return all_data, uv_offsets
 
     def _get_dudv(self):
         """Return an offset from the center of the image in the (u, v) plane
@@ -727,14 +813,14 @@ class Sim(object):
     def _get_gal_exp(self):
         """Return an OrderedDict keyed on band with the galsim object for
         a given exp gal."""
-        flux = 10**(0.4 * (30 - 18))
+        flux = 10**(0.4 * (30 - EXP_GAL_MAG))
 
         _gal = OrderedDict()
         for band in self.bands:
             obj = galsim.Exponential(
                 **self._final_gal_kws
             ).withFlux(flux)
-            _gal[band] = obj
+            _gal[band] = {'obj': obj, 'type': 'galaxy'}
 
         return _gal
 
@@ -748,12 +834,34 @@ class Sim(object):
         angle = self._rng.uniform() * 360
 
         for band in self.bands:
-            _gal[band] = self._builders[band].from_catalog(
+            obj = self._builders[band].from_catalog(
                 self._wldeblend_cat[rind], 0, 0,
-                self._surveys[band].filter_band).model.rotate(
-                    angle * galsim.degrees)
+                self._surveys[band].filter_band,
+            ).model.rotate(
+                angle * galsim.degrees,
+            )
+            _gal[band] = {'obj': obj, 'type': 'galaxy'}
 
         return _gal
+
+    def _get_star_fixed(self):
+        """
+
+        Returns
+        -------
+        An OrderedDict keyed on band with data of theform
+        {'obj': Gaussian, 'type': 'star'}
+        """
+        flux = 10**(0.4 * (30 - FIXED_STAR_MAG))
+
+        _star = OrderedDict()
+        for band in self.bands:
+            obj = galsim.Gaussian(
+                fwhm=1.0e-4,
+            ).withFlux(flux)
+            _star[band] = {'obj': obj, 'type': 'star'}
+
+        return _star
 
     def _get_wcs_for_band(self, band):
         if not hasattr(self, '_band_wcs_objs'):
