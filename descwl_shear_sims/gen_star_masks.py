@@ -284,7 +284,6 @@ def add_bleed(*, mask, image, x, y, width, length, sat_val):
     intx = int(x)
     inty = int(y)
 
-    xpad = 0
     xmin = intx - xpad
     xmax = intx + xpad
 
