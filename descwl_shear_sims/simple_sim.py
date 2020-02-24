@@ -37,7 +37,7 @@ GAL_KWS_DEFAULTS = {
 }
 STARS_KWS_DEFAULTS = {
     'type': 'fixed',
-    'density': 20,  # per squar arcmin
+    'density': 1,  # per square arcmin
 }
 
 PSF_KWS_DEFAULTS = {
