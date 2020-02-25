@@ -90,7 +90,8 @@ class Sim(object):
         drawn. Default is 50.
     cap_radius:  float
         Draw positions from a spherical cap of this opening angle in arcmin
-        rather than restricting positions to a small region within the coadd
+        rather than restricting positions to a small region within the coadd.
+        The buff is set to 0.0 if cap_radius is sent.
     edge_width:  int
         Width of boundary to be marked as EDGE in the bitmask, default 5
     se_dim: int
