@@ -110,6 +110,8 @@ def render_objs_with_psf_shear(
 
         # intersect and add to total image
         overlap = stamp.bounds & se_im.bounds
-        se_im[overlap] += stamp[overlap]
+        oshape = overlap.numpyShape()
+        if oshape[0]*oshape[1] > 0:
+            se_im[overlap] += stamp[overlap]
 
     return se_im

@@ -16,7 +16,7 @@ from collections import OrderedDict
 from .se_obs import SEObs
 from .render_sim import render_objs_with_psf_shear
 from .gen_tanwcs import gen_tanwcs
-from .randsphere import randsphere
+from .randsphere import randsphere, randcap
 from .gen_masks import (
     generate_basic_mask,
     generate_cosmic_rays,
@@ -88,6 +88,10 @@ class Sim(object):
     buff : int, optional
         The width of the buffer region in the coadd image where no objects are
         drawn. Default is 50.
+    cap_radius:  float
+        Draw positions from a spherical cap of this opening angle in arcmin
+        rather than restricting positions to a small region within the coadd.
+        The buff is set to 0.0 if cap_radius is sent.
     edge_width:  int
         Width of boundary to be marked as EDGE in the bitmask, default 5
     se_dim: int
@@ -277,6 +281,7 @@ class Sim(object):
         scale=0.2,
         coadd_dim=351,
         buff=50,
+        cap_radius=None,
         edge_width=5,
         se_dim=None,
         ngals=80,
@@ -320,6 +325,10 @@ class Sim(object):
         self.scale = scale
         self.coadd_dim = coadd_dim
         self.buff = buff
+        self.cap_radius = cap_radius
+        if self.cap_radius is not None:
+            self.buff = 0
+
         self.edge_width = edge_width
         assert edge_width >= 2, 'edge width must be >= 2'
 
@@ -396,14 +405,23 @@ class Sim(object):
         )
         self._coadd_jac = self.coadd_wcs.jacobian(
             world_pos=self._world_origin).getMatrix()
-        self._ra_range, self._dec_range = self._get_patch_ranges()
 
-        self.area_sqr_arcmin = (
-            # factor of 60 to arcmin
-            (self._ra_range[1] - self._ra_range[0]) * 60 *
-            # factor of 180 * 60 / pi to go from radians to arcmin
-            180 * 60 / np.pi * (np.sin(self._dec_range[1] / 180.0 * np.pi) -
-                                np.sin(self._dec_range[0] / 180.0 * np.pi)))
+        if self.cap_radius is None:
+            self._ra_range, self._dec_range = self._get_patch_ranges()
+
+            self.area_sqr_arcmin = (
+                # factor of 60 to arcmin
+                (self._ra_range[1] - self._ra_range[0]) * 60 *
+                # factor of 180 * 60 / pi to go from radians to arcmin
+                180 * 60 / np.pi * (np.sin(self._dec_range[1] / 180.0 * np.pi) -
+                                    np.sin(self._dec_range[0] / 180.0 * np.pi)))
+        else:
+            # area of spherical cap on the unit sphere with opening angle
+            # cap_radius in arcmin
+            cap_rad_radians = np.radians(self.cap_radius/60)
+            area_radians = 2 * np.pi * (1 - np.cos(cap_rad_radians))
+            self.area_sqr_arcmin = area_radians * (60*180/np.pi)**2
+
         LOGGER.info('area is %f arcmin**2', self.area_sqr_arcmin)
 
         # info about coadd PSF image
@@ -797,8 +815,18 @@ class Sim(object):
                 yind * dg + dg/2 - _pos_width,
                 xind * dg + dg/2 - _pos_width)
         else:
-            ra, dec = randsphere(
-                self._rng, 1, ra_range=self._ra_range, dec_range=self._dec_range)
+            if self.cap_radius is None:
+                ra, dec = randsphere(
+                    self._rng, 1, ra_range=self._ra_range, dec_range=self._dec_range)
+            else:
+                ra, dec = randcap(
+                    rng=self._rng,
+                    nrand=1,
+                    ra=self._world_ra,
+                    dec=self._world_dec,
+                    radius=self.cap_radius/60,
+                )
+
             wpos = galsim.CelestialCoord(
                 ra=ra[0] * galsim.degrees, dec=dec[0] * galsim.degrees)
             ipos = self.coadd_wcs.toImage(wpos)

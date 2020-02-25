@@ -17,6 +17,20 @@ def test_simple_sim_smoke():
             assert epoch_obs.noise is not None
 
 
+def test_simple_sim_cap_radius_smoke():
+    sim = Sim(rng=10, cap_radius=1)
+    assert sim.buff == 0.0
+
+    data = sim.gen_sim()
+    assert len(data) == sim.n_bands
+    for band in sim.bands:
+        assert len(data[band]) == sim.epochs_per_band
+        for epoch in range(sim.epochs_per_band):
+            epoch_obs = data[band][epoch]
+            assert isinstance(epoch_obs, SEObs)
+            assert epoch_obs.noise is not None
+
+
 def test_simple_sim_noise():
     sim = Sim(rng=10)
     data = sim.gen_sim()
