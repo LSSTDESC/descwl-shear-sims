@@ -19,8 +19,10 @@ def render_objs_with_psf_shear(
 
     Parameters
     ----------
-    objs : list of galsim.GSObjects
-        The list of objects to be rendered.
+    objs : list of dict
+        The list of dicts with keys type, either 'galaxy' or 'star'
+        and obj, the galsim GSObject to be rendered.  Stars are not
+        sheared.
     psf_function : callable
         A callable with signature `psf_function(*, x, y)` that returns the
         PSF at a given location in the image.
@@ -55,17 +57,21 @@ def render_objs_with_psf_shear(
     jac_wcs = wcs.jacobian(world_pos=wcs.center)
     center_image_pos = wcs.toImage(wcs.center)
 
-    for obj, uv_offset, in zip(objs, uv_offsets):
+    for obj_data, uv_offset, in zip(objs, uv_offsets):
 
-        # shear object and maybe position
-        sobj = obj.shear(g1=g1, g2=g2)
-        if shear_scene:
-            sdu, sdv = np.dot(shear_mat, np.array([uv_offset.x, uv_offset.y]))
-        else:
-            sdu = uv_offset.x
-            sdv = uv_offset.y
+        obj = obj_data['obj']
 
-        uv_pos = galsim.PositionD(x=sdu, y=sdv)
+        du = uv_offset.x
+        dv = uv_offset.y
+
+        if obj_data['type'] == 'galaxy':
+            # shear object and maybe position
+            # this does not alter the original GSObject
+            obj = obj.shear(g1=g1, g2=g2)
+            if shear_scene:
+                du, dv = np.dot(shear_mat, np.array([du, dv]))
+
+        uv_pos = galsim.PositionD(x=du, y=dv)
 
         # deal with WCS stuff
         # we convert the uv position to xy using the jacobian
@@ -79,7 +85,7 @@ def render_objs_with_psf_shear(
         psf = psf_function(x=pos.x, y=pos.y)
 
         # draw with setup_only to get the image size
-        _im = galsim.Convolve(sobj, psf).drawImage(
+        _im = galsim.Convolve(obj, psf).drawImage(
             wcs=local_wcs,
             method=method,
             setup_only=True).array
@@ -94,7 +100,7 @@ def render_objs_with_psf_shear(
         dy = pos.y - (y_ll + (_im.shape[0] - 1)/2)
 
         # draw and set the proper origin
-        stamp = galsim.Convolve(sobj, psf).drawImage(
+        stamp = galsim.Convolve(obj, psf).drawImage(
             nx=_im.shape[1],
             ny=_im.shape[0],
             wcs=local_wcs,
