@@ -1,13 +1,10 @@
-import numpy as np
 from numba import njit
-import galsim
 import ngmix
-from .randsphere import randcap
 
-from .lsst_bits import SAT
+from .lsst_bits import SAT, SAT_VAL
 
 
-class StarMasks(object):
+class StarMaskPDFs(object):
     """
     make fake masks around the given position with
 
@@ -21,15 +18,6 @@ class StarMasks(object):
     ----------
     rng: numpy.RandomState
         Random number generator to use
-    center_ra: float
-        Stars will be generated in a disk around this point
-    center_dec: float
-        Stars will be generated in a disk around this point
-    radius_degrees: float
-        Stars will be generated in a disk with this radius around the coadd
-        center, default 5 degrees
-    density: float
-        Number of saturated stars per square degree, default 200
     radmean: float
         Mean star mask radius in pixels for log normal distribution,
         default 1
@@ -48,99 +36,29 @@ class StarMasks(object):
     """
     def __init__(self, *,
                  rng,
-                 center_ra,
-                 center_dec,
-                 radius_degrees=5,
-                 density=200,
                  radmean=1,
                  radstd=5,
                  radmin=2,
                  radmax=20,
                  bleed_length_fac=4):
 
-        area = np.pi*radius_degrees**2
-        count = rng.poisson(lam=density*area)
-
-        stars = make_star_struct(size=count)
-        self.stars = stars
-        stars['ra'], stars['dec'] = randcap(
-            rng=rng,
-            nrand=count,
-            ra=center_ra,
-            dec=center_dec,
-            radius=radius_degrees,
-        )
-
         rpdf_ub = ngmix.priors.LogNormal(radmean, radstd, rng=rng)
-        rpdf = ngmix.priors.Bounded1D(rpdf_ub, (radmin, radmax))
+        self.radius_pdf = ngmix.priors.Bounded1D(rpdf_ub, (radmin, radmax))
+        self.bleed_length_fac = bleed_length_fac
 
-        stars['radius'] = rpdf.sample(size=count)
-        stars['bleed_width'] = get_bleed_width(stars['radius'])
-        stars['bleed_length'] = get_bleed_length(
-            star_mask_rad=stars['radius'],
-            bleed_length_fac=bleed_length_fac,
-        )
-
-    def set_mask_and_image(self, *, mask, image, wcs, sat_val):
+    def sample(self):
         """
-        set bits in the input mask for contained stars
-        set fake saturation region in the image
-
-        Currently only stars for which the center is in
-        the image are marked
-
-        Parameters
-        ----------
-        mask: array
-            Array of integer type
-        image: array
-            Image array
-        wcs: wcs object
-            A wcs object with the sky2image method
-        sat_val: float
-            Value for saturation
+        sample radius, bleed_width, and bleed_length
         """
 
-        stars = self.stars
-
-        xvals, yvals = wcs.radecToxy(
-            stars['ra'], stars['dec'], galsim.degrees,
+        res = {}
+        res['radius'] = self.radius_pdf.sample()
+        res['bleed_width'] = get_bleed_width(res['radius'])
+        res['bleed_length'] = get_bleed_length(
+            star_mask_rad=res['radius'],
+            bleed_length_fac=self.bleed_length_fac,
         )
-
-        ny, nx = mask.shape
-        keep = np.zeros(stars.size, dtype='bool')
-        for i in range(stars.size):
-            x = xvals[i]
-            y = yvals[i]
-            if (x >= 0 and x < nx and y >= 0 and y < ny):
-
-                add_star_and_bleed(
-                    mask=mask,
-                    image=image,
-                    x=x,
-                    y=y,
-                    radius=stars['radius'][i],
-                    bleed_width=stars['bleed_width'][i],
-                    bleed_length=stars['bleed_length'][i],
-                    sat_val=sat_val,
-                )
-                keep[i] = True
-
-        xvals = xvals[keep]
-        yvals = yvals[keep]
-
-        return xvals, yvals
-
-
-def make_star_struct(size=1):
-    dt = [
-        ('ra', 'f8'),
-        ('dec', 'f8'),
-        ('radius', 'f8'),  # pixels
-        ('bleed_width', 'f8'),  # pixels
-        ('bleed_length', 'f8'),  # pixels
-    ]
-    return np.zeros(size, dtype=dt)
+        return res
 
 
 def add_star_and_bleed(*,
@@ -149,8 +67,7 @@ def add_star_and_bleed(*,
                        x, y,
                        radius,
                        bleed_width,
-                       bleed_length,
-                       sat_val):
+                       bleed_length):
     """
     Add a circular star mask and bleed trail mask to
     the input mask image
@@ -167,8 +84,6 @@ def add_star_and_bleed(*,
         Width of bleed in pixels
     bleed_length: float
         Length of bleed in pixels
-    sat_val: float
-        Value for saturation
     """
     add_star(
         mask=mask,
@@ -176,7 +91,6 @@ def add_star_and_bleed(*,
         x=x,
         y=y,
         radius=radius,
-        sat_val=sat_val,
     )
 
     add_bleed(
@@ -186,7 +100,6 @@ def add_star_and_bleed(*,
         y=y,
         width=bleed_width,
         length=bleed_length,
-        sat_val=sat_val,
     )
 
 
@@ -195,12 +108,10 @@ def get_bleed_width(star_mask_rad):
     width is always odd
     """
 
-    width = np.zeros(star_mask_rad.size, dtype='i4')
-    width[:] = 1
-
-    w, = np.where(star_mask_rad > 10)
-    if w.size > 0:
-        width[w] = 3
+    if star_mask_rad > 10:
+        width = 3
+    else:
+        width = 1
 
     return width
 
@@ -210,18 +121,19 @@ def get_bleed_length(*, star_mask_rad, bleed_length_fac):
     length is always odd
     """
     diameter = star_mask_rad*2
-    length = (bleed_length_fac*diameter).astype('i4')
+    length = int(bleed_length_fac*diameter)
 
-    w, = np.where((length % 2) == 0)
-    if w.size > 0:
-        length[w] -= 1
+    if (length % 2) == 0:
+        length -= 1
 
-    length.clip(min=1, out=length)
+    if length < 1:
+        length = 1
+
     return length
 
 
 @njit
-def add_star(*, mask, image, x, y, radius, sat_val):
+def add_star(*, mask, image, x, y, radius):
     """
     Add a circular star mask to the input mask image
 
@@ -254,11 +166,11 @@ def add_star(*, mask, image, x, y, radius, sat_val):
                 continue
 
             mask[iy, ix] |= SAT
-            image[iy, ix] = sat_val
+            image[iy, ix] = SAT_VAL
 
 
 @njit
-def add_bleed(*, mask, image, x, y, width, length, sat_val):
+def add_bleed(*, mask, image, x, y, width, length):
     """
     Add a bleed trail mask to the input mask image
 
@@ -272,8 +184,6 @@ def add_bleed(*, mask, image, x, y, width, length, sat_val):
         Width of bleed in pixels
     length: float
         Length of bleed in pixels
-    sat_val: float
-        Value for saturation
     """
 
     ny, nx = mask.shape
@@ -298,4 +208,4 @@ def add_bleed(*, mask, image, x, y, width, length, sat_val):
             if ix < 0 or ix > (nx-1):
                 continue
             mask[iy, ix] |= SAT
-            image[iy, ix] = sat_val
+            image[iy, ix] = SAT_VAL

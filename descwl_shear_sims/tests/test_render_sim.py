@@ -28,11 +28,6 @@ def test_render_sim_smoke():
             'obj': galsim.Exponential(half_light_radius=5.5),
             'type': 'galaxy',
         },
-        {
-            'obj': galsim.Gaussian(half_light_radius=1.0e-4),
-            'type': 'star',
-        },
-
     ]
 
     def _psf_function(*, x, y):
@@ -51,7 +46,7 @@ def test_render_sim_smoke():
         units=galsim.arcsec,
     )
 
-    se_img = render_objs_with_psf_shear(
+    se_img, mask_img = render_objs_with_psf_shear(
         objs=objs, psf_function=_psf_function, uv_offsets=uv_offsets,
         wcs=wcs, img_dim=img_dim, method=method,
         g1=g1, g2=g2, shear_scene=shear_scene)
@@ -62,6 +57,53 @@ def test_render_sim_smoke():
         nx=img_dim, ny=img_dim, scale=scale)
 
     assert np.allclose(expected_img.array, se_img.array, rtol=0, atol=1e-9)
+
+
+def test_render_sim_star_smoke():
+    img_dim = 103
+    img_cen = (img_dim - 1)/2
+    scale = 0.25
+    method = 'auto'
+    g1 = 0.0
+    g2 = 0.0
+    shear_scene = False
+    world_origin = galsim.CelestialCoord(
+        ra=0 * galsim.degrees,
+        dec=0 * galsim.degrees,
+    )
+    objs = [
+        {
+            'obj': galsim.Exponential(half_light_radius=5.5),
+            'type': 'galaxy',
+        },
+        {
+            'obj': galsim.Gaussian(half_light_radius=1.0e-4),
+            'type': 'star',
+            'saturated': False,
+        },
+    ]
+
+    def _psf_function(*, x, y):
+        return galsim.Gaussian(fwhm=0.9)
+
+    uv_offsets = [
+        galsim.PositionD(x=0.0, y=0.0),
+        galsim.PositionD(x=2.0, y=1.0),
+    ]
+    wcs = galsim.TanWCS(
+        affine=galsim.AffineTransform(
+            scale, 0.0, 0.0, scale,
+            origin=galsim.PositionD(x=img_cen, y=img_cen),
+            world_origin=galsim.PositionD(0, 0),
+        ),
+        world_origin=world_origin,
+        units=galsim.arcsec,
+    )
+
+    se_img, mask_img = render_objs_with_psf_shear(
+        objs=objs, psf_function=_psf_function, uv_offsets=uv_offsets,
+        wcs=wcs, img_dim=img_dim, method=method,
+        g1=g1, g2=g2, shear_scene=shear_scene)
 
 
 @pytest.mark.parametrize('shear_scene', [True, False])
@@ -100,7 +142,7 @@ def test_render_sim_centered_shear_scene(shear_scene):
         units=galsim.arcsec,
     )
 
-    se_img = render_objs_with_psf_shear(
+    se_img, mask_img = render_objs_with_psf_shear(
         objs=objs, psf_function=_psf_function, uv_offsets=uv_offsets,
         wcs=wcs, img_dim=img_dim, method=method,
         g1=g1, g2=g2, shear_scene=shear_scene)
@@ -146,12 +188,12 @@ def test_render_sim_shear_scene(shear_scene):
     )
     jac_wcs = wcs.jacobian(world_pos=wcs.center)
 
-    se_img = render_objs_with_psf_shear(
+    se_img, mask_img = render_objs_with_psf_shear(
         objs=objs, psf_function=_psf_function, uv_offsets=uv_offsets,
         wcs=wcs, img_dim=img_dim, method=method,
         g1=g1, g2=g2, shear_scene=not shear_scene)
 
-    se_img_shear_scene = render_objs_with_psf_shear(
+    se_img_shear_scene, mask_img = render_objs_with_psf_shear(
         objs=objs, psf_function=_psf_function, uv_offsets=uv_offsets,
         wcs=wcs, img_dim=img_dim, method=method,
         g1=g1, g2=g2, shear_scene=shear_scene)

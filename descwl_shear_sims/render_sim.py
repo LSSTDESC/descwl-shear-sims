@@ -7,6 +7,7 @@ import logging
 
 import numpy as np
 import galsim
+from .gen_star_masks import add_star_and_bleed
 
 LOGGER = logging.getLogger(__name__)
 
@@ -49,10 +50,21 @@ def render_objs_with_psf_shear(
     se_image : galsim.ImageD
         The rendered image.
     """
+
     shear_mat = galsim.Shear(g1=g1, g2=g2).getMatrix()
 
     se_im = galsim.ImageD(
-        nrow=img_dim, ncol=img_dim, xmin=0, ymin=0)
+        nrow=img_dim,
+        ncol=img_dim,
+        xmin=0,
+        ymin=0,
+    )
+    mask_im = galsim.ImageI(
+        nrow=img_dim,
+        ncol=img_dim,
+        xmin=0,
+        ymin=0,
+    )
 
     jac_wcs = wcs.jacobian(world_pos=wcs.center)
     center_image_pos = wcs.toImage(wcs.center)
@@ -114,4 +126,17 @@ def render_objs_with_psf_shear(
         if oshape[0]*oshape[1] > 0:
             se_im[overlap] += stamp[overlap]
 
-    return se_im
+            if (obj_data['type'] == 'star' and obj_data['saturated']):
+
+                sat_data = obj_data['sat_data']
+                add_star_and_bleed(
+                    mask=mask_im.array,
+                    image=se_im.array,
+                    x=pos.x,
+                    y=pos.y,
+                    radius=sat_data['radius'],
+                    bleed_width=sat_data['bleed_width'],
+                    bleed_length=sat_data['bleed_length'],
+                )
+
+    return se_im, mask_im
