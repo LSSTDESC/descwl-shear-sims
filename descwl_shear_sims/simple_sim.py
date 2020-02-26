@@ -615,6 +615,7 @@ class Sim(object):
             band_objs = [o[band] for o in all_data]
 
             wcs_objects = self._get_wcs_for_band(band)
+
             psf_funcs_galsim, psf_funcs_rendered = \
                 self._get_psf_funcs_for_band(band)
 
@@ -931,24 +932,38 @@ class Sim(object):
         return _star
 
     def _get_wcs_for_band(self, band):
+        """
+        return list of all wcs, one for each epoch in this band
+        """
         if not hasattr(self, '_band_wcs_objs'):
-            wcs_kws = dict(
-                position_angle_range=self.wcs_kws.get('position_angle_range', (0, 0)),
-                dither_range=self.wcs_kws.get('dither_range', (0, 0)),
-                scale_frac_std=self.wcs_kws.get('scale_frac_std', 0),
-                shear_std=self.wcs_kws.get('shear_std', 0),
-                scale=self.scale,
-                world_origin=self._world_origin,
-                origin=self._se_origin,
-                rng=self._rng)
-
-            self._band_wcs_objs = {}
-            for band in self.bands:
-                self._band_wcs_objs[band] = []
-                for _ in range(self.epochs_per_band):
-                    self._band_wcs_objs[band].append(gen_tanwcs(**wcs_kws))
+            self._gen_all_wcs()
 
         return self._band_wcs_objs[band]
+
+    def _gen_all_wcs(self):
+        """
+        generate a wcs for each band and epoch.  The result is stored
+        in a dict of lists
+
+        self._band_wcs_objs[band][epoch]
+        """
+        wcs_kws = dict(
+            position_angle_range=self.wcs_kws.get('position_angle_range', (0, 0)),
+            dither_range=self.wcs_kws.get('dither_range', (0, 0)),
+            scale_frac_std=self.wcs_kws.get('scale_frac_std', 0),
+            shear_std=self.wcs_kws.get('shear_std', 0),
+            scale=self.scale,
+            world_origin=self._world_origin,
+            origin=self._se_origin,
+            rng=self._rng,
+        )
+
+        self._band_wcs_objs = {}
+        for band in self.bands:
+            self._band_wcs_objs[band] = []
+            for i in range(self.epochs_per_band):
+                twcs = gen_tanwcs(**wcs_kws)
+                self._band_wcs_objs[band].append(twcs)
 
     def _init_ps_psfs(self):
         if not hasattr(self, '_ps_psf_objs'):

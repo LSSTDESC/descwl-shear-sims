@@ -171,3 +171,17 @@ def test_simple_sim_se_ps_psf():
                 axs[1].imshow(psf2.array)
                 axs[2].imshow(psf1.array - psf2.array)
                 assert False
+
+
+def test_simple_sim_band_wcs():
+    """
+    make sure the cacheing code is consistent
+    """
+    sim = Sim(
+        rng=10,
+        epochs_per_band=1,
+    )
+    sim.gen_sim()
+
+    for band in sim.bands:
+        assert sim._get_wcs_for_band(band) == sim._band_wcs_objs[band]
