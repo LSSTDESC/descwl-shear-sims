@@ -16,6 +16,7 @@ BLEED = np.int64(2**11)
 # TODO get a good value
 SAT_VAL = 1.e18
 
+
 # double check they match the stack
 def _check_bits_against_stack():
     try:
