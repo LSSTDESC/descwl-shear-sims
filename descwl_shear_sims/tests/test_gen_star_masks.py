@@ -1,11 +1,8 @@
 import numpy as np
 
-from ..gen_star_masks import StarMasks
-from ..lsst_bits import SAT
-from ..simple_sim import (
-    Sim,
-    SAT_VAL,
-)
+from ..gen_star_masks import StarMaskPDFs
+from ..lsst_bits import SAT, SAT_VAL
+from ..simple_sim import Sim
 
 
 def test_star_mask_smoke():
@@ -13,53 +10,7 @@ def test_star_mask_smoke():
     make sure we can generate star masks
     """
     rng = np.random.RandomState(2342)
-    ra = 200.0
-    dec = 15.0
-
-    StarMasks(
-        rng=rng,
-        center_ra=ra,
-        center_dec=dec,
-    )
-
-
-def test_star_mask_works():
-    """
-    test star masking, adding them directly to existing mask image
-    """
-    rng = np.random.RandomState(234)
-    sim = Sim(
-        rng=rng,
-        bands=['r'],
-        epochs_per_band=1,
-    )
-
-    data = sim.gen_sim()
-    center_ra = sim._world_origin.ra.deg
-    center_dec = sim._world_origin.dec.deg
-
-    # very high density to ensure we get one
-    star_masks = StarMasks(
-        rng=rng,
-        center_ra=center_ra,
-        center_dec=center_dec,
-        density=10000,
-    )
-    se_obs = data['r'][0]
-    wcs = se_obs.wcs
-    mask = se_obs.bmask.array
-    image = se_obs.image.array
-    xvals, yvals = star_masks.set_mask_and_image(
-        mask=mask,
-        image=image,
-        wcs=wcs,
-        sat_val=SAT_VAL,
-    )
-    nstars = xvals.size
-    assert nstars > 0
-
-    w = np.where((mask & SAT) != 0)
-    assert w[0].size > 0
+    StarMaskPDFs(rng=rng)
 
 
 def test_star_mask_keywords():
@@ -71,17 +22,22 @@ def test_star_mask_keywords():
         rng=rng,
         bands=['r'],
         epochs_per_band=1,
+        stars=True,
+        stars_kws={'density': 3},
         sat_stars=True,
-        sat_stars_kws={'density': 10000},
+        sat_stars_kws={'density': 3},
     )
 
     data = sim.gen_sim()
 
     se_obs = data['r'][0]
     mask = se_obs.bmask.array
+    image = se_obs.image.array
 
     w = np.where((mask & SAT) != 0)
     assert w[0].size > 0
+
+    assert np.all(image[w] == SAT_VAL)
 
 
 def test_star_mask_repeatable():
@@ -95,8 +51,10 @@ def test_star_mask_repeatable():
             rng=rng,
             bands=['r'],
             epochs_per_band=1,
+            stars=True,
+            stars_kws={'density': 3},
             sat_stars=True,
-            sat_stars_kws={'density': 10000},
+            sat_stars_kws={'density': 3},
         )
 
         data = sim.gen_sim()

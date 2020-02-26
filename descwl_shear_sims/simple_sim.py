@@ -22,12 +22,12 @@ from .gen_masks import (
     generate_cosmic_rays,
     generate_bad_columns,
 )
-from .gen_star_masks import StarMasks
+from .gen_star_masks import StarMaskPDFs, add_star_and_bleed
 
 from .ps_psf import PowerSpectrumPSF
 
 # default mask bits from the stack
-from .lsst_bits import BAD_COLUMN, COSMIC_RAY
+from .lsst_bits import BAD_COLUMN, COSMIC_RAY, SAT_VAL
 
 LOGGER = logging.getLogger(__name__)
 
@@ -39,6 +39,10 @@ STARS_KWS_DEFAULTS = {
     'type': 'fixed',
     'density': 1,  # per square arcmin
 }
+SAT_STARS_KWS_DEFAULTS = {
+    'density': 0.0555,  # per square arcmin, 200 per sq degree
+}
+
 
 PSF_KWS_DEFAULTS = {
     'gauss': {'fwhm': 0.8, 'g1': 0.0, 'g2': 0.0},
@@ -46,7 +50,6 @@ PSF_KWS_DEFAULTS = {
 }
 
 # TODO get a realistic value
-SAT_VAL = 1.e18
 EXP_GAL_MAG = 18.0
 FIXED_STAR_MAG = 18.0
 
@@ -90,8 +93,7 @@ class Sim(object):
         drawn. Default is 50.
     cap_radius:  float
         Draw positions from a spherical cap of this opening angle in arcmin
-        rather than restricting positions to a small region within the coadd.
-        The buff is set to 0.0 if cap_radius is sent.
+        rather than restricting positions to a small region within the coadd
     edge_width:  int
         Width of boundary to be marked as EDGE in the bitmask, default 5
     se_dim: int
@@ -242,11 +244,8 @@ class Sim(object):
     sat_stars_kws : dict, optional
         A dictionary of options for generating star and bleed trail masks
 
-            radius_degrees: float
-                Stars will be generated in a disk with this radius around
-                the coadd center, default 5 degrees
             density: float
-                Number of saturated stars per square degree, default 200
+                Number of saturated stars per square arcmin, default 0.055
             radmean: float
                 Mean star mask radius in pixels for log normal distribution,
                 default 3
@@ -380,16 +379,6 @@ class Sim(object):
             dec=self._world_dec * galsim.degrees)
         self._se_origin = galsim.PositionD(x=self._se_cen, y=self._se_cen)
 
-        self.sat_stars = sat_stars
-        self.sat_stars_kws = sat_stars_kws or {}
-        if self.sat_stars:
-            self._star_masks = StarMasks(
-                rng=self._rng,
-                center_ra=self._world_ra,
-                center_dec=self._world_dec,
-                **self.sat_stars_kws
-            )
-
         # coadd WCS to determine where we should draw locations
         # for objects in the sky
         self._coadd_cen = (self.coadd_dim - 1) / 2
@@ -446,6 +435,10 @@ class Sim(object):
             )
 
         self._setup_stars(stars=stars, stars_kws=stars_kws)
+        self._setup_sat_stars(
+            sat_stars=sat_stars,
+            sat_stars_kws=sat_stars_kws,
+        )
 
         # we only allow the sim class to be used once
         # so that method outputs can be cached safely as needed
@@ -455,21 +448,51 @@ class Sim(object):
         LOGGER.info('simulating bands: %s', self.bands)
 
     def _setup_stars(self, *, stars, stars_kws):
-        if self.grid_gals:
+        if stars and self.grid_gals:
             raise ValueError('no grid gals when there are stars')
 
         self.stars = stars
-        if stars_kws is not None:
-            self.stars_kws = copy.deepcopy(stars_kws)
-        else:
-            self.stars_kws = {}
+        self.stars_kws = {}
+        self.stars_kws.update(copy.deepcopy(STARS_KWS_DEFAULTS))
 
-        stars_kws_defaults = copy.deepcopy(STARS_KWS_DEFAULTS)
-        self.stars_kws.update(stars_kws_defaults)
+        if stars_kws is not None:
+            self.stars_kws.update(copy.deepcopy(stars_kws))
 
         self._nstars = int(
             self.stars_kws['density'] * self.area_sqr_arcmin,
         )
+
+    def _setup_sat_stars(self, *, sat_stars, sat_stars_kws):
+        if sat_stars and self.grid_gals:
+            raise ValueError('no grid gals when there are saturated stars')
+
+        self.sat_stars = sat_stars
+        if self.sat_stars:
+            assert self.stars, (
+                'you must set stars True to use saturated stars'
+            )
+
+            self.sat_stars_kws = {}
+            self.sat_stars_kws.update(copy.deepcopy(SAT_STARS_KWS_DEFAULTS))
+
+            if sat_stars_kws is not None:
+                self.sat_stars_kws.update(copy.deepcopy(sat_stars_kws))
+
+            # density per square arcmin. Pop it because it is not
+            # used by the pdf
+            density = self.sat_stars_kws.pop('density')
+
+            self.star_mask_pdf = StarMaskPDFs(
+                rng=self._rng,
+                **self.sat_stars_kws
+            )
+
+            self.sat_stars_frac = (
+                density/self.stars_kws['density']
+            )
+        else:
+            self.star_mask_pdf = None
+            self.sat_stars_frac = 0.0
 
     def _get_nstars(self):
         if self.stars:
@@ -601,7 +624,7 @@ class Sim(object):
                     range(self.epochs_per_band), wcs_objects,
                     psf_funcs_galsim, psf_funcs_rendered):
 
-                se_image = render_objs_with_psf_shear(
+                se_image, overlap_info = render_objs_with_psf_shear(
                     objs=band_objs,
                     uv_offsets=uv_offsets,
                     psf_function=psf_galsim,
@@ -617,7 +640,10 @@ class Sim(object):
 
                 # put this after to make sure bad cols are totally dark
                 bmask, se_image = self._generate_mask_plane(
-                    se_image=se_image, wcs=wcs,
+                    se_image=se_image,
+                    wcs=wcs,
+                    objs=band_objs,
+                    overlap_info=overlap_info,
                 )
 
                 # make galsim image with same wcs as se_image but
@@ -644,7 +670,10 @@ class Sim(object):
 
         return band_data
 
-    def _generate_mask_plane(self, *, se_image, wcs):
+    def _generate_mask_plane(self, *, se_image, wcs, objs, overlap_info):
+        """
+        set masks for edges, cosmics, bad columns and saturated stars/bleeds
+        """
 
         shape = se_image.array.shape
         bmask = generate_basic_mask(shape=shape, edge_width=self.edge_width)
@@ -687,22 +716,32 @@ class Sim(object):
             bmask[msk] |= BAD_COLUMN
             se_image.array[msk] = 0.0
 
-        if self.sat_stars:
-            self._star_masks.set_mask_and_image(
-                mask=bmask,
-                image=se_image.array,
-                wcs=wcs,
-                sat_val=SAT_VAL,
-            )
+        if self.stars and self.sat_stars:
+            for obj_data, info in zip(objs, overlap_info):
+                if (info['overlaps'] and
+                        obj_data['type'] == 'star' and
+                        obj_data['saturated']):
 
-        return (
-            galsim.Image(
-                bmask,
-                bounds=se_image.bounds,
-                wcs=se_image.wcs,
-                dtype=np.int32),
-            se_image,
+                    pos = info['pos']
+
+                    sat_data = obj_data['sat_data']
+                    add_star_and_bleed(
+                        mask=bmask,
+                        image=se_image.array,
+                        x=pos.x,
+                        y=pos.y,
+                        radius=sat_data['radius'],
+                        bleed_width=sat_data['bleed_width'],
+                        bleed_length=sat_data['bleed_length'],
+                    )
+
+        bmask_image = galsim.Image(
+            bmask,
+            bounds=se_image.bounds,
+            wcs=se_image.wcs,
+            dtype=np.int32,
         )
+        return bmask_image, se_image
 
     def _generate_noise_image(self, band_ind):
         """
@@ -884,6 +923,14 @@ class Sim(object):
         An OrderedDict keyed on band with data of theform
         {'obj': Gaussian, 'type': 'star'}
         """
+
+        if self._rng.uniform() < self.sat_stars_frac:
+            saturated = True
+            sat_data = self.star_mask_pdf.sample()
+        else:
+            saturated = False
+            sat_data = None
+
         flux = 10**(0.4 * (30 - FIXED_STAR_MAG))
 
         _star = OrderedDict()
@@ -891,7 +938,13 @@ class Sim(object):
             obj = galsim.Gaussian(
                 fwhm=1.0e-4,
             ).withFlux(flux)
-            _star[band] = {'obj': obj, 'type': 'star'}
+
+            _star[band] = {
+                'obj': obj,
+                'type': 'star',
+                'saturated': saturated,
+                'sat_data': copy.deepcopy(sat_data),
+            }
 
         return _star
 

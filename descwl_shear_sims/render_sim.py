@@ -48,15 +48,26 @@ def render_objs_with_psf_shear(
     -------
     se_image : galsim.ImageD
         The rendered image.
+    overlap_info: list of dict
+        List of dict for each object containing
+            'overlaps': whether or not the stamp for the object overlapped
+            the image
+            'pos': the position of the object center in the image
     """
+
     shear_mat = galsim.Shear(g1=g1, g2=g2).getMatrix()
 
     se_im = galsim.ImageD(
-        nrow=img_dim, ncol=img_dim, xmin=0, ymin=0)
+        nrow=img_dim,
+        ncol=img_dim,
+        xmin=0,
+        ymin=0,
+    )
 
     jac_wcs = wcs.jacobian(world_pos=wcs.center)
     center_image_pos = wcs.toImage(wcs.center)
 
+    overlap_info = []
     for obj_data, uv_offset, in zip(objs, uv_offsets):
 
         obj = obj_data['obj']
@@ -112,6 +123,14 @@ def render_objs_with_psf_shear(
         overlap = stamp.bounds & se_im.bounds
         oshape = overlap.numpyShape()
         if oshape[0]*oshape[1] > 0:
+            overlaps = True
             se_im[overlap] += stamp[overlap]
+        else:
+            overlaps = False
 
-    return se_im
+        overlap_info.append({
+            'overlaps': overlaps,
+            'pos': pos,
+        })
+
+    return se_im, overlap_info
