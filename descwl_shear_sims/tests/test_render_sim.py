@@ -46,10 +46,15 @@ def test_render_sim_smoke():
         units=galsim.arcsec,
     )
 
-    se_img, mask_img = render_objs_with_psf_shear(
+    se_img, overlap_info = render_objs_with_psf_shear(
         objs=objs, psf_function=_psf_function, uv_offsets=uv_offsets,
         wcs=wcs, img_dim=img_dim, method=method,
         g1=g1, g2=g2, shear_scene=shear_scene)
+
+    assert len(overlap_info) == len(objs)
+    for info in overlap_info:
+        assert 'pos' in info and 'overlaps' in info
+        assert info['overlaps'] is True
 
     expected_img = galsim.Convolve(
         objs[0]['obj'], galsim.Gaussian(fwhm=0.9)
@@ -79,7 +84,6 @@ def test_render_sim_star_smoke():
         {
             'obj': galsim.Gaussian(half_light_radius=1.0e-4),
             'type': 'star',
-            'saturated': False,
         },
     ]
 
@@ -100,10 +104,15 @@ def test_render_sim_star_smoke():
         units=galsim.arcsec,
     )
 
-    se_img, mask_img = render_objs_with_psf_shear(
+    se_img, overlap_info = render_objs_with_psf_shear(
         objs=objs, psf_function=_psf_function, uv_offsets=uv_offsets,
         wcs=wcs, img_dim=img_dim, method=method,
         g1=g1, g2=g2, shear_scene=shear_scene)
+
+    assert len(overlap_info) == len(objs)
+    for info in overlap_info:
+        assert 'pos' in info and 'overlaps' in info
+        assert info['overlaps'] is True
 
 
 @pytest.mark.parametrize('shear_scene', [True, False])
@@ -142,7 +151,7 @@ def test_render_sim_centered_shear_scene(shear_scene):
         units=galsim.arcsec,
     )
 
-    se_img, mask_img = render_objs_with_psf_shear(
+    se_img, overlap_info = render_objs_with_psf_shear(
         objs=objs, psf_function=_psf_function, uv_offsets=uv_offsets,
         wcs=wcs, img_dim=img_dim, method=method,
         g1=g1, g2=g2, shear_scene=shear_scene)
@@ -188,12 +197,12 @@ def test_render_sim_shear_scene(shear_scene):
     )
     jac_wcs = wcs.jacobian(world_pos=wcs.center)
 
-    se_img, mask_img = render_objs_with_psf_shear(
+    se_img, _ = render_objs_with_psf_shear(
         objs=objs, psf_function=_psf_function, uv_offsets=uv_offsets,
         wcs=wcs, img_dim=img_dim, method=method,
         g1=g1, g2=g2, shear_scene=not shear_scene)
 
-    se_img_shear_scene, mask_img = render_objs_with_psf_shear(
+    se_img_shear_scene, _ = render_objs_with_psf_shear(
         objs=objs, psf_function=_psf_function, uv_offsets=uv_offsets,
         wcs=wcs, img_dim=img_dim, method=method,
         g1=g1, g2=g2, shear_scene=shear_scene)
