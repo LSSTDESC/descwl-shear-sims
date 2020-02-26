@@ -22,7 +22,7 @@ from .gen_masks import (
     generate_cosmic_rays,
     generate_bad_columns,
 )
-from .gen_star_masks import StarMaskPDFs
+from .gen_star_masks import StarMaskPDFs, add_star_and_bleed
 
 from .ps_psf import PowerSpectrumPSF
 
@@ -624,7 +624,7 @@ class Sim(object):
                     range(self.epochs_per_band), wcs_objects,
                     psf_funcs_galsim, psf_funcs_rendered):
 
-                se_image, omask_image = render_objs_with_psf_shear(
+                se_image, overlap_info = render_objs_with_psf_shear(
                     objs=band_objs,
                     uv_offsets=uv_offsets,
                     psf_function=psf_galsim,
@@ -642,10 +642,9 @@ class Sim(object):
                 bmask, se_image = self._generate_mask_plane(
                     se_image=se_image,
                     wcs=wcs,
+                    objs=band_objs,
+                    overlap_info=overlap_info,
                 )
-
-                # omask_image could have saturated pixels set
-                bmask |= omask_image.array
 
                 # make galsim image with same wcs as se_image but
                 # with pure random noise
@@ -671,9 +670,9 @@ class Sim(object):
 
         return band_data
 
-    def _generate_mask_plane(self, *, se_image, wcs):
+    def _generate_mask_plane(self, *, se_image, wcs, objs, overlap_info):
         """
-        note saturated stars are handled in render_objs_with_psf_shear
+        set masks for edges, cosmics, bad columns and saturated stars/bleeds
         """
 
         shape = se_image.array.shape
@@ -717,14 +716,32 @@ class Sim(object):
             bmask[msk] |= BAD_COLUMN
             se_image.array[msk] = 0.0
 
-        return (
-            galsim.Image(
-                bmask,
-                bounds=se_image.bounds,
-                wcs=se_image.wcs,
-                dtype=np.int32),
-            se_image,
+        if self.stars and self.sat_stars:
+            for obj_data, info in zip(objs, overlap_info):
+                if (info['overlaps'] and
+                        obj_data['type'] == 'star' and
+                        obj_data['saturated']):
+
+                    pos = info['pos']
+
+                    sat_data = obj_data['sat_data']
+                    add_star_and_bleed(
+                        mask=bmask,
+                        image=se_image.array,
+                        x=pos.x,
+                        y=pos.y,
+                        radius=sat_data['radius'],
+                        bleed_width=sat_data['bleed_width'],
+                        bleed_length=sat_data['bleed_length'],
+                    )
+
+        bmask_image = galsim.Image(
+            bmask,
+            bounds=se_image.bounds,
+            wcs=se_image.wcs,
+            dtype=np.int32,
         )
+        return bmask_image, se_image
 
     def _generate_noise_image(self, band_ind):
         """
