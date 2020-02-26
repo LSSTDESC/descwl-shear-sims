@@ -7,7 +7,6 @@ import logging
 
 import numpy as np
 import galsim
-from .gen_star_masks import add_star_and_bleed
 
 LOGGER = logging.getLogger(__name__)
 
@@ -59,16 +58,11 @@ def render_objs_with_psf_shear(
         xmin=0,
         ymin=0,
     )
-    mask_im = galsim.ImageI(
-        nrow=img_dim,
-        ncol=img_dim,
-        xmin=0,
-        ymin=0,
-    )
 
     jac_wcs = wcs.jacobian(world_pos=wcs.center)
     center_image_pos = wcs.toImage(wcs.center)
 
+    overlap_info = []
     for obj_data, uv_offset, in zip(objs, uv_offsets):
 
         obj = obj_data['obj']
@@ -124,19 +118,14 @@ def render_objs_with_psf_shear(
         overlap = stamp.bounds & se_im.bounds
         oshape = overlap.numpyShape()
         if oshape[0]*oshape[1] > 0:
+            overlaps = True
             se_im[overlap] += stamp[overlap]
+        else:
+            overlaps = False
 
-            if (obj_data['type'] == 'star' and obj_data['saturated']):
+        overlap_info.append({
+            'overlaps': overlaps,
+            'pos': pos,
+        })
 
-                sat_data = obj_data['sat_data']
-                add_star_and_bleed(
-                    mask=mask_im.array,
-                    image=se_im.array,
-                    x=pos.x,
-                    y=pos.y,
-                    radius=sat_data['radius'],
-                    bleed_width=sat_data['bleed_width'],
-                    bleed_length=sat_data['bleed_length'],
-                )
-
-    return se_im, mask_im
+    return se_im, overlap_info
