@@ -48,6 +48,11 @@ def render_objs_with_psf_shear(
     -------
     se_image : galsim.ImageD
         The rendered image.
+    overlap_info: list of dict
+        List of dict for each object containing
+            'overlaps': whether or not the stamp for the object overlapped
+            the image
+            'pos': the position of the object center in the image
     """
 
     shear_mat = galsim.Shear(g1=g1, g2=g2).getMatrix()
