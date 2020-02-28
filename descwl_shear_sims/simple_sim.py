@@ -53,6 +53,10 @@ PSF_KWS_DEFAULTS = {
 EXP_GAL_MAG = 18.0
 FIXED_STAR_MAG = 18.0
 
+# we use a fainter fixed star mag when rendering
+# with wldeblend
+FIXED_STAR_MAG_WLDEBLEND = 20.0
+
 
 @functools.lru_cache(maxsize=8)
 def _cached_catalog_read(fname):
@@ -931,10 +935,14 @@ class Sim(object):
             saturated = False
             sat_data = None
 
-        flux = 10**(0.4 * (30 - FIXED_STAR_MAG))
-
         _star = OrderedDict()
         for band in self.bands:
+
+            if self.gal_type == 'wldeblend':
+                flux = self._surveys[band].get_flux(FIXED_STAR_MAG_WLDEBLEND)
+            else:
+                flux = 10**(0.4 * (30 - FIXED_STAR_MAG))
+
             obj = galsim.Gaussian(
                 fwhm=1.0e-4,
             ).withFlux(flux)
