@@ -6,9 +6,7 @@ and cleaned up a fair bit.
 import os
 import logging
 import copy
-import functools
 
-import fitsio
 import galsim
 import numpy as np
 from collections import OrderedDict
@@ -23,11 +21,17 @@ from .gen_masks import (
     generate_bad_columns,
 )
 from .gen_star_masks import StarMaskPDFs, add_star_and_bleed
+from .stars import (
+    sample_star,
+    sample_fixed_star,
+    load_sample_stars,
+)
 
 from .ps_psf import PowerSpectrumPSF
 
 # default mask bits from the stack
 from .lsst_bits import BAD_COLUMN, COSMIC_RAY, SAT_VAL
+from .cache_tools import cached_catalog_read
 
 LOGGER = logging.getLogger(__name__)
 
@@ -37,13 +41,13 @@ GAL_KWS_DEFAULTS = {
 }
 STARS_KWS_DEFAULTS = {
     'type': 'fixed',
-    'density': 1,  # per square arcmin
+    'density': 1,
 }
 SAT_STARS_KWS_DEFAULTS = {
+    # density of sat starsper square arcmin when star type is fixed
+    # not used for star type sample, instead the MAG_SAT is used
     'density': 0.0555,  # per square arcmin, 200 per sq degree
 }
-
-
 PSF_KWS_DEFAULTS = {
     'gauss': {'fwhm': 0.8, 'g1': 0.0, 'g2': 0.0},
     'ps': {},  # the defaults for the ps PSF are in the class
@@ -51,16 +55,6 @@ PSF_KWS_DEFAULTS = {
 
 # TODO get a realistic value
 EXP_GAL_MAG = 18.0
-FIXED_STAR_MAG = 18.0
-
-# we use a fainter fixed star mag when rendering
-# with wldeblend
-FIXED_STAR_MAG_WLDEBLEND = 20.0
-
-
-@functools.lru_cache(maxsize=8)
-def _cached_catalog_read(fname):
-    return fitsio.read(fname)
 
 
 class Sim(object):
@@ -438,8 +432,9 @@ class Sim(object):
                 * self._ngals_factor
             )
 
-        self._setup_stars(stars=stars, stars_kws=stars_kws)
-        self._setup_sat_stars(
+        self._setup_stars(
+            stars=stars,
+            stars_kws=stars_kws,
             sat_stars=sat_stars,
             sat_stars_kws=sat_stars_kws,
         )
@@ -451,52 +446,61 @@ class Sim(object):
 
         LOGGER.info('simulating bands: %s', self.bands)
 
-    def _setup_stars(self, *, stars, stars_kws):
+    def _setup_stars(self,
+                     *,
+                     stars,
+                     stars_kws,
+                     sat_stars,
+                     sat_stars_kws):
+
         if stars and self.grid_gals:
             raise ValueError('no grid gals when there are stars')
 
         self.stars = stars
+        self.sat_stars = sat_stars
+
         self.stars_kws = {}
         self.stars_kws.update(copy.deepcopy(STARS_KWS_DEFAULTS))
 
         if stars_kws is not None:
             self.stars_kws.update(copy.deepcopy(stars_kws))
 
+        assert self.stars_kws['type'] in ('sample', 'fixed')
+        if self.stars_kws['type'] == 'sample':
+            assert self.gal_type == 'wldeblend', (
+                'gal type must be wldeblend for star type sample',
+            )
+
+        # currently fixed average number of stars in every
+        # image
+
         self._nstars = int(
             self.stars_kws['density'] * self.area_sqr_arcmin,
         )
 
-    def _setup_sat_stars(self, *, sat_stars, sat_stars_kws):
-        if sat_stars and self.grid_gals:
-            raise ValueError('no grid gals when there are saturated stars')
+        use_sat_kws = copy.deepcopy(SAT_STARS_KWS_DEFAULTS)
 
-        self.sat_stars = sat_stars
-        if self.sat_stars:
-            assert self.stars, (
-                'you must set stars True to use saturated stars'
-            )
+        if sat_stars_kws is not None:
+            use_sat_kws.update(copy.deepcopy(sat_stars_kws))
 
-            self.sat_stars_kws = {}
-            self.sat_stars_kws.update(copy.deepcopy(SAT_STARS_KWS_DEFAULTS))
+        # density per square arcmin. Pop it because it is not
+        # used by the pdf
 
-            if sat_stars_kws is not None:
-                self.sat_stars_kws.update(copy.deepcopy(sat_stars_kws))
+        sat_density = use_sat_kws.pop('density', 0.0)
 
-            # density per square arcmin. Pop it because it is not
-            # used by the pdf
-            density = self.sat_stars_kws.pop('density')
-
+        if sat_stars:
             self.star_mask_pdf = StarMaskPDFs(
                 rng=self._rng,
-                **self.sat_stars_kws
+                **use_sat_kws
             )
 
-            self.sat_stars_frac = (
-                density/self.stars_kws['density']
-            )
+            if self.stars_kws['type'] == 'fixed':
+                self.sat_stars_frac = sat_density/self.stars_kws['density']
+            else:
+                self._example_stars = load_sample_stars()
         else:
-            self.star_mask_pdf = None
             self.sat_stars_frac = 0.0
+            self._example_stars = None
 
     def _get_nstars(self):
         if self.stars:
@@ -516,7 +520,7 @@ class Sim(object):
         else:
             fname = self._final_gal_kws['catalog']
 
-        self._wldeblend_cat = _cached_catalog_read(fname)
+        self._wldeblend_cat = cached_catalog_read(fname)
         self._wldeblend_cat['pa_disk'] = self._rng.uniform(
             low=0.0, high=360.0, size=self._wldeblend_cat.size)
         self._wldeblend_cat['pa_bulge'] = self._wldeblend_cat['pa_disk']
@@ -817,7 +821,6 @@ class Sim(object):
             star.
         """
 
-        star_type = self.stars_kws['type']
         nstars = self._get_nstars()
 
         LOGGER.info('drawing %d stars for a %f square arcmin patch',
@@ -831,10 +834,7 @@ class Sim(object):
             duv = galsim.PositionD(x=du, y=dv)
 
             # get the star as an dict by band
-            if star_type == 'fixed':
-                star_data = self._get_star_fixed()
-            else:
-                raise ValueError('star type "%s" not valid!' % star_type)
+            star_data = self._get_star()
 
             all_data.append(star_data)
             uv_offsets.append(duv)
@@ -919,7 +919,7 @@ class Sim(object):
 
         return _gal
 
-    def _get_star_fixed(self):
+    def _get_star(self):
         """
 
         Returns
@@ -928,33 +928,25 @@ class Sim(object):
         {'obj': Gaussian, 'type': 'star'}
         """
 
-        if self._rng.uniform() < self.sat_stars_frac:
-            saturated = True
-            sat_data = self.star_mask_pdf.sample()
+        if self.stars_kws['type'] == 'sample':
+            star = sample_star(
+                rng=self._rng,
+                star_data=self._example_stars,
+                surveys=self._surveys,
+                bands=self.bands,
+                sat_stars=self.sat_stars,
+                star_mask_pdf=self.star_mask_pdf,
+            )
         else:
-            saturated = False
-            sat_data = None
+            star = sample_fixed_star(
+                rng=self._rng,
+                bands=self.bands,
+                sat_stars=self.sat_stars,
+                sat_stars_frac=self.sat_stars_frac,
+                star_mask_pdf=self.star_mask_pdf,
+            )
 
-        _star = OrderedDict()
-        for band in self.bands:
-
-            if self.gal_type == 'wldeblend':
-                flux = self._surveys[band].get_flux(FIXED_STAR_MAG_WLDEBLEND)
-            else:
-                flux = 10**(0.4 * (30 - FIXED_STAR_MAG))
-
-            obj = galsim.Gaussian(
-                fwhm=1.0e-4,
-            ).withFlux(flux)
-
-            _star[band] = {
-                'obj': obj,
-                'type': 'star',
-                'saturated': saturated,
-                'sat_data': copy.deepcopy(sat_data),
-            }
-
-        return _star
+        return star
 
     def _get_wcs_for_band(self, band):
         """
