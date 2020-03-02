@@ -54,6 +54,27 @@ def test_simple_sim_sample_stars():
         pass
 
 
+def test_simple_sim_sample_star_density():
+    try:
+        sim = Sim(
+            ngals=10,
+            rng=335,
+            gal_type='wldeblend',
+            stars=True,
+            stars_kws={
+                'type': 'sample',
+                'density': {
+                    'min_density': 2,
+                    'max_density': 20,
+                }
+            },
+        )
+        sim.gen_sim()
+    except OSError:
+        # the catalog is probably not present
+        pass
+
+
 def test_simple_sim_cap_radius_smoke():
     sim = Sim(rng=10, cap_radius=1)
     assert sim.buff == 0.0
