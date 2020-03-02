@@ -497,7 +497,6 @@ class Sim(object):
         else:
             self._example_stars = None
 
-
         if sat_stars:
             self.star_mask_pdf = StarMaskPDFs(
                 rng=self._rng,

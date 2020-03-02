@@ -71,7 +71,6 @@ def render_objs_with_psf_shear(
     for obj_data, uv_offset, in zip(objs, uv_offsets):
 
         obj = obj_data['obj']
-        flux = obj.flux
 
         du = uv_offset.x
         dv = uv_offset.y
