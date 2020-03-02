@@ -53,8 +53,8 @@ PSF_KWS_DEFAULTS = {
     'ps': {},  # the defaults for the ps PSF are in the class
 }
 
-# TODO get a realistic value
 EXP_GAL_MAG = 18.0
+ZERO_POINT = 30
 
 
 class Sim(object):
@@ -683,7 +683,34 @@ class Sim(object):
                     )
                 )
 
+        if self.gal_type == 'wldeblend':
+            # put the images on our common ZERO_POINT
+            self._rescale_wldeblend(band_data)
+
         return band_data
+
+    def _rescale_wldeblend(self, band_data):
+        """
+        all the wldeblend images are on an instrumental
+        zero point.  Rescale to our common ZERO_POINT
+        """
+        for band in self.bands:
+            survey = self._surveys[band]
+
+            # note survey.zero_point is not really a zero point
+            # this brings them to zero point 24.
+            fac = 1.0/survey.exposure_time*survey.zero_point
+
+            # scale to our chosen zero point
+            fac *= 10.0**(0.4*(ZERO_POINT-24))
+
+            wfac = 1.0/fac**2
+
+            for se_obs in band_data[band]:
+
+                se_obs.image *= fac
+                se_obs.noise *= fac
+                se_obs.weight *= wfac
 
     def _generate_mask_plane(self, *, se_image, wcs, objs, overlap_info):
         """
@@ -899,7 +926,7 @@ class Sim(object):
     def _get_gal_exp(self):
         """Return an OrderedDict keyed on band with the galsim object for
         a given exp gal."""
-        flux = 10**(0.4 * (30 - EXP_GAL_MAG))
+        flux = 10**(0.4 * (ZERO_POINT - EXP_GAL_MAG))
 
         _gal = OrderedDict()
         for band in self.bands:
