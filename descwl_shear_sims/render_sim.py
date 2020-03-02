@@ -71,6 +71,7 @@ def render_objs_with_psf_shear(
     for obj_data, uv_offset, in zip(objs, uv_offsets):
 
         obj = obj_data['obj']
+        flux = obj.flux
 
         du = uv_offset.x
         dv = uv_offset.y
@@ -100,20 +101,29 @@ def render_objs_with_psf_shear(
             wcs=local_wcs,
             method=method,
             setup_only=True).array
-        assert _im.shape[0] == _im.shape[1]
+        shape = _im.shape
+
+        if obj_data['type'] == 'star':
+            # avoid stamp-edge issues
+            if obj_data['mag'] < 15:
+                shape = [s*3 for s in shape]
+            elif obj_data['mag'] < 18:
+                shape = [s*2 for s in shape]
+
+        assert shape[0] == shape[1]
 
         # now get location of the stamp
-        x_ll = int(pos.x - (_im.shape[1] - 1)/2)
-        y_ll = int(pos.y - (_im.shape[0] - 1)/2)
+        x_ll = int(pos.x - (shape[1] - 1)/2)
+        y_ll = int(pos.y - (shape[0] - 1)/2)
 
         # get the offset of the center
-        dx = pos.x - (x_ll + (_im.shape[1] - 1)/2)
-        dy = pos.y - (y_ll + (_im.shape[0] - 1)/2)
+        dx = pos.x - (x_ll + (shape[1] - 1)/2)
+        dy = pos.y - (y_ll + (shape[0] - 1)/2)
 
         # draw and set the proper origin
         stamp = galsim.Convolve(obj, psf).drawImage(
-            nx=_im.shape[1],
-            ny=_im.shape[0],
+            nx=shape[1],
+            ny=shape[0],
             wcs=local_wcs,
             offset=galsim.PositionD(x=dx, y=dy),
             method=method)
