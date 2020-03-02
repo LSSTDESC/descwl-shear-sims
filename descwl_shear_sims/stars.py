@@ -1,4 +1,7 @@
 import os
+import functools
+import numpy as np
+import fitsio
 from collections import OrderedDict
 import galsim
 from copy import deepcopy
@@ -110,6 +113,36 @@ def is_saturated(*, mag, band):
         return True
     else:
         return False
+
+
+def sample_star_density(*, rng, min_density, max_density):
+    """
+    sample from the set of example densities
+    """
+    densities = load_sample_star_densities(
+        min_density=min_density,
+        max_density=max_density,
+    )
+    ind = rng.choice(densities.size)
+
+    return densities[ind]
+
+
+@functools.lru_cache(maxsize=1)
+def load_sample_star_densities(*, min_density, max_density):
+    assert 'CATSIM_DIR' in os.environ
+    fname = os.path.join(
+        os.environ['CATSIM_DIR'],
+        'stellar_density_lsst.fits.gz',
+    )
+    with fitsio.FITS(fname) as fits:
+        densities = fits[1]['I'].read().ravel()
+
+    w, = np.where(
+        (densities > min_density) &
+        (densities < max_density)
+    )
+    return densities[w]
 
 
 def load_sample_stars():
