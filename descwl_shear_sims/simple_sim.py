@@ -25,6 +25,7 @@ from .stars import (
     sample_star,
     sample_fixed_star,
     load_sample_stars,
+    sample_star_density,
 )
 
 from .ps_psf import PowerSpectrumPSF
@@ -461,53 +462,64 @@ class Sim(object):
             raise ValueError('no grid gals when there are stars')
 
         self.stars = stars
-        self.sat_stars = sat_stars
 
-        self.stars_kws = {}
-        self.stars_kws.update(copy.deepcopy(STARS_KWS_DEFAULTS))
+        if self.stars:
+            self.sat_stars = sat_stars
 
-        if stars_kws is not None:
-            self.stars_kws.update(copy.deepcopy(stars_kws))
+            self.stars_kws = {}
+            self.stars_kws.update(copy.deepcopy(STARS_KWS_DEFAULTS))
 
-        assert self.stars_kws['type'] in ('sample', 'fixed')
-        if self.stars_kws['type'] == 'sample':
-            assert self.gal_type == 'wldeblend', (
-                'gal type must be wldeblend for star type sample',
+            if stars_kws is not None:
+                self.stars_kws.update(copy.deepcopy(stars_kws))
+
+            assert self.stars_kws['type'] in ('sample', 'fixed')
+            if self.stars_kws['type'] == 'sample':
+                assert self.gal_type == 'wldeblend', (
+                    'gal type must be wldeblend for star type sample',
+                )
+
+            if isinstance(self.stars_kws['density'], dict):
+                ddict = self.stars_kws['density']
+                self.star_density = sample_star_density(
+                    rng=self._rng,
+                    min_density=ddict['min_density'],
+                    max_density=ddict['max_density'],
+                )
+            else:
+                self.star_density = self.stars_kws['density']
+
+            self._nstars = int(
+                self.star_density * self.area_sqr_arcmin,
             )
 
-        # currently fixed average number of stars in every
-        # image
+            use_sat_kws = copy.deepcopy(SAT_STARS_KWS_DEFAULTS)
 
-        self._nstars = int(
-            self.stars_kws['density'] * self.area_sqr_arcmin,
-        )
+            if sat_stars_kws is not None:
+                use_sat_kws.update(copy.deepcopy(sat_stars_kws))
 
-        use_sat_kws = copy.deepcopy(SAT_STARS_KWS_DEFAULTS)
+            # density per square arcmin. Pop it because it is not
+            # used by the pdf
 
-        if sat_stars_kws is not None:
-            use_sat_kws.update(copy.deepcopy(sat_stars_kws))
+            sat_density = use_sat_kws.pop('density', 0.0)
 
-        # density per square arcmin. Pop it because it is not
-        # used by the pdf
+            if self.stars_kws['type'] == 'sample':
+                self._example_stars = load_sample_stars()
+            else:
+                self._example_stars = None
 
-        sat_density = use_sat_kws.pop('density', 0.0)
+            if sat_stars:
+                self.star_mask_pdf = StarMaskPDFs(
+                    rng=self._rng,
+                    **use_sat_kws
+                )
 
-        if self.stars_kws['type'] == 'sample':
-            self._example_stars = load_sample_stars()
+                if self.stars_kws['type'] == 'fixed':
+                    self.sat_stars_frac = sat_density/self.star_density
+            else:
+                self.sat_stars_frac = 0.0
+                self.star_mask_pdf = None
         else:
-            self._example_stars = None
-
-        if sat_stars:
-            self.star_mask_pdf = StarMaskPDFs(
-                rng=self._rng,
-                **use_sat_kws
-            )
-
-            if self.stars_kws['type'] == 'fixed':
-                self.sat_stars_frac = sat_density/self.stars_kws['density']
-        else:
-            self.sat_stars_frac = 0.0
-            self.star_mask_pdf = None
+            self.star_density = 0.0
 
     def _get_nstars(self):
         if self.stars:
