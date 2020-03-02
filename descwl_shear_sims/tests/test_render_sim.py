@@ -83,6 +83,7 @@ def test_render_sim_star_smoke():
         },
         {
             'obj': galsim.Gaussian(half_light_radius=1.0e-4),
+            'mag': 19,
             'type': 'star',
         },
     ]
