@@ -492,6 +492,17 @@ class Sim(object):
                 self.star_density * self.area_sqr_arcmin,
             )
 
+            if self.stars_kws['type'] == 'sample':
+                self._example_stars = load_sample_stars()
+            else:
+                self._example_stars = None
+
+            self._setup_sat_stars(sat_stars_kws=sat_stars_kws)
+        else:
+            self.star_density = 0.0
+
+    def _setup_sat_stars(self, *, sat_stars_kws):
+        if self.sat_stars:
             use_sat_kws = copy.deepcopy(SAT_STARS_KWS_DEFAULTS)
 
             if sat_stars_kws is not None:
@@ -502,24 +513,16 @@ class Sim(object):
 
             sat_density = use_sat_kws.pop('density', 0.0)
 
-            if self.stars_kws['type'] == 'sample':
-                self._example_stars = load_sample_stars()
-            else:
-                self._example_stars = None
+            self.star_mask_pdf = StarMaskPDFs(
+                rng=self._rng,
+                **use_sat_kws
+            )
 
-            if sat_stars:
-                self.star_mask_pdf = StarMaskPDFs(
-                    rng=self._rng,
-                    **use_sat_kws
-                )
-
-                if self.stars_kws['type'] == 'fixed':
-                    self.sat_stars_frac = sat_density/self.star_density
-            else:
-                self.sat_stars_frac = 0.0
-                self.star_mask_pdf = None
+            if self.stars_kws['type'] == 'fixed':
+                self.sat_stars_frac = sat_density/self.star_density
         else:
-            self.star_density = 0.0
+            self.sat_stars_frac = 0.0
+            self.star_mask_pdf = None
 
     def _get_nstars(self):
         if self.stars:
