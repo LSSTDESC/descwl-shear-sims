@@ -97,6 +97,8 @@ class Sim(object):
     se_dim: int
         Dimensions of the single epoch image.  If None (the default) the
         size is chosen to encompass the coadd for small dithers.
+    galaxies: bool
+        If set to True, draw galaxies.   Default True.
     ngals : float, optional
         The number of objects to simulate per arcminute^2. Default is 80.
     grid_gals : bool, optional
@@ -281,6 +283,7 @@ class Sim(object):
         cap_radius=None,
         edge_width=5,
         se_dim=None,
+        galaxies=True,
         ngals=80,
         grid_gals=False,
         gal_type='exp',
@@ -329,6 +332,7 @@ class Sim(object):
         self.edge_width = edge_width
         assert edge_width >= 2, 'edge width must be >= 2'
 
+        self.galaxies = galaxies
         self.ngals = ngals
         self.grid_gals = grid_gals
         self.gal_type = gal_type
@@ -488,6 +492,12 @@ class Sim(object):
 
         sat_density = use_sat_kws.pop('density', 0.0)
 
+        if self.stars_kws['type'] == 'sample':
+            self._example_stars = load_sample_stars()
+        else:
+            self._example_stars = None
+
+
         if sat_stars:
             self.star_mask_pdf = StarMaskPDFs(
                 rng=self._rng,
@@ -496,11 +506,9 @@ class Sim(object):
 
             if self.stars_kws['type'] == 'fixed':
                 self.sat_stars_frac = sat_density/self.stars_kws['density']
-            else:
-                self._example_stars = load_sample_stars()
         else:
             self.sat_stars_frac = 0.0
-            self._example_stars = None
+            self.star_mask_pdf = None
 
     def _get_nstars(self):
         if self.stars:
@@ -783,28 +791,32 @@ class Sim(object):
             galaxy.
         """
 
-        nobj = self._get_nobj()
-
-        LOGGER.info('drawing %d galaxies for a %f square arcmin patch',
-                    nobj, self.area_sqr_arcmin)
-
         all_data = []
         uv_offsets = []
-        for i in range(nobj):
-            # unsheared offset from center of uv image
-            du, dv = self._get_dudv()
-            duv = galsim.PositionD(x=du, y=dv)
 
-            # get the galaxy
-            if self.gal_type == 'exp':
-                gal_data = self._get_gal_exp()
-            elif self.gal_type == 'wldeblend':
-                gal_data = self._get_gal_wldeblend()
-            else:
-                raise ValueError('gal_type "%s" not valid!' % self.gal_type)
+        if self.galaxies:
+            nobj = self._get_nobj()
 
-            all_data.append(gal_data)
-            uv_offsets.append(duv)
+            LOGGER.info('drawing %d galaxies for a %f square arcmin patch',
+                        nobj, self.area_sqr_arcmin)
+
+            for i in range(nobj):
+                # unsheared offset from center of uv image
+                du, dv = self._get_dudv()
+                duv = galsim.PositionD(x=du, y=dv)
+
+                # get the galaxy
+                if self.gal_type == 'exp':
+                    gal_data = self._get_gal_exp()
+                elif self.gal_type == 'wldeblend':
+                    gal_data = self._get_gal_wldeblend()
+                else:
+                    raise ValueError(
+                        'gal_type "%s" not valid!' % self.gal_type
+                    )
+
+                all_data.append(gal_data)
+                uv_offsets.append(duv)
 
         return all_data, uv_offsets
 
