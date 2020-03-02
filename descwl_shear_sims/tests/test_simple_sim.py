@@ -6,7 +6,7 @@ from ..simple_sim import Sim
 
 
 def test_simple_sim_smoke():
-    sim = Sim(rng=10)
+    sim = Sim(rng=10, ngals=10)
     data = sim.gen_sim()
     assert len(data) == sim.n_bands
     for band in sim.bands:
@@ -15,6 +15,43 @@ def test_simple_sim_smoke():
             epoch_obs = data[band][epoch]
             assert isinstance(epoch_obs, SEObs)
             assert epoch_obs.noise is not None
+
+
+def test_simple_sim_wldeblend():
+    try:
+        sim = Sim(
+            rng=101,
+            ngals=10,
+            gal_type='wldeblend',
+        )
+        sim.gen_sim()
+    except OSError:
+        # the catalog is probably not present
+        pass
+
+
+def test_simple_sim_fixed_stars():
+    sim = Sim(
+        rng=120,
+        ngals=10,
+        stars=True,
+    )
+    sim.gen_sim()
+
+
+def test_simple_sim_sample_stars():
+    try:
+        sim = Sim(
+            ngals=10,
+            rng=335,
+            gal_type='wldeblend',
+            stars=True,
+            stars_kws={'type': 'sample'},
+        )
+        sim.gen_sim()
+    except OSError:
+        # the catalog is probably not present
+        pass
 
 
 def test_simple_sim_cap_radius_smoke():
