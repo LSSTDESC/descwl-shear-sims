@@ -49,6 +49,7 @@ def sample_fixed_star(*,
             'type': 'star',
             'obj': obj,
             'type': 'star',
+            'mag': FIXED_STAR_MAG,
             'saturated': saturated,
             'sat_data': deepcopy(sat_data),
         }
