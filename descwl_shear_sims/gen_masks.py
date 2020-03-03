@@ -108,12 +108,9 @@ def generate_cosmic_rays(
 
 def generate_bad_columns(
         *, shape, mean_bad_cols=1,
-        widths=(1, 2, 5, 10), p=(0.8, 0.1, 0.075, 0.025),
-        min_length_frac=(1, 1, 0.25, 0.25),
-        max_length_frac=(1, 1, 0.75, 0.75),
-        gap_prob=(0.30, 0.30, 0, 0),
-        min_gap_frac=(0.1, 0.1, 0, 0),
-        max_gap_frac=(0.3, 0.3, 0, 0),
+        gap_prob=0.30,
+        min_gap_frac=0.1,
+        max_gap_frac=0.3,
         rng=None,
 ):
     """Generate a binary mask w/ bad columns.
@@ -125,25 +122,12 @@ def generate_bad_columns(
     mean_bad_cols : float, optional
         The mean of the Poisson distribution for the total number of
         bad columns to generate.
-    widths : n-tuple of ints, optional
-        The possible widths of the bad columns.
-    p : n-tuple of floats, optional
-        The frequency of each of the bad column widths.
-    min_length_frac : n-tuple of floats, optional
-        The minimum fraction of the image the bad column spans. There should be
-        one entry per bad column width in `widths`.
-    max_length_frac : n-tuple of floats, optional
-        The maximum fraction of the image the bad column spans. There should be
-        one entry per bad column width in `widths`.
-    gap_prob : n-tuple of floats, optional
-        The probability that the bad column has a gap in it. There should be
-        one entry per bad column width in `widths`.
-    min_gap_frac : n-tuple of floats, optional
-        The minimum fraction of the image that the gap spans. There should be
-        one entry per bad column width in `widths`.
-    max_gap_frac : n-tuple of floats, optional
-        The maximum fraction of the image that the gap spans. There should be
-        one entry per bad column width in `widths`.
+    gap_prob : float
+        The probability that the bad column has a gap in it.
+    min_gap_frac : float
+        The minimum fraction of the image that the gap spans.
+    max_gap_frac : floatn
+        The maximum fraction of the image that the gap spans.
     rng : np.random.RandomState or None, optional
         An RNG to use. If none is provided, a new `np.random.RandomState`
         state instance will be created.
@@ -153,32 +137,23 @@ def generate_bad_columns(
     msk : np.ndarray, shape `shape`
         A boolean mask marking the locations of the bad columns.
     """
-    p = np.array(p) / np.sum(p)
+
     msk = np.zeros(shape)
     rng = rng or np.random.RandomState()
     n_bad_cols = rng.poisson(mean_bad_cols)
 
     for _ in range(n_bad_cols):
-        w = rng.choice(widths, p=p)
-        wind = widths.index(w)
-        x = rng.randint(0, msk.shape[1]-w)
 
-        len_frac = rng.uniform(min_length_frac[wind], max_length_frac[wind])
-        length = int(len_frac * msk.shape[0])
-
-        if length < msk.shape[0]:
-            start = rng.choice([0, msk.shape[0] - length])
-        else:
-            start = 0
+        x = rng.choice(msk.shape[1])
 
         # set the mask first
-        msk[start:start+length, x:x+w] = 1
+        msk[:, x] = 1
 
         # add gaps
-        if rng.uniform() < gap_prob[wind]:
-            gfrac = rng.uniform(min_gap_frac[wind], max_gap_frac[wind])
+        if rng.uniform() < gap_prob:
+            gfrac = rng.uniform(min_gap_frac, max_gap_frac)
             glength = int(msk.shape[0] * gfrac)
             gloc = rng.randint(0, msk.shape[0] - glength)
-            msk[gloc:gloc+glength, x:x+1] = 0
+            msk[gloc:gloc+glength, x] = 0
 
     return msk.astype(bool)
