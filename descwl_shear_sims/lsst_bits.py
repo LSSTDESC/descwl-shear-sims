@@ -14,7 +14,12 @@ BLEED = np.int64(2**11)
 
 # saturation value for images
 # TODO get a good value
-SAT_VAL = 1.e18
+SAT_VALS = {
+    'g': 150000,  # from example images
+    'r': 150000,  # TODO get value
+    'i': 150000,  # TODO get value
+    'z': 150000,  # TODO get value
+}
 
 
 # double check they match the stack

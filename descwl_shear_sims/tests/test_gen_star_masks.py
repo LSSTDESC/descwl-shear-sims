@@ -1,7 +1,8 @@
 import numpy as np
 
 from ..gen_star_masks import StarMaskPDFs
-from ..lsst_bits import SAT, SAT_VAL
+from ..lsst_bits import SAT
+from ..saturation import BAND_SAT_VALS
 from ..simple_sim import Sim
 
 
@@ -37,7 +38,7 @@ def test_star_mask_keywords():
     w = np.where((mask & SAT) != 0)
     assert w[0].size > 0
 
-    assert np.all(image[w] == SAT_VAL)
+    assert np.all(image[w] == BAND_SAT_VALS['r'])
 
 
 def test_star_mask_repeatable():

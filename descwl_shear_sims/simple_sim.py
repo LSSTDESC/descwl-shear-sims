@@ -31,7 +31,8 @@ from .stars import (
 from .ps_psf import PowerSpectrumPSF
 
 # default mask bits from the stack
-from .lsst_bits import BAD_COLUMN, COSMIC_RAY, SAT_VAL
+from .lsst_bits import BAD_COLUMN, COSMIC_RAY
+from .saturation import BAND_SAT_VALS, saturate_image_and_mask
 from .cache_tools import cached_catalog_read
 
 LOGGER = logging.getLogger(__name__)
@@ -674,6 +675,7 @@ class Sim(object):
                     wcs=wcs,
                     objs=band_objs,
                     overlap_info=overlap_info,
+                    band=band,
                 )
 
                 # make galsim image with same wcs as se_image but
@@ -727,13 +729,22 @@ class Sim(object):
                 se_obs.noise *= fac
                 se_obs.weight *= wfac
 
-    def _generate_mask_plane(self, *, se_image, wcs, objs, overlap_info):
+    def _generate_mask_plane(self, *, se_image, wcs, objs, overlap_info, band):
         """
         set masks for edges, cosmics, bad columns and saturated stars/bleeds
+
+        also clip high values and set SET
         """
 
+        sat_val = BAND_SAT_VALS[band]
         shape = se_image.array.shape
         bmask = generate_basic_mask(shape=shape, edge_width=self.edge_width)
+
+        saturate_image_and_mask(
+            image=se_image.array,
+            mask=bmask,
+            sat_val=sat_val,
+        )
 
         area_factor = (
             (self.coadd_dim - 2 * self.buff)**2
@@ -754,7 +765,7 @@ class Sim(object):
                 **defaults,
             )
             bmask[msk] |= COSMIC_RAY
-            se_image.array[msk] = SAT_VAL
+            se_image.array[msk] = sat_val
 
         if self.bad_columns:
             defaults = {
@@ -785,6 +796,7 @@ class Sim(object):
                     add_star_and_bleed(
                         mask=bmask,
                         image=se_image.array,
+                        band=band,
                         x=pos.x,
                         y=pos.y,
                         radius=sat_data['radius'],
