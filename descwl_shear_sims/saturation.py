@@ -1,12 +1,24 @@
 from numba import njit
 from .lsst_bits import SAT
+from .sim_constants import ZERO_POINT
 
 # saturation value for images
 BAND_SAT_VALS = {
-    'g': 150000,  # from example images
-    'r': 150000,  # TODO get value
-    'i': 150000,  # TODO get value
-    'z': 150000,  # TODO get value
+    'g': 150000 * 10.0**(0.4*(ZERO_POINT-32.325)),  # from example images
+    'r': 150000 * 10.0**(0.4*(ZERO_POINT-32.325)),  # TODO get value and zp
+    'i': 150000 * 10.0**(0.4*(ZERO_POINT-32.325)),  # TODO get value and zp
+    'z': 150000 * 10.0**(0.4*(ZERO_POINT-32.325)),  # TODO get value and zp
+}
+
+# From the LSST science book
+# mag to saturate for 30 second exposures, need this for the
+# longer exposures, so for now just add one TODO
+BAND_STAR_MAG_SAT = {
+    'u': 14.7+1,
+    'g': 15.7+1,
+    'r': 15.8+1,
+    'i': 15.8+1,
+    'z': 15.3+1,
 }
 
 
