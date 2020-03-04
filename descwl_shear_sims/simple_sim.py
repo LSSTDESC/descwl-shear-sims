@@ -34,6 +34,7 @@ from .ps_psf import PowerSpectrumPSF
 from .lsst_bits import BAD_COLUMN, COSMIC_RAY
 from .saturation import BAND_SAT_VALS, saturate_image_and_mask
 from .cache_tools import cached_catalog_read
+from .sim_constants import EXP_GAL_MAG, ZERO_POINT
 
 LOGGER = logging.getLogger(__name__)
 
@@ -54,9 +55,6 @@ PSF_KWS_DEFAULTS = {
     'gauss': {'fwhm': 0.8, 'g1': 0.0, 'g2': 0.0},
     'ps': {},  # the defaults for the ps PSF are in the class
 }
-
-EXP_GAL_MAG = 18.0
-ZERO_POINT = 30
 
 
 class Sim(object):
@@ -669,15 +667,6 @@ class Sim(object):
 
                 se_image += self._generate_noise_image(band_ind)
 
-                # put this after to make sure bad cols are totally dark
-                bmask, se_image = self._generate_mask_plane(
-                    se_image=se_image,
-                    wcs=wcs,
-                    objs=band_objs,
-                    overlap_info=overlap_info,
-                    band=band,
-                )
-
                 # make galsim image with same wcs as se_image but
                 # with pure random noise
                 noise_example = self._generate_noise_image(band_ind)
@@ -687,6 +676,25 @@ class Sim(object):
                 se_weight = (
                     se_image.copy() * 0
                     + 1.0 / self.noise_per_epoch[band_ind]**2
+                )
+
+                if self.gal_type == 'wldeblend':
+                    # put the images on our common ZERO_POINT before
+                    # checking for saturation
+                    self._rescale_wldeblend(
+                        image=se_image,
+                        noise=noise_image,
+                        weight=se_weight,
+                        band=band,
+                    )
+
+                # put this after to make sure bad cols are totally dark
+                bmask, se_image = self._generate_mask_plane(
+                    se_image=se_image,
+                    wcs=wcs,
+                    objs=band_objs,
+                    overlap_info=overlap_info,
+                    band=band,
                 )
 
                 band_data[band].append(
@@ -700,40 +708,34 @@ class Sim(object):
                     )
                 )
 
-        if self.gal_type == 'wldeblend':
-            # put the images on our common ZERO_POINT
-            self._rescale_wldeblend(band_data)
-
         return band_data
 
-    def _rescale_wldeblend(self, band_data):
+    def _rescale_wldeblend(self, *, image, noise, weight, band):
         """
         all the wldeblend images are on an instrumental
         zero point.  Rescale to our common ZERO_POINT
         """
-        for band in self.bands:
-            survey = self._surveys[band]
+        survey = self._surveys[band]
 
-            # note survey.zero_point is not really a zero point
-            # this brings them to zero point 24.
-            fac = 1.0/survey.exposure_time*survey.zero_point
+        # this brings them to zero point 24.
+        fac = 1.0/survey.exposure_time
 
-            # scale to our chosen zero point
-            fac *= 10.0**(0.4*(ZERO_POINT-24))
+        # scale to our chosen zero point
+        fac *= 10.0**(0.4*(ZERO_POINT-24))
 
-            wfac = 1.0/fac**2
+        wfac = 1.0/fac**2
 
-            for se_obs in band_data[band]:
-
-                se_obs.image *= fac
-                se_obs.noise *= fac
-                se_obs.weight *= wfac
+        image *= fac
+        noise *= fac
+        weight *= wfac
 
     def _generate_mask_plane(self, *, se_image, wcs, objs, overlap_info, band):
         """
         set masks for edges, cosmics, bad columns and saturated stars/bleeds
 
         also clip high values and set SET
+
+        make sure the image is on the right zero point before calling this code
         """
 
         sat_val = BAND_SAT_VALS[band]
