@@ -58,34 +58,27 @@ def sample_star(*,
                 sat_stars,
                 star_mask_pdf=None):
 
-    while True:
-        # same star index for all bands
-        star_ind = rng.choice(star_data.size)
+    # same star index for all bands
+    star_ind = rng.choice(star_data.size)
 
-        star = OrderedDict()
+    star = OrderedDict()
 
-        for band in bands:
-            bstar = {'type': 'star'}
-            bstar['mag'] = get_star_mag(stars=star_data, index=star_ind, band=band)
-            bstar['flux'] = surveys[band].get_flux(bstar['mag'])
+    for band in bands:
+        bstar = {'type': 'star'}
+        bstar['mag'] = get_star_mag(stars=star_data, index=star_ind, band=band)
+        bstar['flux'] = surveys[band].get_flux(bstar['mag'])
 
-            bstar['obj'] = galsim.Gaussian(
-                fwhm=1.0e-4,
-            ).withFlux(
-                flux=bstar['flux'],
-            )
+        bstar['obj'] = galsim.Gaussian(
+            fwhm=1.0e-4,
+        ).withFlux(
+            flux=bstar['flux'],
+        )
 
-            bstar['saturated'] = is_saturated(mag=bstar['mag'], band=band)
-            star[band] = bstar
+        bstar['saturated'] = is_saturated(mag=bstar['mag'], band=band)
+        star[band] = bstar
 
-        if sat_stars:
-            # we accept anything when doing saturation
-            set_sat_data(star=star, star_mask_pdf=star_mask_pdf)
-            break
-        elif not any_saturated(star=star):
-            # if not doing saturation, we only accept the star if it
-            # does not saturate
-            break
+    if sat_stars:
+        set_sat_data(star=star, star_mask_pdf=star_mask_pdf)
 
     return star
 

@@ -903,10 +903,26 @@ class Sim(object):
             # get the star as an dict by band
             star_data = self._get_star()
 
-            all_data.append(star_data)
-            uv_offsets.append(duv)
+            if self._keep_star(star_data):
+                all_data.append(star_data)
+                uv_offsets.append(duv)
 
         return all_data, uv_offsets
+
+    def _keep_star(self, star):
+
+        keep = True
+
+        min_mag = self.stars_kws.get('min_mag', None)
+        if min_mag is not None:
+            if any((star[band]['mag'] < min_mag for band in star)):
+                keep = False
+
+        if not self.sat_stars:
+            if any((star[band]['saturated'] for band in star)):
+                keep = False
+
+        return keep
 
     def _get_dudv(self):
         """Return an offset from the center of the image in the (u, v) plane
