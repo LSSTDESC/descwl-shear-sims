@@ -639,6 +639,8 @@ class Sim(object):
         all_data = all_gal_data + all_star_data
         uv_offsets = uv_offsets_gals + uv_offsets_stars
 
+        self._set_folding_thresholds(all_data)
+
         band_data = OrderedDict()
         for band_ind, band in enumerate(self.bands):
             band_objs = [o[band] for o in all_data]
@@ -709,6 +711,25 @@ class Sim(object):
                 )
 
         return band_data
+
+    def _set_folding_thresholds(self, all_objs):
+
+        noises = {}
+        for band_ind, band in enumerate(self.bands):
+            sky_noise_per_pixel = \
+                self.noise_per_band[band_ind]/np.sqrt(self.n_bands)
+            noises[band] = sky_noise_per_pixel
+
+        for obj_data in all_objs:
+            for band in self.bands:
+                band_data = obj_data[band]
+                obj = band_data['obj']
+
+                sky_noise_per_pixel = noises[band]
+                folding_threshold = sky_noise_per_pixel/obj.flux
+
+                gsp = galsim.GSParams(folding_threshold=folding_threshold)
+                band_data['obj'] = obj.withGSParams(gsp)
 
     def _rescale_wldeblend(self, *, image, noise, weight, band):
         """
