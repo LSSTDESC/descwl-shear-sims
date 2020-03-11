@@ -726,7 +726,7 @@ class Sim(object):
                 obj = band_data['obj']
 
                 sky_noise_per_pixel = noises[band]
-                folding_threshold = 0.01*sky_noise_per_pixel/obj.flux
+                folding_threshold = sky_noise_per_pixel/obj.flux
 
                 gsp = galsim.GSParams(folding_threshold=folding_threshold)
                 band_data['obj'] = obj.withGSParams(gsp)
