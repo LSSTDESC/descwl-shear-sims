@@ -2,12 +2,13 @@ from numba import njit
 from .lsst_bits import SAT
 from .sim_constants import ZERO_POINT
 
-# saturation value for images
+# saturation value for visit images, rescaled to
+# our zero point
 BAND_SAT_VALS = {
-    'g': 150000 * 10.0**(0.4*(ZERO_POINT-32.325)),  # from example images
-    'r': 150000 * 10.0**(0.4*(ZERO_POINT-32.325)),  # TODO get value and zp
-    'i': 150000 * 10.0**(0.4*(ZERO_POINT-32.325)),  # TODO get value and zp
-    'z': 150000 * 10.0**(0.4*(ZERO_POINT-32.325)),  # TODO get value and zp
+    'g': 140000 * 10.0**(0.4*(ZERO_POINT-32.325)),  # from example images
+    'r': 140000 * 10.0**(0.4*(ZERO_POINT-32.16)),
+    'i': 140000 * 10.0**(0.4*(ZERO_POINT-31.825)),
+    'z': 140000 * 10.0**(0.4*(ZERO_POINT-31.50)),
 }
 
 # From the LSST science book
