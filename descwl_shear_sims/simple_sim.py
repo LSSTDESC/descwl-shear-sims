@@ -230,6 +230,9 @@ class Sim(object):
 
         See descwl_shear_sims.gen_masks.generate_bad_columns for the defaults.
 
+    saturate: bool
+        If True, saturate values above a threshold
+
     stars: bool, optional
     stars_kws: dict, optional
         A dictionary of options for generating stars
@@ -295,6 +298,7 @@ class Sim(object):
         cosmic_rays_kws=None,
         bad_columns=False,
         bad_columns_kws=None,
+        saturate=False,
         stars=False,
         stars_kws=None,
         sat_stars=False,
@@ -435,6 +439,8 @@ class Sim(object):
                 * self.area_sqr_arcmin
                 * self._ngals_factor
             )
+
+        self.saturate = saturate
 
         self._setup_stars(
             stars=stars,
@@ -759,15 +765,19 @@ class Sim(object):
         make sure the image is on the right zero point before calling this code
         """
 
+        # saturation occurs in the single epoch image.  Note before calling
+        # this method we should have rescaled wldeblend images, and we have put
+        # that into the sat vals
         sat_val = BAND_SAT_VALS[band]
         shape = se_image.array.shape
         bmask = generate_basic_mask(shape=shape, edge_width=self.edge_width)
 
-        saturate_image_and_mask(
-            image=se_image.array,
-            mask=bmask,
-            sat_val=sat_val,
-        )
+        if self.saturate:
+            saturate_image_and_mask(
+                image=se_image.array,
+                mask=bmask,
+                sat_val=sat_val,
+            )
 
         area_factor = (
             (self.coadd_dim - 2 * self.buff)**2
