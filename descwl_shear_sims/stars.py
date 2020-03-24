@@ -7,19 +7,9 @@ import galsim
 from copy import deepcopy
 
 from .cache_tools import cached_catalog_read
+from .saturation import BAND_STAR_MAG_SAT
 
 FIXED_STAR_MAG = 19.0
-
-# From the LSST science book
-# mag to saturate for 30 second exposures, need this for the
-# longer exposures, so for now just add one TODO
-MAG_SAT = {
-    'u': 14.7+1,
-    'g': 15.7+1,
-    'r': 15.8+1,
-    'i': 15.8+1,
-    'z': 15.3+1,
-}
 
 
 def sample_fixed_star(*,
@@ -84,8 +74,7 @@ def sample_star(*,
             flux=bstar['flux'],
         )
 
-        # we might reset this below
-        bstar['saturated'] = False
+        bstar['saturated'] = is_saturated(mag=bstar['mag'], band=band)
         star[band] = bstar
 
     if sat_stars:
@@ -103,13 +92,17 @@ def set_sat_data(*, star, star_mask_pdf):
             bstar['sat_data'] = deepcopy(sat_data)
 
 
+def any_saturated(*, star):
+    return any(star[band]['saturated'] for band in star)
+
+
 def get_star_mag(*, stars, index, band):
     magname = '%s_ab' % band
     return stars[magname][index]
 
 
 def is_saturated(*, mag, band):
-    if mag < MAG_SAT[band]:
+    if mag < BAND_STAR_MAG_SAT[band]:
         return True
     else:
         return False

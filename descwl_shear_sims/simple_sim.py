@@ -31,8 +31,10 @@ from .stars import (
 from .ps_psf import PowerSpectrumPSF
 
 # default mask bits from the stack
-from .lsst_bits import BAD_COLUMN, COSMIC_RAY, SAT_VAL
+from .lsst_bits import BAD_COLUMN, COSMIC_RAY
+from .saturation import BAND_SAT_VALS, saturate_image_and_mask
 from .cache_tools import cached_catalog_read
+from .sim_constants import EXP_GAL_MAG, ZERO_POINT
 
 LOGGER = logging.getLogger(__name__)
 
@@ -53,9 +55,6 @@ PSF_KWS_DEFAULTS = {
     'gauss': {'fwhm': 0.8, 'g1': 0.0, 'g2': 0.0},
     'ps': {},  # the defaults for the ps PSF are in the class
 }
-
-EXP_GAL_MAG = 18.0
-ZERO_POINT = 30
 
 
 class Sim(object):
@@ -231,6 +230,9 @@ class Sim(object):
 
         See descwl_shear_sims.gen_masks.generate_bad_columns for the defaults.
 
+    saturate: bool
+        If True, saturate values above a threshold
+
     stars: bool, optional
     stars_kws: dict, optional
         A dictionary of options for generating stars
@@ -296,6 +298,7 @@ class Sim(object):
         cosmic_rays_kws=None,
         bad_columns=False,
         bad_columns_kws=None,
+        saturate=False,
         stars=False,
         stars_kws=None,
         sat_stars=False,
@@ -436,6 +439,8 @@ class Sim(object):
                 * self.area_sqr_arcmin
                 * self._ngals_factor
             )
+
+        self.saturate = saturate
 
         self._setup_stars(
             stars=stars,
@@ -640,6 +645,8 @@ class Sim(object):
         all_data = all_gal_data + all_star_data
         uv_offsets = uv_offsets_gals + uv_offsets_stars
 
+        self._set_folding_thresholds(all_data)
+
         band_data = OrderedDict()
         for band_ind, band in enumerate(self.bands):
             band_objs = [o[band] for o in all_data]
@@ -668,14 +675,6 @@ class Sim(object):
 
                 se_image += self._generate_noise_image(band_ind)
 
-                # put this after to make sure bad cols are totally dark
-                bmask, se_image = self._generate_mask_plane(
-                    se_image=se_image,
-                    wcs=wcs,
-                    objs=band_objs,
-                    overlap_info=overlap_info,
-                )
-
                 # make galsim image with same wcs as se_image but
                 # with pure random noise
                 noise_example = self._generate_noise_image(band_ind)
@@ -685,6 +684,25 @@ class Sim(object):
                 se_weight = (
                     se_image.copy() * 0
                     + 1.0 / self.noise_per_epoch[band_ind]**2
+                )
+
+                if self.gal_type == 'wldeblend':
+                    # put the images on our common ZERO_POINT before
+                    # checking for saturation
+                    self._rescale_wldeblend(
+                        image=se_image,
+                        noise=noise_image,
+                        weight=se_weight,
+                        band=band,
+                    )
+
+                # put this after to make sure bad cols are totally dark
+                bmask, se_image = self._generate_mask_plane(
+                    se_image=se_image,
+                    wcs=wcs,
+                    objs=band_objs,
+                    overlap_info=overlap_info,
+                    band=band,
                 )
 
                 band_data[band].append(
@@ -698,42 +716,72 @@ class Sim(object):
                     )
                 )
 
-        if self.gal_type == 'wldeblend':
-            # put the images on our common ZERO_POINT
-            self._rescale_wldeblend(band_data)
-
         return band_data
 
-    def _rescale_wldeblend(self, band_data):
+    def _set_folding_thresholds(self, all_objs):
+
+        noises = {}
+        for band_ind, band in enumerate(self.bands):
+            sky_noise_per_pixel = \
+                self.noise_per_band[band_ind]/np.sqrt(self.n_bands)
+            noises[band] = sky_noise_per_pixel
+
+        for obj_data in all_objs:
+            for band in self.bands:
+                band_data = obj_data[band]
+                obj = band_data['obj']
+
+                sky_noise_per_pixel = noises[band]
+
+                folding_threshold = sky_noise_per_pixel/obj.flux
+                folding_threshold = np.exp(np.floor(np.log(folding_threshold)))
+
+                folding_threshold = min(folding_threshold, 0.005)
+
+                gsp = galsim.GSParams(folding_threshold=folding_threshold)
+                band_data['obj'] = obj.withGSParams(gsp)
+
+    def _rescale_wldeblend(self, *, image, noise, weight, band):
         """
         all the wldeblend images are on an instrumental
         zero point.  Rescale to our common ZERO_POINT
         """
-        for band in self.bands:
-            survey = self._surveys[band]
+        survey = self._surveys[band]
 
-            # note survey.zero_point is not really a zero point
-            # this brings them to zero point 24.
-            fac = 1.0/survey.exposure_time*survey.zero_point
+        # this brings them to zero point 24.
+        fac = 1.0/survey.exposure_time
 
-            # scale to our chosen zero point
-            fac *= 10.0**(0.4*(ZERO_POINT-24))
+        # scale to our chosen zero point
+        fac *= 10.0**(0.4*(ZERO_POINT-24))
 
-            wfac = 1.0/fac**2
+        wfac = 1.0/fac**2
 
-            for se_obs in band_data[band]:
+        image *= fac
+        noise *= fac
+        weight *= wfac
 
-                se_obs.image *= fac
-                se_obs.noise *= fac
-                se_obs.weight *= wfac
-
-    def _generate_mask_plane(self, *, se_image, wcs, objs, overlap_info):
+    def _generate_mask_plane(self, *, se_image, wcs, objs, overlap_info, band):
         """
         set masks for edges, cosmics, bad columns and saturated stars/bleeds
+
+        also clip high values and set SET
+
+        make sure the image is on the right zero point before calling this code
         """
 
+        # saturation occurs in the single epoch image.  Note before calling
+        # this method we should have rescaled wldeblend images, and we have put
+        # that into the sat vals
+        sat_val = BAND_SAT_VALS[band]
         shape = se_image.array.shape
         bmask = generate_basic_mask(shape=shape, edge_width=self.edge_width)
+
+        if self.saturate:
+            saturate_image_and_mask(
+                image=se_image.array,
+                mask=bmask,
+                sat_val=sat_val,
+            )
 
         area_factor = (
             (self.coadd_dim - 2 * self.buff)**2
@@ -754,7 +802,7 @@ class Sim(object):
                 **defaults,
             )
             bmask[msk] |= COSMIC_RAY
-            se_image.array[msk] = SAT_VAL
+            se_image.array[msk] = sat_val
 
         if self.bad_columns:
             defaults = {
@@ -785,6 +833,7 @@ class Sim(object):
                     add_star_and_bleed(
                         mask=bmask,
                         image=se_image.array,
+                        band=band,
                         x=pos.x,
                         y=pos.y,
                         radius=sat_data['radius'],
@@ -889,10 +938,26 @@ class Sim(object):
             # get the star as an dict by band
             star_data = self._get_star()
 
-            all_data.append(star_data)
-            uv_offsets.append(duv)
+            if self._keep_star(star_data):
+                all_data.append(star_data)
+                uv_offsets.append(duv)
 
         return all_data, uv_offsets
+
+    def _keep_star(self, star):
+
+        keep = True
+
+        min_mag = self.stars_kws.get('min_mag', None)
+        if min_mag is not None:
+            if any((star[band]['mag'] < min_mag for band in star)):
+                keep = False
+
+        if not self.sat_stars:
+            if any((star[band]['saturated'] for band in star)):
+                keep = False
+
+        return keep
 
     def _get_dudv(self):
         """Return an offset from the center of the image in the (u, v) plane

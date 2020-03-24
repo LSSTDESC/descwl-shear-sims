@@ -95,19 +95,16 @@ def render_objs_with_psf_shear(
         # get the psf
         psf = psf_function(x=pos.x, y=pos.y)
 
+        convolved_obj = galsim.Convolve(obj, psf)
+
         # draw with setup_only to get the image size
-        _im = galsim.Convolve(obj, psf).drawImage(
+        _im = convolved_obj.drawImage(
             wcs=local_wcs,
             method=method,
-            setup_only=True).array
-        shape = _im.shape
+            setup_only=True,
+        ).array
 
-        if obj_data['type'] == 'star':
-            # avoid stamp-edge issues
-            if obj_data['mag'] < 15:
-                shape = [s*3 for s in shape]
-            elif obj_data['mag'] < 18:
-                shape = [s*2 for s in shape]
+        shape = _im.shape
 
         assert shape[0] == shape[1]
 
@@ -120,12 +117,13 @@ def render_objs_with_psf_shear(
         dy = pos.y - (y_ll + (shape[0] - 1)/2)
 
         # draw and set the proper origin
-        stamp = galsim.Convolve(obj, psf).drawImage(
+        stamp = convolved_obj.drawImage(
             nx=shape[1],
             ny=shape[0],
             wcs=local_wcs,
             offset=galsim.PositionD(x=dx, y=dy),
-            method=method)
+            method=method,
+        )
         stamp.setOrigin(x_ll, y_ll)
 
         # intersect and add to total image

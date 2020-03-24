@@ -1,7 +1,8 @@
 from numba import njit
 import ngmix
 
-from .lsst_bits import SAT, SAT_VAL
+from .lsst_bits import SAT
+from .saturation import BAND_SAT_VALS
 
 
 class StarMaskPDFs(object):
@@ -64,6 +65,7 @@ class StarMaskPDFs(object):
 def add_star_and_bleed(*,
                        mask,
                        image,
+                       band,
                        x, y,
                        radius,
                        bleed_width,
@@ -85,12 +87,16 @@ def add_star_and_bleed(*,
     bleed_length: float
         Length of bleed in pixels
     """
+
+    sat_val = BAND_SAT_VALS[band]
+
     add_star(
         mask=mask,
         image=image,
         x=x,
         y=y,
         radius=radius,
+        sat_val=sat_val,
     )
 
     add_bleed(
@@ -100,6 +106,7 @@ def add_star_and_bleed(*,
         y=y,
         width=bleed_width,
         length=bleed_length,
+        sat_val=sat_val,
     )
 
 
@@ -133,7 +140,7 @@ def get_bleed_length(*, star_mask_rad, bleed_length_fac):
 
 
 @njit
-def add_star(*, mask, image, x, y, radius):
+def add_star(*, mask, image, x, y, radius, sat_val):
     """
     Add a circular star mask to the input mask image
 
@@ -145,6 +152,8 @@ def add_star(*, mask, image, x, y, radius):
         The center position of the circle
     radius: float
         Radius of circle in pixels
+    sat_val: float
+        Value at saturation
     """
 
     intx = int(x)
@@ -166,11 +175,11 @@ def add_star(*, mask, image, x, y, radius):
                 continue
 
             mask[iy, ix] |= SAT
-            image[iy, ix] = SAT_VAL
+            image[iy, ix] = sat_val
 
 
 @njit
-def add_bleed(*, mask, image, x, y, width, length):
+def add_bleed(*, mask, image, x, y, width, length, sat_val):
     """
     Add a bleed trail mask to the input mask image
 
@@ -184,6 +193,8 @@ def add_bleed(*, mask, image, x, y, width, length):
         Width of bleed in pixels
     length: float
         Length of bleed in pixels
+    sat_val: float
+        Value at saturation
     """
 
     ny, nx = mask.shape
@@ -208,4 +219,4 @@ def add_bleed(*, mask, image, x, y, width, length):
             if ix < 0 or ix > (nx-1):
                 continue
             mask[iy, ix] |= SAT
-            image[iy, ix] = SAT_VAL
+            image[iy, ix] = sat_val

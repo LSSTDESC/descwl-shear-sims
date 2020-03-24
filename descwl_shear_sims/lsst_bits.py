@@ -12,10 +12,6 @@ EDGE = np.int64(2**4)
 STAR = np.int64(2**10)
 BLEED = np.int64(2**11)
 
-# saturation value for images
-# TODO get a good value
-SAT_VAL = 1.e18
-
 
 # double check they match the stack
 def _check_bits_against_stack():
