@@ -20,7 +20,11 @@ from .gen_masks import (
     generate_cosmic_rays,
     generate_bad_columns,
 )
-from .gen_star_masks import StarMaskPDFs, add_star_and_bleed
+from .gen_star_masks import (
+    StarMaskPDFs,
+    add_star_and_bleed,
+    add_bright_star_mask,
+)
 from .stars import (
     sample_star,
     sample_fixed_star,
@@ -31,7 +35,7 @@ from .stars import (
 from .ps_psf import PowerSpectrumPSF
 
 # default mask bits from the stack
-from .lsst_bits import BAD_COLUMN, COSMIC_RAY
+from .lsst_bits import BAD_COLUMN, COSMIC_RAY, BRIGHT_STAR
 from .saturation import BAND_SAT_VALS, saturate_image_and_mask
 from .cache_tools import cached_catalog_read
 from .sim_constants import EXP_GAL_MAG, ZERO_POINT
@@ -820,6 +824,18 @@ class Sim(object):
             )
             bmask[msk] |= BAD_COLUMN
             se_image.array[msk] = 0.0
+
+        if self.stars:
+            for obj_data, info in zip(objs, overlap_info):
+                if (info['overlaps'] and
+                        obj_data['type'] == 'star'):
+
+                    if obj_data['mag'] < 18:
+                        pos = info['pos']
+                        add_bright_star_mask(
+                            mask=bmask, x=pos.x, y=pos.y,
+                            radius=3/0.2, val=BRIGHT_STAR,
+                        )
 
         if self.stars and self.sat_stars:
             for obj_data, info in zip(objs, overlap_info):
