@@ -2,15 +2,14 @@ import numpy as np
 import warnings
 
 # default mask bits from the stack
-BAD_COLUMN = np.int64(2**0)
-SAT = np.int64(2**1)
-COSMIC_RAY = np.int64(2**3)
-EDGE = np.int64(2**4)
+BAD_COLUMN = np.int32(2**0)
+SAT = np.int32(2**1)
+COSMIC_RAY = np.int32(2**3)
+EDGE = np.int32(2**4)
 
 # these are not official values, as far as I know
 # the stack doesn't mark such things (ES 2020-02-18)
-STAR = np.int64(2**10)
-BLEED = np.int64(2**11)
+BRIGHT_STAR = np.int32(2**30)
 
 
 # double check they match the stack
