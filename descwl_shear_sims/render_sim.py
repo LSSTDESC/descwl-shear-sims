@@ -105,6 +105,8 @@ def render_objs_with_psf_shear(
         ).array
 
         shape = _im.shape
+        if shape[0] > img_dim:
+            shape = (img_dim, img_dim)
 
         assert shape[0] == shape[1]
 
