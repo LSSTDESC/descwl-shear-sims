@@ -733,17 +733,18 @@ class Sim(object):
         for obj_data in all_objs:
             for band in self.bands:
                 band_data = obj_data[band]
-                obj = band_data['obj']
+                if band_data['type'] == 'star':
+                    obj = band_data['obj']
 
-                sky_noise_per_pixel = noises[band]
+                    sky_noise_per_pixel = noises[band]
 
-                folding_threshold = sky_noise_per_pixel/obj.flux
-                folding_threshold = np.exp(np.floor(np.log(folding_threshold)))
+                    folding_threshold = sky_noise_per_pixel/obj.flux
+                    folding_threshold = np.exp(np.floor(np.log(folding_threshold)))
 
-                folding_threshold = min(folding_threshold, 0.005)
+                    folding_threshold = min(folding_threshold, 0.005)
 
-                gsp = galsim.GSParams(folding_threshold=folding_threshold)
-                band_data['obj'] = obj.withGSParams(gsp)
+                    gsp = galsim.GSParams(folding_threshold=folding_threshold)
+                    band_data['obj'] = obj.withGSParams(gsp)
 
     def _rescale_wldeblend(self, *, image, noise, weight, band):
         """
