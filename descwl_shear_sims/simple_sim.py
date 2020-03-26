@@ -43,7 +43,7 @@ from .sim_constants import EXP_GAL_MAG, ZERO_POINT
 LOGGER = logging.getLogger(__name__)
 
 GAL_KWS_DEFAULTS = {
-    'exp': {'half_light_radius': 0.5},
+    'exp': {'half_light_radius': 0.5, 'mag': EXP_GAL_MAG},
     'wldeblend': {'ngals_factor': 1.0},
 }
 STARS_KWS_DEFAULTS = {
@@ -348,6 +348,10 @@ class Sim(object):
         self.gal_kws = gal_kws or {}
         gal_kws_defaults = copy.deepcopy(GAL_KWS_DEFAULTS[self.gal_type])
         gal_kws_defaults.update(self.gal_kws)
+
+        if self.gal_type == 'exp':
+            self._fixed_gal_mag = gal_kws_defaults.pop('mag')
+
         self._final_gal_kws = gal_kws_defaults
 
         self.psf_type = psf_type
@@ -1023,7 +1027,8 @@ class Sim(object):
     def _get_gal_exp(self):
         """Return an OrderedDict keyed on band with the galsim object for
         a given exp gal."""
-        flux = 10**(0.4 * (ZERO_POINT - EXP_GAL_MAG))
+        # flux = 10**(0.4 * (ZERO_POINT - EXP_GAL_MAG))
+        flux = 10**(0.4 * (ZERO_POINT - self._fixed_gal_mag))
 
         _gal = OrderedDict()
         for band in self.bands:
