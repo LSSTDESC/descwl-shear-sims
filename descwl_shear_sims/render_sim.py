@@ -14,7 +14,8 @@ LOGGER = logging.getLogger(__name__)
 def render_objs_with_psf_shear(
         *,
         objs, psf_function, uv_offsets,
-        wcs, img_dim, method, g1, g2, shear_scene):
+        wcs, img_dim, method, g1, g2, shear_scene,
+        expand_star_stamps=True):
     """Render objects into a scene with some PSF function, shear, and WCS.
 
     Parameters
@@ -105,6 +106,14 @@ def render_objs_with_psf_shear(
         ).array
 
         shape = _im.shape
+
+        if expand_star_stamps and obj_data['type'] == 'star':
+            # avoid stamp-edge issues
+            if obj_data['mag'] < 15:
+                shape = [s*4 for s in shape]
+            elif obj_data['mag'] < 18:
+                shape = [s*3 for s in shape]
+
         if shape[0] > img_dim:
             shape = (img_dim, img_dim)
 

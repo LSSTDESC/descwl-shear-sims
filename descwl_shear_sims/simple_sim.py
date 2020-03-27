@@ -269,6 +269,9 @@ class Sim(object):
                 The bleed length is this factor times the *diameter* of the
                 circular star mask, default 2
 
+    bright_strategy: str
+        How to deal with bright star stamps.  'expand' means simply expand
+        the stamp sizes, 'fold' means adjust the folding threshold.
 
     Methods
     -------
@@ -307,11 +310,14 @@ class Sim(object):
         stars_kws=None,
         sat_stars=False,
         sat_stars_kws=None,
+        bright_strategy='expand',
     ):
         self._rng = (
             rng
             if isinstance(rng, np.random.RandomState)
             else np.random.RandomState(seed=rng))
+
+        self.bright_strategy = bright_strategy
 
         # we set these here so they are seeded once - no calls to the RNG
         # should preceed these calls
@@ -643,13 +649,18 @@ class Sim(object):
             raise RuntimeError("A `Sim` object can only be called once!")
         self.called = True
 
+        expand_star_stamps = (
+            True if self.bright_strategy == 'expand' else False
+        )
+
         all_gal_data, uv_offsets_gals = self._generate_gals()
         all_star_data, uv_offsets_stars = self._generate_stars()
 
         all_data = all_gal_data + all_star_data
         uv_offsets = uv_offsets_gals + uv_offsets_stars
 
-        self._set_folding_thresholds(all_data)
+        if self.bright_strategy == 'fold':
+            self._set_folding_thresholds(all_data)
 
         band_data = OrderedDict()
         for band_ind, band in enumerate(self.bands):
@@ -675,6 +686,7 @@ class Sim(object):
                     g1=self.g1,
                     g2=self.g2,
                     shear_scene=self.shear_scene,
+                    expand_star_stamps=expand_star_stamps,
                 )
 
                 se_image += self._generate_noise_image(band_ind)
