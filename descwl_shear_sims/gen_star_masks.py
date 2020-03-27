@@ -1,7 +1,7 @@
 from numba import njit
 import ngmix
 
-from .lsst_bits import SAT, BRIGHT_STAR
+from .lsst_bits import SAT
 from .saturation import BAND_SAT_VALS
 
 
