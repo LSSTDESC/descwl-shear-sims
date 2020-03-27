@@ -273,6 +273,9 @@ class Sim(object):
         How to deal with bright star stamps.  'expand' means simply expand
         the stamp sizes, 'fold' means adjust the folding threshold.
 
+    trim_stamps: bool
+        If True, trim stamps in renderer to avoid huge fft errors from galsim
+
     Methods
     -------
     gen_sim()
@@ -311,6 +314,7 @@ class Sim(object):
         sat_stars=False,
         sat_stars_kws=None,
         bright_strategy='expand',
+        trim_stamps=True,
     ):
         self._rng = (
             rng
@@ -318,6 +322,7 @@ class Sim(object):
             else np.random.RandomState(seed=rng))
 
         self.bright_strategy = bright_strategy
+        self.trim_stamps = trim_stamps
 
         # we set these here so they are seeded once - no calls to the RNG
         # should preceed these calls
@@ -691,6 +696,7 @@ class Sim(object):
                     g2=self.g2,
                     shear_scene=self.shear_scene,
                     expand_star_stamps=expand_star_stamps,
+                    trim_stamps=self.trim_stamps,
                 )
 
                 se_image += self._generate_noise_image(band_ind)
