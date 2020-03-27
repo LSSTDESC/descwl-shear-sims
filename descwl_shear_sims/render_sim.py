@@ -15,7 +15,8 @@ def render_objs_with_psf_shear(
         *,
         objs, psf_function, uv_offsets,
         wcs, img_dim, method, g1, g2, shear_scene,
-        expand_star_stamps=True):
+        expand_star_stamps=True,
+        trim_stamps=True):
     """Render objects into a scene with some PSF function, shear, and WCS.
 
     Parameters
@@ -44,6 +45,12 @@ def render_objs_with_psf_shear(
     shear_scene : bool
         If True, the object positions and their shapes are sheared. Otherwise,
         only the object shapes are sheared.
+    expand_star_stamps: bool
+        If True, expand bright star stamps to avoid rendering issues, default
+        True
+    trim_stamps: bool
+        If true, trim stamps larger than the input image to avoid huge
+        ffts.  Default True.
 
     Returns
     -------
@@ -114,8 +121,10 @@ def render_objs_with_psf_shear(
             elif obj_data['mag'] < 18:
                 shape = [s*3 for s in shape]
 
-        if shape[0] > img_dim:
-            shape = (img_dim, img_dim)
+        if trim_stamps:
+            # to avoid "fft too big" errors from galsim
+            if shape[0] > img_dim:
+                shape = (img_dim, img_dim)
 
         assert shape[0] == shape[1]
 

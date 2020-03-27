@@ -201,12 +201,16 @@ def test_render_sim_shear_scene(shear_scene):
     se_img, _ = render_objs_with_psf_shear(
         objs=objs, psf_function=_psf_function, uv_offsets=uv_offsets,
         wcs=wcs, img_dim=img_dim, method=method,
-        g1=g1, g2=g2, shear_scene=not shear_scene)
+        g1=g1, g2=g2, shear_scene=not shear_scene,
+        trim_stamps=False,
+    )
 
     se_img_shear_scene, _ = render_objs_with_psf_shear(
         objs=objs, psf_function=_psf_function, uv_offsets=uv_offsets,
         wcs=wcs, img_dim=img_dim, method=method,
-        g1=g1, g2=g2, shear_scene=shear_scene)
+        g1=g1, g2=g2, shear_scene=shear_scene,
+        trim_stamps=False,
+    )
 
     if shear_scene:
         smat = galsim.Shear(g1=g1, g2=g2).getMatrix()
