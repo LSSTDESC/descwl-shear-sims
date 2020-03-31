@@ -20,7 +20,11 @@ from .gen_masks import (
     generate_cosmic_rays,
     generate_bad_columns,
 )
-from .gen_star_masks import StarMaskPDFs, add_star_and_bleed
+from .gen_star_masks import (
+    StarMaskPDFs,
+    add_star_and_bleed,
+    add_bright_star_mask,
+)
 from .stars import (
     sample_star,
     sample_fixed_star,
@@ -31,7 +35,7 @@ from .stars import (
 from .ps_psf import PowerSpectrumPSF
 
 # default mask bits from the stack
-from .lsst_bits import BAD_COLUMN, COSMIC_RAY
+from .lsst_bits import BAD_COLUMN, COSMIC_RAY, BRIGHT_STAR
 from .saturation import BAND_SAT_VALS, saturate_image_and_mask
 from .cache_tools import cached_catalog_read
 from .sim_constants import EXP_GAL_MAG, ZERO_POINT
@@ -39,7 +43,7 @@ from .sim_constants import EXP_GAL_MAG, ZERO_POINT
 LOGGER = logging.getLogger(__name__)
 
 GAL_KWS_DEFAULTS = {
-    'exp': {'half_light_radius': 0.5},
+    'exp': {'half_light_radius': 0.5, 'mag': EXP_GAL_MAG},
     'wldeblend': {'ngals_factor': 1.0},
 }
 STARS_KWS_DEFAULTS = {
@@ -265,6 +269,12 @@ class Sim(object):
                 The bleed length is this factor times the *diameter* of the
                 circular star mask, default 2
 
+    bright_strategy: str
+        How to deal with bright star stamps.  'expand' means simply expand
+        the stamp sizes, 'fold' means adjust the folding threshold.
+
+    trim_stamps: bool
+        If True, trim stamps in renderer to avoid huge fft errors from galsim
 
     Methods
     -------
@@ -303,11 +313,16 @@ class Sim(object):
         stars_kws=None,
         sat_stars=False,
         sat_stars_kws=None,
+        bright_strategy='expand',
+        trim_stamps=True,
     ):
         self._rng = (
             rng
             if isinstance(rng, np.random.RandomState)
             else np.random.RandomState(seed=rng))
+
+        self.bright_strategy = bright_strategy
+        self.trim_stamps = trim_stamps
 
         # we set these here so they are seeded once - no calls to the RNG
         # should preceed these calls
@@ -344,6 +359,10 @@ class Sim(object):
         self.gal_kws = gal_kws or {}
         gal_kws_defaults = copy.deepcopy(GAL_KWS_DEFAULTS[self.gal_type])
         gal_kws_defaults.update(self.gal_kws)
+
+        if self.gal_type == 'exp':
+            self._fixed_gal_mag = gal_kws_defaults.pop('mag')
+
         self._final_gal_kws = gal_kws_defaults
 
         self.psf_type = psf_type
@@ -639,13 +658,18 @@ class Sim(object):
             raise RuntimeError("A `Sim` object can only be called once!")
         self.called = True
 
+        expand_star_stamps = (
+            True if self.bright_strategy == 'expand' else False
+        )
+
         all_gal_data, uv_offsets_gals = self._generate_gals()
         all_star_data, uv_offsets_stars = self._generate_stars()
 
         all_data = all_gal_data + all_star_data
         uv_offsets = uv_offsets_gals + uv_offsets_stars
 
-        self._set_folding_thresholds(all_data)
+        if self.bright_strategy == 'fold':
+            self._set_folding_thresholds(all_data)
 
         band_data = OrderedDict()
         for band_ind, band in enumerate(self.bands):
@@ -671,6 +695,8 @@ class Sim(object):
                     g1=self.g1,
                     g2=self.g2,
                     shear_scene=self.shear_scene,
+                    expand_star_stamps=expand_star_stamps,
+                    trim_stamps=self.trim_stamps,
                 )
 
                 se_image += self._generate_noise_image(band_ind)
@@ -729,17 +755,18 @@ class Sim(object):
         for obj_data in all_objs:
             for band in self.bands:
                 band_data = obj_data[band]
-                obj = band_data['obj']
+                if band_data['type'] == 'star':
+                    obj = band_data['obj']
 
-                sky_noise_per_pixel = noises[band]
+                    sky_noise_per_pixel = noises[band]
 
-                folding_threshold = sky_noise_per_pixel/obj.flux
-                folding_threshold = np.exp(np.floor(np.log(folding_threshold)))
+                    folding_threshold = sky_noise_per_pixel/obj.flux
+                    folding_threshold = np.exp(np.floor(np.log(folding_threshold)))
 
-                folding_threshold = min(folding_threshold, 0.005)
+                    folding_threshold = min(folding_threshold, 0.005)
 
-                gsp = galsim.GSParams(folding_threshold=folding_threshold)
-                band_data['obj'] = obj.withGSParams(gsp)
+                    gsp = galsim.GSParams(folding_threshold=folding_threshold)
+                    band_data['obj'] = obj.withGSParams(gsp)
 
     def _rescale_wldeblend(self, *, image, noise, weight, band):
         """
@@ -820,6 +847,18 @@ class Sim(object):
             )
             bmask[msk] |= BAD_COLUMN
             se_image.array[msk] = 0.0
+
+        if self.stars:
+            for obj_data, info in zip(objs, overlap_info):
+                if (info['overlaps'] and
+                        obj_data['type'] == 'star'):
+
+                    if obj_data['mag'] < 18:
+                        pos = info['pos']
+                        add_bright_star_mask(
+                            mask=bmask, x=pos.x, y=pos.y,
+                            radius=3/0.2, val=BRIGHT_STAR,
+                        )
 
         if self.stars and self.sat_stars:
             for obj_data, info in zip(objs, overlap_info):
@@ -1006,7 +1045,8 @@ class Sim(object):
     def _get_gal_exp(self):
         """Return an OrderedDict keyed on band with the galsim object for
         a given exp gal."""
-        flux = 10**(0.4 * (ZERO_POINT - EXP_GAL_MAG))
+        # flux = 10**(0.4 * (ZERO_POINT - EXP_GAL_MAG))
+        flux = 10**(0.4 * (ZERO_POINT - self._fixed_gal_mag))
 
         _gal = OrderedDict()
         for band in self.bands:

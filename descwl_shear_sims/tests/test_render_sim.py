@@ -64,6 +64,68 @@ def test_render_sim_smoke():
     assert np.allclose(expected_img.array, se_img.array, rtol=0, atol=1e-9)
 
 
+@pytest.mark.parametrize('expand_star_stamps,trim_stamps', [
+    (True, True),
+    (True, False),
+    (False, True),
+    (False, False),
+])
+def test_render_opt_smoke(expand_star_stamps, trim_stamps):
+    img_dim = 103
+    img_cen = (img_dim - 1)/2
+    scale = 0.25
+    method = 'auto'
+    g1 = 0.0
+    g2 = 0.0
+    shear_scene = False
+    world_origin = galsim.CelestialCoord(
+        ra=0 * galsim.degrees,
+        dec=0 * galsim.degrees,
+    )
+    objs = [
+        {
+            'obj': galsim.Exponential(half_light_radius=5.5),
+            'type': 'galaxy',
+        },
+    ]
+
+    def _psf_function(*, x, y):
+        assert np.allclose(x, img_cen)
+        assert np.allclose(y, img_cen)
+        return galsim.Gaussian(fwhm=0.9)
+
+    uv_offsets = [galsim.PositionD(x=0.0, y=0.0)]
+    wcs = galsim.TanWCS(
+        affine=galsim.AffineTransform(
+            scale, 0.0, 0.0, scale,
+            origin=galsim.PositionD(x=img_cen, y=img_cen),
+            world_origin=galsim.PositionD(0, 0),
+        ),
+        world_origin=world_origin,
+        units=galsim.arcsec,
+    )
+
+    se_img, overlap_info = render_objs_with_psf_shear(
+        objs=objs, psf_function=_psf_function, uv_offsets=uv_offsets,
+        wcs=wcs, img_dim=img_dim, method=method,
+        g1=g1, g2=g2, shear_scene=shear_scene,
+        expand_star_stamps=expand_star_stamps,
+        trim_stamps=trim_stamps,
+    )
+
+    assert len(overlap_info) == len(objs)
+    for info in overlap_info:
+        assert 'pos' in info and 'overlaps' in info
+        assert info['overlaps'] is True
+
+    expected_img = galsim.Convolve(
+        objs[0]['obj'], galsim.Gaussian(fwhm=0.9)
+    ).drawImage(
+        nx=img_dim, ny=img_dim, scale=scale)
+
+    assert np.allclose(expected_img.array, se_img.array, rtol=0, atol=1e-9)
+
+
 def test_render_sim_star_smoke():
     img_dim = 103
     img_cen = (img_dim - 1)/2
@@ -201,12 +263,16 @@ def test_render_sim_shear_scene(shear_scene):
     se_img, _ = render_objs_with_psf_shear(
         objs=objs, psf_function=_psf_function, uv_offsets=uv_offsets,
         wcs=wcs, img_dim=img_dim, method=method,
-        g1=g1, g2=g2, shear_scene=not shear_scene)
+        g1=g1, g2=g2, shear_scene=not shear_scene,
+        trim_stamps=False,
+    )
 
     se_img_shear_scene, _ = render_objs_with_psf_shear(
         objs=objs, psf_function=_psf_function, uv_offsets=uv_offsets,
         wcs=wcs, img_dim=img_dim, method=method,
-        g1=g1, g2=g2, shear_scene=shear_scene)
+        g1=g1, g2=g2, shear_scene=shear_scene,
+        trim_stamps=False,
+    )
 
     if shear_scene:
         smat = galsim.Shear(g1=g1, g2=g2).getMatrix()
