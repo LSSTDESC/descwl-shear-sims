@@ -681,7 +681,7 @@ class Sim(object):
             raise RuntimeError("A `Sim` object can only be called once!")
         self.called = True
 
-        all_data, uv_offsets = self._generate_objects()
+        all_data = self._generate_objects()
 
         if self.bright_strategy == 'fold':
             self._set_folding_thresholds(all_data)
@@ -689,17 +689,20 @@ class Sim(object):
         band_data = OrderedDict()
         for band_ind, band in enumerate(self.bands):
             band_objs = [o[band] for o in all_data]
+            uv_offsets = [o[band]['dudv'] for o in all_data]
 
             wcs_objects = self._get_wcs_for_band(band)
 
-            psf_funcs_galsim, psf_funcs_rendered = \
-                self._get_psf_funcs_for_band(band)
+            (
+                psf_funcs_galsim,
+                psf_funcs_rendered,
+            ) = self._get_psf_funcs_for_band(band)
 
             band_data[band] = []
             for epoch, wcs, psf_galsim, psf_func in zip(
                     range(self.epochs_per_band), wcs_objects,
-                    psf_funcs_galsim, psf_funcs_rendered):
-
+                    psf_funcs_galsim, psf_funcs_rendered
+            ):
                 se_image, overlap_info = render_objs_with_psf_shear(
                     objs=band_objs,
                     uv_offsets=uv_offsets,
@@ -761,11 +764,16 @@ class Sim(object):
         return band_data
 
     def _set_folding_thresholds(self, all_objs):
-
+        """Function due to M Jarvis. Attempts to set the folding threshold
+        so that we render will into the noise in the final coadded image.
+        """
+        # these are approximate noises in the final coadded image
         noises = {}
         for band_ind, band in enumerate(self.bands):
-            sky_noise_per_pixel = \
-                self.noise_per_band[band_ind]/np.sqrt(self.n_bands)
+            sky_noise_per_pixel = (
+                self.noise_per_band[band_ind]
+                / np.sqrt(self.n_bands)
+            )
             noises[band] = sky_noise_per_pixel
 
         for obj_data in all_objs:
@@ -776,7 +784,7 @@ class Sim(object):
 
                     sky_noise_per_pixel = noises[band]
 
-                    folding_threshold = sky_noise_per_pixel/obj.flux
+                    folding_threshold = sky_noise_per_pixel / obj.flux
                     folding_threshold = np.exp(np.floor(np.log(folding_threshold)))
 
                     folding_threshold = min(folding_threshold, 0.005)
@@ -807,7 +815,7 @@ class Sim(object):
         """
         set masks for edges, cosmics, bad columns and saturated stars/bleeds
 
-        also clip high values and set SET
+        also clip high values and set mask bits
 
         make sure the image is on the right zero point before calling this code
         """
@@ -923,84 +931,72 @@ class Sim(object):
             self.noise_per_epoch[band_ind]
         )
 
-    def _generate_gals(self):
-        """Generate all galaxies in all bands.
+    def _generate_objects(self):
+        """Generate all objects in all bands.
 
         Returns
         -------
-        all_band_obj : list of OrderedDicts
-            A list the length of the number of galaxies with an OrderedDict
-            for each object holding each galaxies galsim object in each band.
-        uv_offsets : list of galsim.PositionD
-            A list of the uv-plane offsets in the world coordinates for each
-            galaxy.
+        all_data : list of OrderedDicts
+            A list the length of the number of objects with an OrderedDict
+            for each object holding each objects galsim representation in each band,
+            the object type, and it's offset in u,v in the image.
         """
 
         all_data = []
-        uv_offsets = []
+        nobj = self._get_nobj()
+        LOGGER.info('drawing %d objects for a %f square arcmin patch',
+                    nobj, self.area_sqr_arcmin)
 
-        if self.galaxies:
-            nobj = self._get_nobj()
+        gal_frac = self._gal_dens / (self._star_dens + self._gal_dens)
 
-            LOGGER.info('drawing %d galaxies for a %f square arcmin patch',
-                        nobj, self.area_sqr_arcmin)
+        for i in range(nobj):
+            # unsheared offset from center of uv image
+            du, dv = self._get_dudv()
+            dudv = galsim.PositionD(x=du, y=dv)
 
-            for i in range(nobj):
-                # unsheared offset from center of uv image
-                du, dv = self._get_dudv()
-                duv = galsim.PositionD(x=du, y=dv)
+            if self.galaxies and self.stars:
+                ran_u = self._rng.uniform()
+                _type_to_draw = 'gal' if ran_u < gal_frac else 'star'
+            elif not self.stars and self.galaxies:
+                _type_to_draw = 'gal'
+            elif not self.galaxies and self.stars:
+                _type_to_draw = 'star'
+            else:
+                raise ValueError(
+                    "We could not determine a type of object to draw! "
+                    "Check the input settings for `stars`, `galaxies`, "
+                    "and their densities!"
+                )
 
+            if _type_to_draw == 'gal':
                 # get the galaxy
                 if self.gal_type == 'exp':
-                    gal_data = self._get_gal_exp()
+                    obj_data = self._get_gal_exp()
                 elif self.gal_type == 'wldeblend':
-                    gal_data = self._get_gal_wldeblend()
+                    obj_data = self._get_gal_wldeblend()
                 else:
                     raise ValueError(
                         'gal_type "%s" not valid!' % self.gal_type
                     )
+            else:
+                # get the star as an dict by band
+                obj_data = self._get_star()
+                if not self._keep_star(obj_data):
+                    continue
 
-                all_data.append(gal_data)
-                uv_offsets.append(duv)
+            for band in self.bands:
+                obj_data[band]['dudv'] = dudv
+            all_data.append(obj_data)
 
-        return all_data, uv_offsets
-
-    def _generate_stars(self):
-        """Generate all stars in all bands.
-
-        Returns
-        -------
-        all_band_obj : list of OrderedDicts
-            A list the length of the number of stars with an OrderedDict
-            for each object holding each stars galsim object in each band.
-        uv_offsets : list of galsim.PositionD
-            A list of the uv-plane offsets in the world coordinates for each
-            star.
-        """
-
-        nstars = self._get_nstars()
-
-        LOGGER.info('drawing %d stars for a %f square arcmin patch',
-                    nstars, self.area_sqr_arcmin)
-
-        all_data = []
-        uv_offsets = []
-        for i in range(nstars):
-            # unsheared offset from center of uv image
-            du, dv = self._get_dudv()
-            duv = galsim.PositionD(x=du, y=dv)
-
-            # get the star as an dict by band
-            star_data = self._get_star()
-
-            if self._keep_star(star_data):
-                all_data.append(star_data)
-                uv_offsets.append(duv)
-
-        return all_data, uv_offsets
+        return all_data
 
     def _keep_star(self, star):
+        """remove stars under certain conditions
 
+        the conditions are:
+          - too faint
+          - saturated
+        """
         keep = True
 
         min_mag = self.stars_kws.get('min_mag', None)
@@ -1017,20 +1013,21 @@ class Sim(object):
     def _get_dudv(self):
         """Return an offset from the center of the image in the (u, v) plane
         of the coadd."""
-        if self.grid_gals:
+        if self.layout_type == 'grid':
+            gdim = self.layout_kws.get('dim')
             # half of the width of center of the patch that has objects
             # object locations should be in [-pos_width, +pos_width] below
-            # we are making a grid in (u,v) as opposed to ra-dec so the spacing
+            # we are making a grid in (x,y) as opposed to ra-dec so the spacing
             # is even
             frac = 1.0 - self.buff * 2 / self.coadd_dim
-            _pos_width = self.coadd_dim * frac * 0.5 * self.scale
+            _pos_width = self.coadd_dim * frac * 0.5
             yind, xind = np.unravel_index(
-                self._gal_grid_ind, (self.ngals, self.ngals))
-            dg = _pos_width * 2 / self.ngals
-            self._gal_grid_ind += 1
-            return (
-                yind * dg + dg/2 - _pos_width,
-                xind * dg + dg/2 - _pos_width)
+                self._obj_grid_ind, (gdim, gdim))
+            dg = _pos_width * 2 / gdim
+            self._obj_grid_ind += 1
+            dpos = galsim.PositionD(
+                y=yind * dg + dg/2 - _pos_width,
+                x=xind * dg + dg/2 - _pos_width)
         else:
             if self.cap_radius is None:
                 ra, dec = randsphere(
@@ -1048,12 +1045,13 @@ class Sim(object):
                 ra=ra[0] * galsim.degrees, dec=dec[0] * galsim.degrees)
             ipos = self.coadd_wcs.toImage(wpos)
             dpos = ipos - self._coadd_origin
-            dudv = np.dot(self._coadd_jac, np.array([dpos.x, dpos.y]))
-            return dudv
+
+        dudv = np.dot(self._coadd_jac, np.array([dpos.x, dpos.y]))
+        return dudv
 
     def _get_nobj(self):
         # grids have a fixed number of objects, otherwise we use a varying number
-        if self.grid_gals:
+        if self.layout_type == 'grid':
             return self._nobj
         else:
             return self._rng.poisson(self._nobj)
