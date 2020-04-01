@@ -42,12 +42,11 @@ from .sim_constants import ZERO_POINT
 
 LOGGER = logging.getLogger(__name__)
 
-GAL_KWS_DEFAULTS = {
+GALS_KWS_DEFAULTS = {
     'exp': {'half_light_radius': 0.5, 'mag': 18.0},
     'wldeblend': {},
 }
 STARS_KWS_DEFAULTS = {
-    'type': 'fixed',
     'density': 1,
 }
 SAT_STARS_KWS_DEFAULTS = {
@@ -120,16 +119,16 @@ class Sim(object):
 
     grid_objects : int, optional
         If non-zero, this is the number of objects to put on a grid per side.
-    galaxies: bool
+    gals: bool
         If set to True, draw galaxies. Default True.
-    gal_type : str, optional
+    gals_type : str, optional
         A string indicating what kind of galaxy to simulate. Possible options are
 
             'exp' : simple exponential disks
             'wldeblend' : use the LSSTDESC WeakLensingDeblending package
 
         Default is 'exp'.
-    gal_kws : dict, optional
+    gals_kws : dict, optional
         A dictionary of options for constructing galaxies. These vary per
         galaxy type. Possible entries per galaxy type are
 
@@ -256,15 +255,19 @@ class Sim(object):
         If True, saturate values above a threshold.  Default is False.
     stars: bool, optional
         If True, draw stars in the sim. Default is False.
+    stars_type : str, optional
+        A string indicating the kinds of stars to draw. Should be one of
+
+            'fixed' - draw stars with a fixed brightness of magnitude 19
+            'sample' - sample stars from a catalog derived from more detailed
+                       simulations
+
+        Default is 'fixed'.
     stars_kws: dict, optional
         A dictionary of options for generating stars
 
-            type: string
-                type of star, for now just "fixed" is allowed, which
-                means a fixed brightness at mag 19 with the same mean
-                number as the number of galaxies
             density: float
-                number per square arcmin, default 20
+                number per square arcmin, default 1
 
     sat_stars: bool, optional
         If `True` then add star and bleed trail masks. Default is `False`.
@@ -318,9 +321,9 @@ class Sim(object):
         se_dim=None,
         layout_type='random',
         layout_kws=None,
-        galaxies=True,
-        gal_type='exp',
-        gal_kws=None,
+        gals=True,
+        gals_type='exp',
+        gals_kws=None,
         psf_type='gauss',
         psf_kws=None,
         wcs_kws=None,
@@ -330,6 +333,7 @@ class Sim(object):
         bad_columns_kws=None,
         saturate=False,
         stars=False,
+        stars_type='fixed',
         stars_kws=None,
         sat_stars=False,
         sat_stars_kws=None,
@@ -398,27 +402,30 @@ class Sim(object):
 
         ########################################
         # galaxies
-        self.galaxies = galaxies
-        self.gal_type = gal_type
-        self.gal_kws = copy.deepcopy(GAL_KWS_DEFAULTS[self.gal_type])
-        if gal_kws:
-            self.gal_kws.update(copy.deepcopy(self.gal_kws))
+        self.gals = gals
+        self.gals_type = gals_type
+        self.gals_kws = copy.deepcopy(GALS_KWS_DEFAULTS[self.gals_type])
+        if gals_kws:
+            self.gals_kws.update(copy.deepcopy(self.gals_kws))
 
-        if self.gal_type == 'exp':
-            self._fixed_gal_mag = self.gal_kws['mag']
+        if self.gals_type == 'exp':
+            self._fixed_gal_mag = self.gals_kws['mag']
 
-        self._gal_dens = self.gal_kws.get('density', 80)
+        self._gal_dens = self.gals_kws.get('density', 80)
 
         # now we call any extra init for wldeblend
         # this call will reset some things above
-        if self.gal_type == 'wldeblend':
+        if self.gals_type == 'wldeblend':
             self._extra_init_for_wldeblend()
 
         ######################
         # stars
         self._setup_stars(
             stars=stars,
+            stars_type=stars_type,
             stars_kws=stars_kws,
+        )
+        self._setup_sat_stars(
             sat_stars=sat_stars,
             sat_stars_kws=sat_stars_kws,
         )
@@ -519,25 +526,22 @@ class Sim(object):
         self.psf_dim = 53
         self._psf_cen = (self.psf_dim - 1)/2
 
-    def _setup_stars(self,
-                     *,
-                     stars,
-                     stars_kws,
-                     sat_stars,
-                     sat_stars_kws):
-
+    def _setup_stars(
+        self, *,
+        stars,
+        stars_kws,
+        stars_type,
+    ):
         self.stars = stars
+        self.stars_type = stars_type
         self.stars_kws = copy.deepcopy(STARS_KWS_DEFAULTS)
-        self.sat_stars = sat_stars
-        self.sat_stars_kws = copy.deepcopy(SAT_STARS_KWS_DEFAULTS)
+        if stars_kws is not None:
+            self.stars_kws.update(copy.deepcopy(stars_kws))
 
         if self.stars:
-            if stars_kws is not None:
-                self.stars_kws.update(copy.deepcopy(stars_kws))
-
-            assert self.stars_kws['type'] in ('sample', 'fixed')
-            if self.stars_kws['type'] == 'sample':
-                assert self.gal_type == 'wldeblend', (
+            assert self.stars_type in ('sample', 'fixed')
+            if self.stars_type == 'sample':
+                assert self.gals_type == 'wldeblend', (
                     'gal type must be wldeblend for star type sample',
                 )
 
@@ -551,20 +555,21 @@ class Sim(object):
             else:
                 self._star_dens = self.stars_kws['density']
 
-            if self.stars_kws['type'] == 'sample':
+            if self.stars_type == 'sample':
                 self._example_stars = load_sample_stars()
             else:
                 self._example_stars = None
-
-            self._setup_sat_stars(sat_stars_kws=sat_stars_kws)
         else:
             self._star_dens = 0.0
+            self._example_stars = None
 
-    def _setup_sat_stars(self, *, sat_stars_kws):
-        if self.sat_stars:
-            if sat_stars_kws is not None:
-                self.sat_stars_kws.update(copy.deepcopy(sat_stars_kws))
+    def _setup_sat_stars(self, *, sat_stars, sat_stars_kws):
+        self.sat_stars = sat_stars
+        self.sat_stars_kws = copy.deepcopy(SAT_STARS_KWS_DEFAULTS)
+        if sat_stars_kws is not None:
+            self.sat_stars_kws.update(copy.deepcopy(sat_stars_kws))
 
+        if self.stars and self.sat_stars and self.stars_type == 'fixed':
             # density per square arcmin.
             sat_density = self.sat_stars_kws.get('density', 0.0)
 
@@ -575,8 +580,7 @@ class Sim(object):
                 **use_kws
             )
 
-            if self.stars_kws['type'] == 'fixed':
-                self._sat_stars_frac = sat_density / self._star_dens
+            self._sat_stars_frac = sat_density / self._star_dens
         else:
             self._sat_stars_frac = 0.0
             self._star_mask_pdf = None
@@ -586,12 +590,12 @@ class Sim(object):
         import descwl
 
         # make sure to find the proper catalog
-        if 'catalog' not in self.gal_kws:
+        if 'catalog' not in self.gals_kws:
             fname = os.path.join(
                 os.environ.get('CATSIM_DIR', '.'),
                 'OneDegSq.fits')
         else:
-            fname = self.gal_kws['catalog']
+            fname = self.gals_kws['catalog']
 
         self._wldeblend_cat = cached_catalog_read(fname)
         self._wldeblend_cat['pa_disk'] = self._rng.uniform(
@@ -731,7 +735,7 @@ class Sim(object):
                     + 1.0 / self.noise_per_epoch[band_ind]**2
                 )
 
-                if self.gal_type == 'wldeblend':
+                if self.gals_type == 'wldeblend':
                     # put the images on our common ZERO_POINT before
                     # checking for saturation
                     self._rescale_wldeblend(
@@ -874,8 +878,10 @@ class Sim(object):
 
         if self.stars:
             for obj_data, info in zip(objs, overlap_info):
-                if (info['overlaps'] and
-                        obj_data['type'] == 'star'):
+                if (
+                    info['overlaps'] and
+                    obj_data['type'] == 'star'
+                ):
 
                     if obj_data['mag'] < 18:
                         pos = info['pos']
@@ -886,10 +892,11 @@ class Sim(object):
 
         if self.stars and self.sat_stars:
             for obj_data, info in zip(objs, overlap_info):
-                if (info['overlaps'] and
-                        obj_data['type'] == 'star' and
-                        obj_data['saturated']):
-
+                if (
+                    info['overlaps'] and
+                    obj_data['type'] == 'star' and
+                    obj_data['saturated']
+                ):
                     pos = info['pos']
 
                     sat_data = obj_data['sat_data']
@@ -954,12 +961,12 @@ class Sim(object):
             du, dv = self._get_dudv()
             dudv = galsim.PositionD(x=du, y=dv)
 
-            if self.galaxies and self.stars:
+            if self.gals and self.stars:
                 ran_u = self._rng.uniform()
                 _type_to_draw = 'gal' if ran_u < gal_frac else 'star'
-            elif not self.stars and self.galaxies:
+            elif not self.stars and self.gals:
                 _type_to_draw = 'gal'
-            elif not self.galaxies and self.stars:
+            elif not self.gals and self.stars:
                 _type_to_draw = 'star'
             else:
                 raise ValueError(
@@ -970,13 +977,13 @@ class Sim(object):
 
             if _type_to_draw == 'gal':
                 # get the galaxy
-                if self.gal_type == 'exp':
+                if self.gals_type == 'exp':
                     obj_data = self._get_gal_exp()
-                elif self.gal_type == 'wldeblend':
+                elif self.gals_type == 'wldeblend':
                     obj_data = self._get_gal_wldeblend()
                 else:
                     raise ValueError(
-                        'gal_type "%s" not valid!' % self.gal_type
+                        'gals_type "%s" not valid!' % self.gals_type
                     )
             else:
                 # get the star as an dict by band
@@ -1062,10 +1069,13 @@ class Sim(object):
         # flux = 10**(0.4 * (ZERO_POINT - EXP_GAL_MAG))
         flux = 10**(0.4 * (ZERO_POINT - self._fixed_gal_mag))
 
+        use_kwargs = copy.deepcopy(self.gals_kws)
+        use_kwargs.pop('mag', None)
+
         _gal = OrderedDict()
         for band in self.bands:
             obj = galsim.Exponential(
-                **self._final_gal_kws
+                **use_kwargs
             ).withFlux(flux)
             _gal[band] = {'obj': obj, 'type': 'galaxy'}
 
@@ -1096,26 +1106,26 @@ class Sim(object):
 
         Returns
         -------
-        An OrderedDict keyed on band with data of theform
-        {'obj': Gaussian, 'type': 'star'}
+        An OrderedDict keyed on band with data of the form
+            {'obj': Gaussian, 'type': 'star'}
         """
 
-        if self.stars_kws['type'] == 'sample':
+        if self.stars_type == 'sample':
             star = sample_star(
                 rng=self._rng,
                 star_data=self._example_stars,
                 surveys=self._surveys,
                 bands=self.bands,
                 sat_stars=self.sat_stars,
-                star_mask_pdf=self.star_mask_pdf,
+                star_mask_pdf=self._star_mask_pdf,
             )
         else:
             star = sample_fixed_star(
                 rng=self._rng,
                 bands=self.bands,
                 sat_stars=self.sat_stars,
-                sat_stars_frac=self.sat_stars_frac,
-                star_mask_pdf=self.star_mask_pdf,
+                sat_stars_frac=self._sat_stars_frac,
+                star_mask_pdf=self._star_mask_pdf,
             )
 
         return star
