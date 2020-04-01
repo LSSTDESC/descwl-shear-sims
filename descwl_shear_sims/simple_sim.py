@@ -12,7 +12,7 @@ import numpy as np
 from collections import OrderedDict
 
 from .se_obs import SEObs
-from .render_sim import render_objs_with_psf_shear
+from .render_sim import append_wcs_info_and_render_objs_with_psf_shear
 from .gen_tanwcs import gen_tanwcs
 from .randsphere import randsphere, randcap
 from .gen_masks import (
@@ -73,7 +73,7 @@ class Sim(object):
         The number of single epoch images **per band**. Default is 10.
     noise_per_band : float or list of floats, optional
         The total noise for a single band. Can be different per band. Default
-        is 180 units.
+        is 100 units.
     bands : list of str, optional
         A list of bands to simulate. Default is ('r', 'i', 'z').
     g1 : float, optional
@@ -406,7 +406,7 @@ class Sim(object):
         self.gals_type = gals_type
         self.gals_kws = copy.deepcopy(GALS_KWS_DEFAULTS[self.gals_type])
         if gals_kws:
-            self.gals_kws.update(copy.deepcopy(self.gals_kws))
+            self.gals_kws.update(copy.deepcopy(gals_kws))
 
         if self.gals_type == 'exp':
             self._fixed_gal_mag = self.gals_kws['mag']
@@ -693,7 +693,6 @@ class Sim(object):
         band_data = OrderedDict()
         for band_ind, band in enumerate(self.bands):
             band_objs = [o[band] for o in all_data]
-            uv_offsets = [o[band]['dudv'] for o in all_data]
 
             wcs_objects = self._get_wcs_for_band(band)
 
@@ -707,9 +706,8 @@ class Sim(object):
                     range(self.epochs_per_band), wcs_objects,
                     psf_funcs_galsim, psf_funcs_rendered
             ):
-                se_image, overlap_info = render_objs_with_psf_shear(
+                se_image = append_wcs_info_and_render_objs_with_psf_shear(
                     objs=band_objs,
-                    uv_offsets=uv_offsets,
                     psf_function=psf_galsim,
                     wcs=wcs,
                     img_dim=self.se_dim,
@@ -750,8 +748,8 @@ class Sim(object):
                     se_image=se_image,
                     wcs=wcs,
                     objs=band_objs,
-                    overlap_info=overlap_info,
                     band=band,
+                    epoch=epoch,
                 )
 
                 band_data[band].append(
@@ -815,7 +813,7 @@ class Sim(object):
         noise *= fac
         weight *= wfac
 
-    def _generate_mask_plane(self, *, se_image, wcs, objs, overlap_info, band):
+    def _generate_mask_plane(self, *, se_image, wcs, objs, band, epoch):
         """
         set masks for edges, cosmics, bad columns and saturated stars/bleeds
 
@@ -877,27 +875,27 @@ class Sim(object):
             se_image.array[msk] = 0.0
 
         if self.stars:
-            for obj_data, info in zip(objs, overlap_info):
+            for obj_data in objs:
                 if (
-                    info['overlaps'] and
+                    obj_data['overlaps'][epoch] and
                     obj_data['type'] == 'star'
                 ):
 
                     if obj_data['mag'] < 18:
-                        pos = info['pos']
+                        pos = obj_data['pos'][-1]
                         add_bright_star_mask(
                             mask=bmask, x=pos.x, y=pos.y,
                             radius=3/0.2, val=BRIGHT_STAR,
                         )
 
         if self.stars and self.sat_stars:
-            for obj_data, info in zip(objs, overlap_info):
+            for obj_data in objs:
                 if (
-                    info['overlaps'] and
+                    obj_data['overlaps'][epoch] and
                     obj_data['type'] == 'star' and
                     obj_data['saturated']
                 ):
-                    pos = info['pos']
+                    pos = obj_data['pos'][epoch]
 
                     sat_data = obj_data['sat_data']
                     add_star_and_bleed(
@@ -1071,6 +1069,7 @@ class Sim(object):
 
         use_kwargs = copy.deepcopy(self.gals_kws)
         use_kwargs.pop('mag', None)
+        use_kwargs.pop('density', None)
 
         _gal = OrderedDict()
         for band in self.bands:

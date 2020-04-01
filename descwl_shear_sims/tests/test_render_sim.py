@@ -8,7 +8,7 @@ import galsim
 
 import pytest
 
-from ..render_sim import render_objs_with_psf_shear
+from ..render_sim import append_wcs_info_and_render_objs_with_psf_shear
 
 
 def test_render_sim_smoke():
@@ -27,6 +27,7 @@ def test_render_sim_smoke():
         {
             'obj': galsim.Exponential(half_light_radius=5.5),
             'type': 'galaxy',
+            'dudv': galsim.PositionD(x=0.0, y=0.0),
         },
     ]
 
@@ -35,7 +36,6 @@ def test_render_sim_smoke():
         assert np.allclose(y, img_cen)
         return galsim.Gaussian(fwhm=0.9)
 
-    uv_offsets = [galsim.PositionD(x=0.0, y=0.0)]
     wcs = galsim.TanWCS(
         affine=galsim.AffineTransform(
             scale, 0.0, 0.0, scale,
@@ -46,15 +46,16 @@ def test_render_sim_smoke():
         units=galsim.arcsec,
     )
 
-    se_img, overlap_info = render_objs_with_psf_shear(
-        objs=objs, psf_function=_psf_function, uv_offsets=uv_offsets,
+    se_img = append_wcs_info_and_render_objs_with_psf_shear(
+        objs=objs, psf_function=_psf_function,
         wcs=wcs, img_dim=img_dim, method=method,
         g1=g1, g2=g2, shear_scene=shear_scene)
 
-    assert len(overlap_info) == len(objs)
-    for info in overlap_info:
-        assert 'pos' in info and 'overlaps' in info
-        assert info['overlaps'] is True
+    for obj in objs:
+        assert 'pos' in obj
+        assert 'overlaps' in obj
+        assert obj['overlaps'][0] is True
+        assert obj['pos'][0] == galsim.PositionD(x=img_cen, y=img_cen)
 
     expected_img = galsim.Convolve(
         objs[0]['obj'], galsim.Gaussian(fwhm=0.9)
@@ -86,6 +87,7 @@ def test_render_opt_smoke(expand_star_stamps, trim_stamps):
         {
             'obj': galsim.Exponential(half_light_radius=5.5),
             'type': 'galaxy',
+            'dudv': galsim.PositionD(x=0.0, y=0.0),
         },
     ]
 
@@ -94,7 +96,6 @@ def test_render_opt_smoke(expand_star_stamps, trim_stamps):
         assert np.allclose(y, img_cen)
         return galsim.Gaussian(fwhm=0.9)
 
-    uv_offsets = [galsim.PositionD(x=0.0, y=0.0)]
     wcs = galsim.TanWCS(
         affine=galsim.AffineTransform(
             scale, 0.0, 0.0, scale,
@@ -105,18 +106,22 @@ def test_render_opt_smoke(expand_star_stamps, trim_stamps):
         units=galsim.arcsec,
     )
 
-    se_img, overlap_info = render_objs_with_psf_shear(
-        objs=objs, psf_function=_psf_function, uv_offsets=uv_offsets,
+    se_img = append_wcs_info_and_render_objs_with_psf_shear(
+        objs=objs, psf_function=_psf_function,
         wcs=wcs, img_dim=img_dim, method=method,
         g1=g1, g2=g2, shear_scene=shear_scene,
         expand_star_stamps=expand_star_stamps,
         trim_stamps=trim_stamps,
     )
 
-    assert len(overlap_info) == len(objs)
-    for info in overlap_info:
-        assert 'pos' in info and 'overlaps' in info
-        assert info['overlaps'] is True
+    for obj in objs:
+        assert 'pos' in obj
+        assert 'overlaps' in obj
+        assert obj['overlaps'][0] is True
+        assert np.allclose(
+            [obj['pos'][0].x, obj['pos'][0].y],
+            [img_cen, img_cen],
+        )
 
     expected_img = galsim.Convolve(
         objs[0]['obj'], galsim.Gaussian(fwhm=0.9)
@@ -131,8 +136,8 @@ def test_render_sim_star_smoke():
     img_cen = (img_dim - 1)/2
     scale = 0.25
     method = 'auto'
-    g1 = 0.0
-    g2 = 0.0
+    g1 = -0.1
+    g2 = 0.2
     shear_scene = False
     world_origin = galsim.CelestialCoord(
         ra=0 * galsim.degrees,
@@ -140,23 +145,21 @@ def test_render_sim_star_smoke():
     )
     objs = [
         {
-            'obj': galsim.Exponential(half_light_radius=5.5),
+            'obj': galsim.Exponential(half_light_radius=5.5).withFlux(0),
             'type': 'galaxy',
+            'dudv': galsim.PositionD(x=1.0, y=2.0),
         },
         {
             'obj': galsim.Gaussian(half_light_radius=1.0e-4),
             'mag': 19,
             'type': 'star',
+            'dudv': galsim.PositionD(x=0.0, y=0.0),
         },
     ]
 
     def _psf_function(*, x, y):
         return galsim.Gaussian(fwhm=0.9)
 
-    uv_offsets = [
-        galsim.PositionD(x=0.0, y=0.0),
-        galsim.PositionD(x=2.0, y=1.0),
-    ]
     wcs = galsim.TanWCS(
         affine=galsim.AffineTransform(
             scale, 0.0, 0.0, scale,
@@ -167,15 +170,31 @@ def test_render_sim_star_smoke():
         units=galsim.arcsec,
     )
 
-    se_img, overlap_info = render_objs_with_psf_shear(
-        objs=objs, psf_function=_psf_function, uv_offsets=uv_offsets,
+    se_img = append_wcs_info_and_render_objs_with_psf_shear(
+        objs=objs, psf_function=_psf_function,
         wcs=wcs, img_dim=img_dim, method=method,
         g1=g1, g2=g2, shear_scene=shear_scene)
 
-    assert len(overlap_info) == len(objs)
-    for info in overlap_info:
-        assert 'pos' in info and 'overlaps' in info
-        assert info['overlaps'] is True
+    for obj in objs:
+        assert 'pos' in obj
+        assert 'overlaps' in obj
+        assert obj['overlaps'][0] is True
+
+    assert not np.allclose(
+        [objs[0]['pos'][0].x, objs[0]['pos'][0].y],
+        [img_cen, img_cen],
+    )
+    assert np.allclose(
+        [objs[1]['pos'][0].x, objs[1]['pos'][0].y],
+        [img_cen, img_cen],
+    )
+
+    expected_img = galsim.Convolve(
+        objs[1]['obj'], galsim.Gaussian(fwhm=0.9)
+    ).drawImage(
+        nx=img_dim, ny=img_dim, scale=scale)
+
+    assert np.allclose(expected_img.array, se_img.array, rtol=0, atol=2e-8)
 
 
 @pytest.mark.parametrize('shear_scene', [True, False])
@@ -195,6 +214,7 @@ def test_render_sim_centered_shear_scene(shear_scene):
         {
             'obj': galsim.Exponential(half_light_radius=5.5),
             'type': 'galaxy',
+            'dudv': galsim.PositionD(x=0.0, y=0.0),
         },
     ]
 
@@ -203,7 +223,6 @@ def test_render_sim_centered_shear_scene(shear_scene):
         assert np.allclose(y, img_cen)
         return galsim.Gaussian(fwhm=0.9)
 
-    uv_offsets = [galsim.PositionD(x=0.0, y=0.0)]
     wcs = galsim.TanWCS(
         affine=galsim.AffineTransform(
             scale, 0.0, 0.0, scale,
@@ -214,10 +233,19 @@ def test_render_sim_centered_shear_scene(shear_scene):
         units=galsim.arcsec,
     )
 
-    se_img, overlap_info = render_objs_with_psf_shear(
-        objs=objs, psf_function=_psf_function, uv_offsets=uv_offsets,
+    se_img = append_wcs_info_and_render_objs_with_psf_shear(
+        objs=objs, psf_function=_psf_function,
         wcs=wcs, img_dim=img_dim, method=method,
         g1=g1, g2=g2, shear_scene=shear_scene)
+
+    for obj in objs:
+        assert 'pos' in obj
+        assert 'overlaps' in obj
+        assert obj['overlaps'][0] is True
+        assert np.allclose(
+            [obj['pos'][0].x, obj['pos'][0].y],
+            [img_cen, img_cen],
+        )
 
     expected_img = galsim.Convolve(
         objs[0]['obj'].shear(g1=g1, g2=g2), galsim.Gaussian(fwhm=0.9)
@@ -242,13 +270,20 @@ def test_render_sim_shear_scene(shear_scene):
         {
             'obj': galsim.Exponential(half_light_radius=5.5),
             'type': 'galaxy',
+            'dudv': galsim.PositionD(x=-1.3, y=0.578),
+        }
+    ]
+    objs_shear_scene = [
+        {
+            'obj': galsim.Exponential(half_light_radius=5.5),
+            'type': 'galaxy',
+            'dudv': galsim.PositionD(x=-1.3, y=0.578),
         }
     ]
 
     def _psf_function(*, x, y):
         return galsim.Gaussian(fwhm=0.9)
 
-    uv_offsets = [galsim.PositionD(x=-1.3, y=0.578)]
     wcs = galsim.TanWCS(
         affine=galsim.AffineTransform(
             scale, 0.0, 0.0, scale,
@@ -260,26 +295,44 @@ def test_render_sim_shear_scene(shear_scene):
     )
     jac_wcs = wcs.jacobian(world_pos=wcs.center)
 
-    se_img, _ = render_objs_with_psf_shear(
-        objs=objs, psf_function=_psf_function, uv_offsets=uv_offsets,
+    se_img = append_wcs_info_and_render_objs_with_psf_shear(
+        objs=objs, psf_function=_psf_function,
         wcs=wcs, img_dim=img_dim, method=method,
         g1=g1, g2=g2, shear_scene=not shear_scene,
         trim_stamps=False,
     )
 
-    se_img_shear_scene, _ = render_objs_with_psf_shear(
-        objs=objs, psf_function=_psf_function, uv_offsets=uv_offsets,
+    for obj in objs:
+        assert 'pos' in obj
+        assert 'overlaps' in obj
+        assert obj['overlaps'][0] is True
+        assert not np.allclose(
+            [obj['pos'][0].x, obj['pos'][0].y],
+            [img_cen, img_cen],
+        )
+
+    se_img_shear_scene = append_wcs_info_and_render_objs_with_psf_shear(
+        objs=objs_shear_scene, psf_function=_psf_function,
         wcs=wcs, img_dim=img_dim, method=method,
         g1=g1, g2=g2, shear_scene=shear_scene,
         trim_stamps=False,
     )
 
+    for obj in objs_shear_scene:
+        assert 'pos' in obj
+        assert 'overlaps' in obj
+        assert obj['overlaps'][0] is True
+        assert not np.allclose(
+            [obj['pos'][0].x, obj['pos'][0].y],
+            [img_cen, img_cen],
+        )
+
     if shear_scene:
         smat = galsim.Shear(g1=g1, g2=g2).getMatrix()
-        dxdy = np.dot(smat, np.array([uv_offsets[0].x, uv_offsets[0].y]))
+        dxdy = np.dot(smat, np.array([objs[0]['dudv'].x, objs[0]['dudv'].y]))
         offset = jac_wcs.toImage(galsim.PositionD(x=dxdy[0], y=dxdy[1]))
     else:
-        offset = jac_wcs.toImage(uv_offsets[0])
+        offset = jac_wcs.toImage(objs[0]['dudv'])
 
     obj_world_pos = wcs.toWorld(offset + origin)
     expected_img = galsim.Convolve(

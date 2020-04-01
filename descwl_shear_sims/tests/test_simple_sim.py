@@ -268,3 +268,61 @@ def test_simple_sim_band_wcs():
 
     for band in sim.bands:
         assert sim._get_wcs_for_band(band) == sim._band_wcs_objs[band]
+
+
+def test_simple_sim_grid_smoke():
+    sim = Sim(
+        rng=10,
+        layout_type='grid',
+        layout_kws={'dim': 10}
+    )
+    data = sim.gen_sim()
+
+    for band, bdata in data.items():
+        for se_obs in bdata:
+            if False:
+                import matplotlib.pyplot as plt
+                fig, axs = plt.subplots(nrows=1, ncols=1, figsize=(8, 8))
+                axs.imshow(se_obs.image.array)
+                assert False
+
+
+def test_simple_sim_grid_only_stars_smoke():
+    sim = Sim(
+        rng=10,
+        layout_type='grid',
+        layout_kws={'dim': 10},
+        gals=False,
+        stars=True,
+    )
+    data = sim.gen_sim()
+
+    for band, bdata in data.items():
+        for se_obs in bdata:
+            if False:
+                import matplotlib.pyplot as plt
+                fig, axs = plt.subplots(nrows=1, ncols=1, figsize=(8, 8))
+                axs.imshow(se_obs.image.array)
+                assert False
+
+
+def test_simple_sim_grid_stars_and_gals_smoke():
+    sim = Sim(
+        rng=10,
+        layout_type='grid',
+        layout_kws={'dim': 10},
+        gals=True,
+        gals_kws={'density': 10},
+        stars=True,
+        stars_kws={'density': 10},
+        noise_per_band=0,
+    )
+    data = sim.gen_sim()
+
+    for band, bdata in data.items():
+        for se_obs in bdata:
+            if False:
+                import matplotlib.pyplot as plt
+                fig, axs = plt.subplots(nrows=1, ncols=1, figsize=(8, 8))
+                axs.imshow(se_obs.image.array)
+                assert False
