@@ -1,0 +1,259 @@
+# This is an example YAML file that could be used to power the sims.
+
+###############################
+# main options
+
+# An RNG to use for drawing the objects. If an int or None is passed,
+# the input is used to initialize a new `np.random.RandomState` object.
+rng: 123
+
+# The number of single epoch images **per band**. Default is 10.
+epochs_per_band: 10
+
+# The total noise for a single band. Can be different per band. Default
+# is 100 units.
+noise_per_band: 100
+
+# A list of bands to simulate. Default is ('r', 'i', 'z').
+bands: ['r', 'i', 'z']
+
+# The simulated shears for the 1 and 2 axes
+g1: 0.02
+g2: 0.0
+
+# Whether or not to shear the full scene. Default is True.
+shear_scene: true
+
+# The overall pixel scale of the images. Default is 0.2 arcsec.
+scale: 0.02
+
+# The total dimension of the coadd image. Default is 351.  An odd default
+# is chosen, along with that of the single epoch images, so that the
+# grids will match perfectly in the case of no dithers/rotations etc.
+# However, odd dimensions are not required.
+coadd_dim: 351
+
+# The width of the buffer region in the coadd image where no objects are
+# drawn. Default is 50.
+buff: 50
+
+
+# Width of boundary to be marked as EDGE in the bitmask, default 5
+edge_width: 5
+
+# If set to True, draw galaxies. Default True.
+gals: true
+
+# A string indicating what kind of galaxy to simulate. Possible options are
+#
+#     'exp' : simple exponential disks
+#     'wldeblend' : use the LSSTDESC WeakLensingDeblending package
+#
+# Default is 'exp'.
+gals_type: 'wldeblend'
+
+# A dictionary of options for constructing galaxies. These vary per
+# galaxy type. Possible entries per galaxy type are
+#
+#     all types - any of the following
+#         'density' : float
+#             The density of galaxies in number per arcminute^2.
+#             Default is 80.
+#
+#     'exp' - any of the keywords to `galsim.Exponential`
+#         Default is 'half_light_radius=0.5'.
+#
+#     'wldeblend' - any of the following keywords
+#         'catalog' : str
+#             A path to the catalog to draw from. If this keyword is not
+#             given, you need to have the one square degree catsim catalog
+#             in the current working directory or in the directory given by
+#             the environment variable 'CATSIM_DIR'.
+gals_kws:
+  density: 10
+
+#####################
+# other options for more special things
+
+# Draw positions from a spherical cap of this opening angle in arcmin
+# rather than restricting positions to a small region within the coadd
+cap_radius: 2
+
+# Dimensions of the single epoch image.  If None (the default) the
+# size is chosen to encompass the coadd for small dithers.
+se_dim: 1000
+
+
+# A string indicating how to layout the objects in the image. Possible options
+# are
+#
+#     'random' : randomly place the objects in the image
+#     'grid' : place the objects on a grid in the image
+#
+# Default is 'random'.
+layout_type: grid
+
+# A dictionary giving options for the specific layout type. These vary per
+# layout type and are
+#
+#     'random' - no options
+#     'grid' - any of the following
+#         'dim' : int, required
+#             An integer giving the dimension of the grid on one axis.
+layout_kws: {'dim': 10}
+
+
+# A string indicating the kind of PSF. Possible options are
+#
+#     'gauss' : a Gaussian PSF
+#     'ps' : an approximate spatially varying PSF constructed with a
+#         power spectrum model
+#
+# Default is 'gauss'.
+psf_type: 'gauss'
+
+# A dictionary of options for constructing the PSF. These vary per
+# psf type. Possible entries per psf type are
+#
+#     'gauss' - any of the following keywords
+#         'fwhm': float, optional
+#             The FWHM of the Gaussian. Default is 0.8.
+#         'g1': float, optional
+#             The shape of the PSF on the 1-axis. Default is 0.
+#         'g2': float, optional
+#             The shape of the PSF on the 2-axis. Default is 0.
+#
+#     'ps' - any of the following keywords
+#         trunc : float
+#             The truncation scale for the shape/magnification power spectrum
+#             used to generate the PSF variation. Default is 1.
+#         noise_level : float, optional
+#             If not `None`, generate a noise field to add to the PSF images with
+#             desired noise. A value of 1e-2 generates a PSF image with an
+#             effective signal-to-noise of ~250. Default is none
+#         variation_factor : float, optional
+#             This factor is used internally to scale the overall variance in the
+#             PSF shape power spectra and the change in the PSF size across the
+#             image. Setting this factor greater than 1 results in more variation
+#             and less than 1 results in less variation. Default is 10.
+#         median_seeing : float, optional
+#             The approximate median seeing for the PSF. Default is 0.8.
+psf_kws:
+  fwhm: 0.7
+  g1: 0.2
+  g2: -0.2
+
+# A dictionary of options for constructing the WCS. These are any of
+#
+#     position_angle_range : 2-tuple of floats
+#         The range of position angles to select from for rotating the image
+#         WCS coordinares. In degrees.
+#     dither_range : 2-tuple of floats
+#         The lowest and highest dither in uv coordinate pixels.
+#     scale_frac_std : float
+#         The fractional variance in the generated image pixel scale.
+#     shear_std : float
+#         The standard deviation of the Gaussian shear put into the WCS.
+#     ra : float, optional
+#         The ra of the center of the image in world coordinates.
+#     dec : float, optional
+#         The ra of the center of the image in world coordinates.
+# The default values will generate a WCS that is at `(ra, dec) = (180, 0)`
+# with `position_angle_range=(0,0)`, `scale_frac_std=0`, `dither_range=(0,0)`,
+# and `shear_std=0`.
+wcs_kws:
+  scale_frac_std: 0.02
+
+# If `True` then add cosmic rays, otherwise do not. Default is `False`.
+cosmic_rays: true
+
+# A dictionary of options for generating cosmic rays
+#
+#     mean_cosmic_rays : int, optional
+#         The mean number of cosmic rays.
+#     min_length : int, optional
+#         The minimum length of the track.
+#     max_length : int, optional
+#         The maximum length of the track.
+#
+# See descwl_shear_sims.gen_masks.generate_cosmic_rays for the defaults.
+# The imput value for `mean_cosmic_rays` is scaled by the area of
+# the SE image relative to the final coadd area without buffers.
+cosmic_rays_kws:
+  min_length: 1
+  max_length: 100
+
+# If `True` then add bad columns, otherwise do not. Default is `False`.
+bad_columns: false
+
+# A dictionary of options for generating bad columns
+#
+#     mean_bad_cols : float, optional
+#         The mean of the Poisson distribution for the total number of
+#         bad columns to generate.
+#     gap_prob : float
+#         The probability that the bad column has a gap in it.
+#     min_gap_frac : float
+#         The minimum fraction of the image that the gap spans.
+#     max_gap_frac : floatn
+#         The maximum fraction of the image that the gap spans.
+#
+# See descwl_shear_sims.gen_masks.generate_bad_columns for the defaults.
+bad_columns_kws:
+  gap_prob: 0.1
+
+# If True, saturate values above a threshold.  Default is False.
+saturate: false
+
+# If True, draw stars in the sim. Default is False.
+stars: false
+
+# A string indicating the kinds of stars to draw. Should be one of
+#
+#     'fixed' - draw stars with a fixed brightness of magnitude 19
+#     'sample' - sample stars from a catalog derived from more detailed
+#                simulations
+#
+# Default is 'fixed'.
+stars_type: 'fixed'
+# A dictionary of options for generating stars
+#
+#     density: float
+#         number per square arcmin, default 1
+stars_kws:
+  density: 1
+
+# If `True` then add star and bleed trail masks. Default is `False`.
+sat_stars: false
+
+# A dictionary of options for generating star and bleed trail masks
+#
+#     density: float
+#         Number of saturated stars per square arcmin, default 0.055
+#     radmean: float
+#         Mean star mask radius in pixels for log normal distribution,
+#         default 3
+#     radstd: float
+#         Radius standard deviation in pixels for log normal distribution,
+#         default 5
+#     radmin: float
+#         Minimum radius in pixels of star masks.  The log normal values
+#         will be clipped to more than this value.  Default 3
+#     radmax: float
+#         Maximum radius in pixels of star masks.  The log normal values
+#         will be clipped to less than this value. Default 500
+#     bleed_length_fac: float
+#         The bleed length is this factor times the *diameter* of the
+#         circular star mask, default 2
+sat_stars_kws:
+  density: 0.055
+  radmean: 5
+
+# How to deal with bright star stamps. 'expand' means simply expand
+# the stamp sizes, 'fold' means adjust the folding threshold. Default
+# is 'expand'.
+bright_strategy: 'expand'
+
+# If True, trim stamps in renderer to avoid huge FFT errors from galsim.
+# Default is True.
+trim_stamps: true

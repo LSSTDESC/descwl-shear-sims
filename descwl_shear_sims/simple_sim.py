@@ -116,7 +116,7 @@ class Sim(object):
             'grid' - any of the following
                 'dim' : int, required
                     An integer giving the dimension of the grid on one axis.
-        Default is 'random'.
+
     gals: bool
         If set to True, draw galaxies. Default True.
     gals_type : str, optional
@@ -144,10 +144,6 @@ class Sim(object):
                     given, you need to have the one square degree catsim catalog
                     in the current working directory or in the directory given by
                     the environment variable 'CATSIM_DIR'.
-                'ngals_factor' : float
-                    A factor by which to cut down the catsim catalog. The
-                    Default for this is 1.0 in order to better match LSST
-                    depths and number densities.
 
     psf_type : str, optional
         A string indicating the kind of PSF. Possible options are
@@ -228,25 +224,12 @@ class Sim(object):
             mean_bad_cols : float, optional
                 The mean of the Poisson distribution for the total number of
                 bad columns to generate.
-            widths : n-tuple of ints, optional
-                The possible widths of the bad columns.
-            p : n-tuple of floats, optional
-                The frequency of each of the bad column widths.
-            min_length_frac : n-tuple of floats, optional
-                The minimum fraction of the image the bad column spans. There should be
-                one entry per bad column width in `widths`.
-            max_length_frac : n-tuple of floats, optional
-                The maximum fraction of the image the bad column spans. There should be
-                one entry per bad column width in `widths`.
-            gap_prob : n-tuple of floats, optional
-                The probability that the bad column has a gap in it. There should be
-                one entry per bad column width in `widths`.
-            min_gap_frac : n-tuple of floats, optional
-                The minimum fraction of the image that the gap spans. There should be
-                one entry per bad column width in `widths`.
-            max_gap_frac : n-tuple of floats, optional
-                The maximum fraction of the image that the gap spans. There should be
-                one entry per bad column width in `widths`.
+            gap_prob : float
+                The probability that the bad column has a gap in it.
+            min_gap_frac : float
+                The minimum fraction of the image that the gap spans.
+            max_gap_frac : floatn
+                The maximum fraction of the image that the gap spans.
 
         See descwl_shear_sims.gen_masks.generate_bad_columns for the defaults.
     saturate: bool
