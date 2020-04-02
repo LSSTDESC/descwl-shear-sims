@@ -116,9 +116,7 @@ class Sim(object):
             'grid' - any of the following
                 'dim' : int, required
                     An integer giving the dimension of the grid on one axis.
-
-    grid_objects : int, optional
-        If non-zero, this is the number of objects to put on a grid per side.
+        Default is 'random'.
     gals: bool
         If set to True, draw galaxies. Default True.
     gals_type : str, optional
