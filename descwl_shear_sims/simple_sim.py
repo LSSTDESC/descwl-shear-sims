@@ -997,7 +997,7 @@ class Sim(object):
         """remove stars under certain conditions
 
         the conditions are:
-          - too faint
+          - too bright
           - saturated
         """
         keep = True
