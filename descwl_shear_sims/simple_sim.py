@@ -43,7 +43,7 @@ from .sim_constants import ZERO_POINT
 LOGGER = logging.getLogger(__name__)
 
 GALS_KWS_DEFAULTS = {
-    'exp': {'half_light_radius': 0.5, 'mag': 18.0},
+    'exp': {'half_light_radius': 0.5, 'mag': 17.75},
     'wldeblend': {},
 }
 STARS_KWS_DEFAULTS = {
@@ -73,7 +73,8 @@ class Sim(object):
         The number of single epoch images **per band**. Default is 10.
     noise_per_band : float or list of floats, optional
         The total noise for a single band. Can be different per band. Default
-        is 100 units.
+        is 20 units which roughly approximates the 10-year LSST depth for an
+        image with a zero-point of 30 in the i-band.
     bands : list of str, optional
         A list of bands to simulate. Default is ('r', 'i', 'z').
     g1 : float, optional
@@ -289,7 +290,7 @@ class Sim(object):
         self, *,
         rng,
         epochs_per_band=10,
-        noise_per_band=100,
+        noise_per_band=20,
         bands=('r', 'i', 'z'),
         g1=0.02,
         g2=0.0,
