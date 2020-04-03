@@ -6,7 +6,7 @@ from ..simple_sim import Sim
 
 
 def test_simple_sim_smoke():
-    sim = Sim(rng=10, ngals=10)
+    sim = Sim(rng=10, gals_kws={'density': 10})
     data = sim.gen_sim()
     assert len(data) == sim.n_bands
     for band in sim.bands:
@@ -21,8 +21,8 @@ def test_simple_sim_wldeblend():
     try:
         sim = Sim(
             rng=101,
-            ngals=10,
-            gal_type='wldeblend',
+            gals_kws={'density': 10},
+            gals_type='wldeblend',
         )
         sim.gen_sim()
     except OSError:
@@ -33,7 +33,7 @@ def test_simple_sim_wldeblend():
 def test_simple_sim_fixed_stars():
     sim = Sim(
         rng=120,
-        ngals=10,
+        gals_kws={'density': 10},
         stars=True,
     )
     sim.gen_sim()
@@ -42,11 +42,11 @@ def test_simple_sim_fixed_stars():
 def test_simple_sim_sample_stars():
     try:
         sim = Sim(
-            ngals=10,
+            gals_kws={'density': 10},
             rng=335,
-            gal_type='wldeblend',
+            gals_type='wldeblend',
             stars=True,
-            stars_kws={'type': 'sample'},
+            stars_type='sample',
         )
         sim.gen_sim()
     except OSError:
@@ -57,9 +57,9 @@ def test_simple_sim_sample_stars():
 def test_simple_sim_sample_star_density():
     try:
         sim = Sim(
-            ngals=10,
+            gals_kws={'density': 10},
             rng=335,
-            gal_type='wldeblend',
+            gals_type='wldeblend',
             stars=True,
             stars_kws={
                 'type': 'sample',
@@ -78,9 +78,9 @@ def test_simple_sim_sample_star_density():
 def test_simple_sim_sample_star_minmag_smoke():
     try:
         sim = Sim(
-            ngals=10,
+            gals_kws={'density': 10},
             rng=335,
-            gal_type='wldeblend',
+            gals_type='wldeblend',
             stars=True,
             stars_kws={
                 'type': 'sample',
@@ -94,7 +94,7 @@ def test_simple_sim_sample_star_minmag_smoke():
 
 
 def test_simple_sim_cap_radius_smoke():
-    sim = Sim(rng=10, cap_radius=1)
+    sim = Sim(rng=10, cap_radius=1, gals_kws={'density': 10})
     assert sim.buff == 0.0
 
     data = sim.gen_sim()
@@ -108,7 +108,7 @@ def test_simple_sim_cap_radius_smoke():
 
 
 def test_simple_sim_noise():
-    sim = Sim(rng=10)
+    sim = Sim(rng=10, gals_kws={'density': 10})
     data = sim.gen_sim()
     for band in sim.bands:
         for epoch in range(sim.epochs_per_band):
@@ -122,14 +122,14 @@ def test_simple_sim_noise():
 
 
 def test_simple_sim_double_call_raises():
-    sim = Sim(rng=10)
+    sim = Sim(rng=10, gals_kws={'density': 10})
     sim.gen_sim()
     with pytest.raises(RuntimeError):
         sim.gen_sim()
 
 
 def test_simple_sim_psf_smoke():
-    sim = Sim(rng=10)
+    sim = Sim(rng=10, gals_kws={'density': 10})
     data = sim.gen_sim()
     assert len(data) == sim.n_bands
     for band in sim.bands:
@@ -140,7 +140,7 @@ def test_simple_sim_psf_smoke():
 
 
 def test_simple_sim_psf_center():
-    sim = Sim(rng=10)
+    sim = Sim(rng=10, gals_kws={'density': 10})
     data = sim.gen_sim()
     se_obs = data[sim.bands[0]][0]
 
@@ -186,6 +186,7 @@ def test_simple_sim_psf_shape():
     sim = Sim(
         rng=10,
         psf_kws={'g1': shear.g1, 'g2': shear.g2},
+        gals_kws={'density': 10},
     )
     data = sim.gen_sim()
     se_obs = data[sim.bands[0]][0]
@@ -221,7 +222,7 @@ def test_simple_sim_se_shape():
     """
 
     se_dim = 1024
-    sim = Sim(rng=10, se_dim=se_dim)
+    sim = Sim(rng=10, se_dim=se_dim, gals_kws={'density': 10})
     data = sim.gen_sim()
 
     for band, bdata in data.items():
@@ -231,7 +232,12 @@ def test_simple_sim_se_shape():
 
 
 def test_simple_sim_se_ps_psf():
-    sim = Sim(rng=10, psf_type='ps', psf_kws={'noise_level': 0})
+    sim = Sim(
+        rng=10,
+        psf_type='ps',
+        psf_kws={'noise_level': 0},
+        gals_kws={'density': 10},
+    )
     data = sim.gen_sim()
 
     for band, bdata in data.items():
@@ -256,8 +262,67 @@ def test_simple_sim_band_wcs():
     sim = Sim(
         rng=10,
         epochs_per_band=1,
+        gals_kws={'density': 10},
     )
     sim.gen_sim()
 
     for band in sim.bands:
         assert sim._get_wcs_for_band(band) == sim._band_wcs_objs[band]
+
+
+def test_simple_sim_grid_smoke():
+    sim = Sim(
+        rng=10,
+        layout_type='grid',
+        layout_kws={'dim': 10}
+    )
+    data = sim.gen_sim()
+
+    for band, bdata in data.items():
+        for se_obs in bdata:
+            if False:
+                import matplotlib.pyplot as plt
+                fig, axs = plt.subplots(nrows=1, ncols=1, figsize=(8, 8))
+                axs.imshow(se_obs.image.array)
+                assert False
+
+
+def test_simple_sim_grid_only_stars_smoke():
+    sim = Sim(
+        rng=10,
+        layout_type='grid',
+        layout_kws={'dim': 10},
+        gals=False,
+        stars=True,
+    )
+    data = sim.gen_sim()
+
+    for band, bdata in data.items():
+        for se_obs in bdata:
+            if False:
+                import matplotlib.pyplot as plt
+                fig, axs = plt.subplots(nrows=1, ncols=1, figsize=(8, 8))
+                axs.imshow(se_obs.image.array)
+                assert False
+
+
+def test_simple_sim_grid_stars_and_gals_smoke():
+    sim = Sim(
+        rng=10,
+        layout_type='grid',
+        layout_kws={'dim': 10},
+        gals=True,
+        gals_kws={'density': 10},
+        stars=True,
+        stars_kws={'density': 10},
+        noise_per_band=0,
+    )
+    data = sim.gen_sim()
+
+    for band, bdata in data.items():
+        for se_obs in bdata:
+            if False:
+                import matplotlib.pyplot as plt
+                fig, axs = plt.subplots(nrows=1, ncols=1, figsize=(8, 8))
+                axs.imshow(se_obs.image.array)
+                assert False

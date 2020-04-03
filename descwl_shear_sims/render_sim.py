@@ -11,9 +11,9 @@ import galsim
 LOGGER = logging.getLogger(__name__)
 
 
-def render_objs_with_psf_shear(
+def append_wcs_info_and_render_objs_with_psf_shear(
         *,
-        objs, psf_function, uv_offsets,
+        objs, psf_function,
         wcs, img_dim, method, g1, g2, shear_scene,
         expand_star_stamps=True,
         trim_stamps=True):
@@ -22,15 +22,16 @@ def render_objs_with_psf_shear(
     Parameters
     ----------
     objs : list of dict
-        The list of dicts with keys type, either 'galaxy' or 'star'
-        and obj, the galsim GSObject to be rendered.  Stars are not
-        sheared.
+        The list of dicts with keys 'type', either 'galaxy' or 'star', 'dudv'
+        the offset of the object in the u-v plane, and 'obj',
+        the galsim GSObject to be rendered.  Stars are not sheared. Note that
+        this function adds WCS info to the object in the fields 'overlaps' and
+        'pos' giving whether or not the object overlaps with the image and its
+        position in the image. These fields are lists that get appened to for each
+        epioch in each band.
     psf_function : callable
         A callable with signature `psf_function(*, x, y)` that returns the
         PSF at a given location in the image.
-    uv_offsets : list of galsim.PositionD
-        The offset from the center of the image for each object in u,v. The
-        units of u,v are usualy arcseconds.
     wcs : galsim.TanWCS
         The WCS function to use for the image.
     img_dim : int
@@ -56,11 +57,6 @@ def render_objs_with_psf_shear(
     -------
     se_image : galsim.ImageD
         The rendered image.
-    overlap_info: list of dict
-        List of dict for each object containing
-            'overlaps': whether or not the stamp for the object overlapped
-            the image
-            'pos': the position of the object center in the image
     """
 
     shear_mat = galsim.Shear(g1=g1, g2=g2).getMatrix()
@@ -75,10 +71,10 @@ def render_objs_with_psf_shear(
     jac_wcs = wcs.jacobian(world_pos=wcs.center)
     center_image_pos = wcs.toImage(wcs.center)
 
-    overlap_info = []
-    for obj_data, uv_offset, in zip(objs, uv_offsets):
+    for obj_data in objs:
 
         obj = obj_data['obj']
+        uv_offset = obj_data['dudv']
 
         du = uv_offset.x
         dv = uv_offset.y
@@ -155,9 +151,12 @@ def render_objs_with_psf_shear(
         else:
             overlaps = False
 
-        overlap_info.append({
-            'overlaps': overlaps,
-            'pos': pos,
-        })
+        if 'overlaps' not in obj_data:
+            obj_data['overlaps'] = []
+        obj_data['overlaps'].append(overlaps)
 
-    return se_im, overlap_info
+        if 'pos' not in obj_data:
+            obj_data['pos'] = []
+        obj_data['pos'].append(pos)
+
+    return se_im
