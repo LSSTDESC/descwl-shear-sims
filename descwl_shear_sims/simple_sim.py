@@ -433,6 +433,13 @@ class Sim(object):
 
         LOGGER.info('simulating bands: %s', self.bands)
 
+    @property
+    def star_density(self):
+        """
+        the density of stars
+        """
+        return self._star_dens
+
     def _setup_wcs(
             self, *,
             scale, coadd_dim, buff, cap_radius, wcs_kws, se_dim,
