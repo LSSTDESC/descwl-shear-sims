@@ -9,6 +9,8 @@ def test_simple_sim_smoke():
     sim = Sim(rng=10, gals_kws={'density': 10})
     data = sim.gen_sim()
     assert len(data) == sim.n_bands
+    assert sim.star_density == 0.0
+
     for band in sim.bands:
         assert len(data[band]) == sim.epochs_per_band
         for epoch in range(sim.epochs_per_band):
@@ -55,6 +57,8 @@ def test_simple_sim_sample_stars():
 
 
 def test_simple_sim_sample_star_density():
+    min_density = 2
+    max_density = 20
     try:
         sim = Sim(
             gals_kws={'density': 10},
@@ -64,12 +68,14 @@ def test_simple_sim_sample_star_density():
             stars_kws={
                 'type': 'sample',
                 'density': {
-                    'min_density': 2,
-                    'max_density': 20,
+                    'min_density': min_density,
+                    'max_density': max_density,
                 }
             },
         )
         sim.gen_sim()
+
+        assert min_density < sim.star_density < max_density
     except OSError:
         # the catalog is probably not present
         pass
@@ -307,6 +313,8 @@ def test_simple_sim_grid_only_stars_smoke():
 
 
 def test_simple_sim_grid_stars_and_gals_smoke():
+
+    star_density = 10
     sim = Sim(
         rng=10,
         layout_type='grid',
@@ -314,9 +322,10 @@ def test_simple_sim_grid_stars_and_gals_smoke():
         gals=True,
         gals_kws={'density': 10},
         stars=True,
-        stars_kws={'density': 10},
+        stars_kws={'density': star_density},
         noise_per_band=0,
     )
+    assert sim.star_density == star_density
     data = sim.gen_sim()
 
     for band, bdata in data.items():
