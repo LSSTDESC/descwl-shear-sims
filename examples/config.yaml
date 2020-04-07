@@ -1,48 +1,54 @@
 # This is an example YAML file that could be used to power the sims.
+#
+# everything is left at its default except
+#  gal_type set to wldeblend
+#  epochs_per_band set to 1 to make it fast
 
 ###############################
 # main options
 
 # An RNG to use for drawing the objects. If an int or None is passed,
 # the input is used to initialize a new `np.random.RandomState` object.
-rng: 123
+# you would not usually put the rng in the config, as it should be
+# different for each simulation instance
+# rng: 123
 
 # The number of single epoch images **per band**. Default is 10.
-epochs_per_band: 3
+epochs_per_band: 1
 
 # The total noise for a single band. Can be different per band. Default
-# is 100 units.
-noise_per_band: 100
+# is 100 units.  This is ignored for gal_type wldeblend
+# noise_per_band: 100
 
 # A list of bands to simulate. Default is ('r', 'i', 'z').
-bands: ['r', 'i', 'z']
+# bands: ['r', 'i', 'z']
 
 # The simulated shears for the 1 and 2 axes
-g1: 0.02
-g2: 0.0
+# g1: 0.02
+# g2: 0.0
 
 # Whether or not to shear the full scene. Default is True.
-shear_scene: true
+# shear_scene: true
 
 # The overall pixel scale of the images. Default is 0.2 arcsec.
-scale: 0.2
+# scale: 0.2
 
 # The total dimension of the coadd image. Default is 351.  An odd default
 # is chosen, along with that of the single epoch images, so that the
 # grids will match perfectly in the case of no dithers/rotations etc.
 # However, odd dimensions are not required.
-coadd_dim: 351
+# coadd_dim: 351
 
 # The width of the buffer region in the coadd image where no objects are
 # drawn. Default is 50.
-buff: 50
+# buff: 50
 
 
 # Width of boundary to be marked as EDGE in the bitmask, default 5
-edge_width: 5
+# edge_width: 5
 
 # If set to True, draw galaxies. Default True.
-gals: true
+# gals: true
 
 # A string indicating what kind of galaxy to simulate. Possible options are
 #
@@ -55,13 +61,15 @@ gals_type: 'wldeblend'
 # A dictionary of options for constructing galaxies. These vary per
 # galaxy type. Possible entries per galaxy type are
 #
-#     all types - any of the following
-#         'density' : float
-#             The density of galaxies in number per arcminute^2.
-#             Default is 80.
-#
 #     'exp' - any of the keywords to `galsim.Exponential`
 #         Default is 'half_light_radius=0.5'.
+#         Further keywords
+#           density: float
+#             The density of galaxies in number per arcminute^2.
+#             Default is 80.
+#           mag: float
+#             fixed mag for each galaxy.  Flux will be gotten from
+#             this mag
 #
 #     'wldeblend' - any of the following keywords
 #         'catalog' : str
@@ -69,8 +77,8 @@ gals_type: 'wldeblend'
 #             given, you need to have the one square degree catsim catalog
 #             in the current working directory or in the directory given by
 #             the environment variable 'CATSIM_DIR'.
-gals_kws:
-  density: 10
+#
+# gals_kws: null
 
 #####################
 # other options for more special things
