@@ -285,6 +285,18 @@ class Sim(object):
     -------
     gen_sim()
         Generate a simulation.
+
+    Properties
+    ----------
+    mean_nobj: int
+        Get the expected mean number of objects.  For non-grids we
+        draw a poisson deviate with this mean
+    mean_density: float
+        Get the mean expected density of objects per square arcminute.
+    star_density: float
+        Get the mean expected density of stars used in the simulation
+    gal_density: float
+        Get the mean expected density of galaxies used in the simulation
     """
     def __init__(
         self, *,
@@ -420,6 +432,13 @@ class Sim(object):
         if self.layout_type == 'grid':
             self._obj_grid_ind = 0
             self._nobj = self.layout_kws.get('dim')**2
+
+            # re-define the density parameters for the grid
+            star_frac = self._star_dens/(self._gal_dens + self._star_dens)
+            density = self._nobj/self.area_sqr_arcmin
+
+            self._gal_dens = density*(1-star_frac)
+            self._star_dens = density*star_frac
         else:
             self._nobj = (
                 int(self._gal_dens * self.area_sqr_arcmin)
@@ -434,11 +453,33 @@ class Sim(object):
         LOGGER.info('simulating bands: %s', self.bands)
 
     @property
+    def mean_nobj(self):
+        """
+        the mean number of objects expected.  For non-grids we draw a poisson
+        deviate with this mean
+        """
+        return self._nobj
+
+    @property
+    def mean_density(self):
+        """
+        the density of stars
+        """
+        return self._nobj/self.area_sqr_arcmin
+
+    @property
     def star_density(self):
         """
         the density of stars
         """
         return self._star_dens
+
+    @property
+    def gal_density(self):
+        """
+        the density of stars
+        """
+        return self._gal_dens
 
     def _setup_wcs(
             self, *,

@@ -314,18 +314,25 @@ def test_simple_sim_grid_only_stars_smoke():
 
 def test_simple_sim_grid_stars_and_gals_smoke():
 
+    # on a grid, these are only used to determine the
+    # fraction of each type
     star_density = 10
+    gal_density = 10
     sim = Sim(
         rng=10,
         layout_type='grid',
         layout_kws={'dim': 10},
         gals=True,
-        gals_kws={'density': 10},
+        gals_kws={'density': gal_density},
         stars=True,
         stars_kws={'density': star_density},
         noise_per_band=0,
     )
-    assert sim.star_density == star_density
+
+    # density gets reset
+    star_frac = star_density/(star_density + gal_density)
+    assert sim.star_density == sim.mean_density*star_frac
+
     data = sim.gen_sim()
 
     for band, bdata in data.items():
