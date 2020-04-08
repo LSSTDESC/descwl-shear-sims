@@ -456,7 +456,7 @@ class Sim(object):
     def mean_nobj(self):
         """
         the mean number of objects expected.  For non-grids we draw a poisson
-        deviate with this mean
+        deviate with this mean.
         """
         return self._nobj
 
