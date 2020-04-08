@@ -229,6 +229,8 @@ gals_type: 'wldeblend'
 #
 #     density: float
 #         number per square arcmin, default 1
+#     mag: float
+#         magnitude for fixed stars, default 19.0
 # stars_kws:
 #   density: 1
 
