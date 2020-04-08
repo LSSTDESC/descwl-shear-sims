@@ -6,7 +6,7 @@ install:
     echo "installing miniconda"
     rm -rf $HOME/miniconda
     mkdir -p $HOME/download
-    curl -s https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -o $HOME/download/miniconda.sh
+    curl -s https://repo.continuum.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -o $HOME/download/miniconda.sh
     bash $HOME/download/miniconda.sh -b -p $HOME/miniconda
 
     export PATH=$HOME/miniconda/bin:$PATH
