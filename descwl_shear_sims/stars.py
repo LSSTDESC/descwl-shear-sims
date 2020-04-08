@@ -9,11 +9,10 @@ from copy import deepcopy
 from .cache_tools import cached_catalog_read
 from .saturation import BAND_STAR_MAG_SAT
 
-FIXED_STAR_MAG = 19.0
-
 
 def sample_fixed_star(*,
                       rng,
+                      mag,
                       bands,
                       sat_stars,
                       sat_stars_frac,
@@ -32,7 +31,7 @@ def sample_fixed_star(*,
             saturated = True
             sat_data = star_mask_pdf.sample()
 
-    flux = 10**(0.4 * (30 - FIXED_STAR_MAG))
+    flux = 10**(0.4 * (30 - mag))
 
     star = OrderedDict()
     for band in bands:
@@ -42,7 +41,7 @@ def sample_fixed_star(*,
             'type': 'star',
             'obj': obj,
             'type': 'star',
-            'mag': FIXED_STAR_MAG,
+            'mag': mag,
             'saturated': saturated,
             'sat_data': deepcopy(sat_data),
         }

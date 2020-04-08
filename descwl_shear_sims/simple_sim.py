@@ -48,6 +48,7 @@ GALS_KWS_DEFAULTS = {
 }
 STARS_KWS_DEFAULTS = {
     'density': 1,
+    'mag': 19.0,
 }
 SAT_STARS_KWS_DEFAULTS = {
     # density of sat starsper square arcmin when star type is fixed
@@ -250,6 +251,8 @@ class Sim(object):
 
             density: float
                 number per square arcmin, default 1
+            mag: float
+                magnitude for fixed stars, default 19.0
 
     sat_stars: bool, optional
         If `True` then add star and bleed trail masks. Default is `False`.
@@ -1151,6 +1154,7 @@ class Sim(object):
         else:
             star = sample_fixed_star(
                 rng=self._rng,
+                mag=self.stars_kws['mag'],
                 bands=self.bands,
                 sat_stars=self.sat_stars,
                 sat_stars_frac=self._sat_stars_frac,
