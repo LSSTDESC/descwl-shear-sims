@@ -35,7 +35,7 @@ from .stars import (
 from .ps_psf import PowerSpectrumPSF
 
 # default mask bits from the stack
-from .lsst_bits import BAD_COLUMN, COSMIC_RAY, BRIGHT_STAR
+from .lsst_bits import BAD_COLUMN, COSMIC_RAY, SAT, BRIGHT
 from .saturation import BAND_SAT_VALS, saturate_image_and_mask
 from .cache_tools import cached_catalog_read
 from .sim_constants import ZERO_POINT
@@ -796,6 +796,9 @@ class Sim(object):
                     )
                 )
 
+        if self.stars:
+            add_bright_star_masks(all_data, band_data)
+
         return band_data
 
     def _set_folding_thresholds(self, all_objs):
@@ -908,29 +911,27 @@ class Sim(object):
             se_image.array[msk] = 0.0
 
         if self.stars:
-            for obj_data in objs:
-                if (
-                    obj_data['overlaps'][epoch] and
-                    obj_data['type'] == 'star'
-                ):
-
-                    if obj_data['mag'] < 18:
-                        pos = obj_data['pos'][-1]
-                        add_bright_star_mask(
-                            mask=bmask, x=pos.x, y=pos.y,
-                            radius=3/0.2, val=BRIGHT_STAR,
-                        )
+            for odata in objs:
+                if (odata['overlaps'][epoch]):
+                    pos = odata['pos'][-1]
+                    row, col = int(pos.y), int(pos.x)
+                    if (bmask[row, col] & SAT) != 0:
+                        odata['is_bright'] = True
 
         if self.stars and self.sat_stars:
-            for obj_data in objs:
+            # special stars that get bleeds.  They are marked
+            # saturated, but note there can be saturated pixels
+            # even without this set (see saturate_image_and_mask)
+            # TODO rename saturated key to has_bleed or something
+            for odata in objs:
                 if (
-                    obj_data['overlaps'][epoch] and
-                    obj_data['type'] == 'star' and
-                    obj_data['saturated']
+                    odata['overlaps'][epoch] and
+                    odata['type'] == 'star' and
+                    odata['saturated']
                 ):
-                    pos = obj_data['pos'][epoch]
+                    pos = odata['pos'][epoch]
 
-                    sat_data = obj_data['sat_data']
+                    sat_data = odata['sat_data']
                     add_star_and_bleed(
                         mask=bmask,
                         image=se_image.array,
@@ -1109,7 +1110,11 @@ class Sim(object):
             obj = galsim.Exponential(
                 **use_kwargs
             ).withFlux(flux)
-            _gal[band] = {'obj': obj, 'type': 'galaxy'}
+            _gal[band] = {
+                'obj': obj,
+                'type': 'galaxy',
+                'is_bright': False,
+            }
 
         return _gal
 
@@ -1129,7 +1134,11 @@ class Sim(object):
             ).model.rotate(
                 angle * galsim.degrees,
             )
-            _gal[band] = {'obj': obj, 'type': 'galaxy'}
+            _gal[band] = {
+                'obj': obj,
+                'type': 'galaxy',
+                'is_bright': False,
+            }
 
         return _gal
 
@@ -1160,6 +1169,12 @@ class Sim(object):
                 sat_stars_frac=self._sat_stars_frac,
                 star_mask_pdf=self._star_mask_pdf,
             )
+
+        # we want to mask it in all bands
+        is_bright = any(star[band]['saturated'] for band in star)
+
+        for band in star:
+            star[band]['is_bright'] = is_bright
 
         return star
 
@@ -1269,3 +1284,23 @@ class Sim(object):
                 return gsimage
 
         return _psf_galsim_func, _psf_render_func
+
+
+def add_bright_star_masks(obj_data, band_data):
+    """
+    add a bright star mask in all bands
+    """
+
+    bands = list(band_data.keys())
+    for odata in obj_data:
+        if odata[bands[0]]['type'] == 'star':
+
+            if any(odata[band]['is_bright'] for band in odata):
+
+                for band in band_data:
+                    for epoch, pos in zip(band_data[band], odata[band]['pos']):
+                        bmask = epoch.bmask.array
+                        add_bright_star_mask(
+                            mask=bmask, x=pos.x, y=pos.y,
+                            radius=3/0.2, val=BRIGHT,
+                        )

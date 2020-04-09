@@ -9,7 +9,7 @@ EDGE = np.int32(2**4)
 
 # these are not official values, as far as I know
 # the stack doesn't mark such things (ES 2020-02-18)
-BRIGHT_STAR = np.int32(2**30)
+BRIGHT = np.int32(2**30)
 
 
 # double check they match the stack
