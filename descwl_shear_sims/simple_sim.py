@@ -728,7 +728,7 @@ class Sim(object):
         all_data = self._generate_objects()
 
         if self.bright_strategy == 'fold':
-            self._set_folding_thresholds(all_data)
+            self._set_gsparams(all_data)
 
         band_data = OrderedDict()
         for band_ind, band in enumerate(self.bands):
@@ -808,7 +808,7 @@ class Sim(object):
 
         return band_data
 
-    def _set_folding_thresholds(self, all_objs):
+    def _set_gsparams(self, all_objs):
         """Function due to M Jarvis. Attempts to set the folding threshold
         so that we render will into the noise in the final coadded image.
         """
