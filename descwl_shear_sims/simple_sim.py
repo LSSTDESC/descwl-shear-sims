@@ -1035,21 +1035,17 @@ class Sim(object):
         return all_data
 
     def _keep_star(self, star):
-        """remove stars under certain conditions
+        """
+        remove stars under certain conditions
 
         the conditions are:
           - too bright
-          - saturated
         """
         keep = True
 
         min_mag = self.stars_kws.get('min_mag', None)
         if min_mag is not None:
             if any((star[band]['mag'] < min_mag for band in star)):
-                keep = False
-
-        if not self.sat_stars:
-            if any((star[band]['saturated'] for band in star)):
                 keep = False
 
         return keep
