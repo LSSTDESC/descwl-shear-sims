@@ -1037,6 +1037,7 @@ class Sim(object):
     def _keep_star(self, star):
         """
         remove stars under certain conditions
+        Note this no longer checks saturated
 
         the conditions are:
           - too bright
