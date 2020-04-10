@@ -16,7 +16,8 @@ def sample_fixed_star(*,
                       bands,
                       sat_stars,
                       sat_stars_frac,
-                      star_mask_pdf):
+                      star_mask_pdf,
+                      flux_funcs):
     """
     Returns
     -------
@@ -31,10 +32,10 @@ def sample_fixed_star(*,
             saturated = True
             sat_data = star_mask_pdf.sample()
 
-    flux = 10**(0.4 * (30 - mag))
-
     star = OrderedDict()
     for band in bands:
+
+        flux = flux_funcs[band](mag)
         obj = galsim.Gaussian(fwhm=1.0e-4).withFlux(flux)
 
         star[band] = {
@@ -52,7 +53,7 @@ def sample_fixed_star(*,
 def sample_star(*,
                 rng,
                 star_data,
-                surveys,
+                flux_funcs,
                 bands,
                 sat_stars,
                 star_mask_pdf=None):
@@ -65,7 +66,7 @@ def sample_star(*,
     for band in bands:
         bstar = {'type': 'star'}
         bstar['mag'] = get_star_mag(stars=star_data, index=star_ind, band=band)
-        bstar['flux'] = surveys[band].get_flux(bstar['mag'])
+        bstar['flux'] = flux_funcs[band](bstar['mag'])
 
         bstar['obj'] = galsim.Gaussian(
             fwhm=1.0e-4,

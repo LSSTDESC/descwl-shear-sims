@@ -397,6 +397,9 @@ class Sim(object):
         if psf_kws is not None:
             self.psf_kws.update(copy.deepcopy(psf_kws))
 
+        # used when not doing wldeblend
+        self._default_flux_funcs = {b: get_flux for b in self.bands}
+
         ########################################
         # galaxies
         self.gals = gals
@@ -573,10 +576,12 @@ class Sim(object):
 
         if self.stars:
             assert self.stars_type in ('sample', 'fixed')
+            """
             if self.stars_type == 'sample':
                 assert self.gals_type == 'wldeblend', (
                     'gal type must be wldeblend for star type sample',
                 )
+            """
 
             if isinstance(self.stars_kws['density'], dict):
                 ddict = self.stars_kws['density']
@@ -637,6 +642,7 @@ class Sim(object):
 
         self._surveys = {}
         self._builders = {}
+        self._survey_flux_funcs = {}
         noises = []
         for band in self.bands:
             # make the survey and code to build galaxies from it
@@ -662,6 +668,7 @@ class Sim(object):
                 _svy = descwl.survey.Survey(**pars)
 
             self._surveys[band] = _svy
+            self._survey_flux_funcs[band] = _svy.get_flux
             self._builders[band] = descwl.model.GalaxyBuilder(
                 survey=self._surveys[band],
                 no_disk=False,
@@ -832,16 +839,14 @@ class Sim(object):
 
     def _rescale_wldeblend(self, *, image, noise, weight, band):
         """
-        all the wldeblend images are on an instrumental
-        zero point.  Rescale to our common ZERO_POINT
+        Take out the exposure time
         """
+
         survey = self._surveys[band]
 
-        # this brings them to zero point 24.
-        fac = 1.0/survey.exposure_time
-
-        # scale to our chosen zero point
-        fac *= 10.0**(0.4*(ZERO_POINT-24))
+        s_zp = survey.zero_point
+        s_et = survey.exposure_time
+        fac = 10.0**(0.4*(ZERO_POINT - 24.0))/s_zp/s_et
 
         wfac = 1.0/fac**2
 
@@ -1098,8 +1103,8 @@ class Sim(object):
     def _get_gal_exp(self):
         """Return an OrderedDict keyed on band with the galsim object for
         a given exp gal."""
-        # flux = 10**(0.4 * (ZERO_POINT - EXP_GAL_MAG))
-        flux = 10**(0.4 * (ZERO_POINT - self._fixed_gal_mag))
+        # flux = 10**(0.4 * (ZERO_POINT - self._fixed_gal_mag))
+        flux = get_flux(self._fixed_gal_mag)
 
         use_kwargs = copy.deepcopy(self.gals_kws)
         use_kwargs.pop('mag', None)
@@ -1151,11 +1156,16 @@ class Sim(object):
             {'obj': Gaussian, 'type': 'star'}
         """
 
+        if self.gals_type == 'wldeblend':
+            flux_funcs = self._survey_flux_funcs
+        else:
+            flux_funcs = self._default_flux_funcs
+
         if self.stars_type == 'sample':
             star = sample_star(
                 rng=self._rng,
                 star_data=self._example_stars,
-                surveys=self._surveys,
+                flux_funcs=flux_funcs,
                 bands=self.bands,
                 sat_stars=self.sat_stars,
                 star_mask_pdf=self._star_mask_pdf,
@@ -1168,6 +1178,7 @@ class Sim(object):
                 sat_stars=self.sat_stars,
                 sat_stars_frac=self._sat_stars_frac,
                 star_mask_pdf=self._star_mask_pdf,
+                flux_funcs=flux_funcs,
             )
 
         # we want to mask it in all bands
@@ -1304,3 +1315,7 @@ def add_bright_star_masks(obj_data, band_data):
                             mask=bmask, x=pos.x, y=pos.y,
                             radius=3/0.2, val=BRIGHT,
                         )
+
+
+def get_flux(mag):
+    return 10**(0.4 * (ZERO_POINT - mag))
