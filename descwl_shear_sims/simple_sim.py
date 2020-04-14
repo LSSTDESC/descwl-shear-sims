@@ -74,7 +74,7 @@ class Sim(object):
         The number of single epoch images **per band**. Default is 10.
     noise_per_band : float or list of floats, optional
         The total noise for a single band. Can be different per band. Default
-        is 20 units which roughly approximates the 10-year LSST depth for an
+        is 0.6 units which roughly approximates the 10-year LSST depth for an
         image with a zero-point of 30 in the i-band.
     bands : list of str, optional
         A list of bands to simulate. Default is ('r', 'i', 'z').
@@ -305,7 +305,7 @@ class Sim(object):
         self, *,
         rng,
         epochs_per_band=10,
-        noise_per_band=20,
+        noise_per_band=0.6,
         bands=('r', 'i', 'z'),
         g1=0.02,
         g2=0.0,
