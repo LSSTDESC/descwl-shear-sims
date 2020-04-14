@@ -17,8 +17,9 @@
 epochs_per_band: 1
 
 # The total noise for a single band. Can be different per band. Default
-# is 100 units.  This is ignored for gal_type wldeblend
-# noise_per_band: 100
+# is 0.6 units which matches 10-year LSST depth in the i-band.  
+# This is ignored for gal_type wldeblend
+# noise_per_band: 0.6
 
 # A list of bands to simulate. Default is ('r', 'i', 'z').
 # bands: ['r', 'i', 'z']
