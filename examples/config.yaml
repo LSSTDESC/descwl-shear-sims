@@ -73,6 +73,8 @@ gals_type: 'wldeblend'
 #             this mag
 #
 #     'wldeblend' - any of the following keywords
+#         'make_round': bool
+#             If True make the objects round
 #         'catalog' : str
 #             A path to the catalog to draw from. If this keyword is not
 #             given, you need to have the one square degree catsim catalog

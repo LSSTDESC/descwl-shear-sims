@@ -20,11 +20,19 @@ def test_simple_sim_smoke():
             assert epoch_obs.noise is not None
 
 
-def test_simple_sim_wldeblend():
+@pytest.mark.parametrize('make_round', [False, True])
+def test_simple_sim_wldeblend(make_round):
+    """
+    no way to test roundness because we currently cannot
+    turn off the noise for wldeblend
+    """
+    gals_kws = {
+        'make_round': make_round,
+    }
     try:
         sim = Sim(
             rng=101,
-            gals_kws={'density': 10},
+            gals_kws=gals_kws,
             gals_type='wldeblend',
         )
         sim.gen_sim()

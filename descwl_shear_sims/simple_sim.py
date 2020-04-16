@@ -44,7 +44,7 @@ LOGGER = logging.getLogger(__name__)
 
 GALS_KWS_DEFAULTS = {
     'exp': {'half_light_radius': 0.5, 'mag': 17.75},
-    'wldeblend': {},
+    'wldeblend': {'make_round': False},
 }
 STARS_KWS_DEFAULTS = {
     'density': 1,
@@ -626,6 +626,7 @@ class Sim(object):
     def _extra_init_for_wldeblend(self):
         # guard the import here
         import descwl
+        from .galaxy_builder import RoundGalaxyBuilder
 
         # make sure to find the proper catalog
         if 'catalog' not in self.gals_kws:
@@ -669,12 +670,23 @@ class Sim(object):
 
             self._surveys[band] = _svy
             self._survey_flux_funcs[band] = _svy.get_flux
-            self._builders[band] = descwl.model.GalaxyBuilder(
-                survey=self._surveys[band],
-                no_disk=False,
-                no_bulge=False,
-                no_agn=False,
-                verbose_model=False)
+
+            if self.gals_kws['make_round']:
+                self._builders[band] = RoundGalaxyBuilder(
+                    survey=self._surveys[band],
+                    no_disk=False,
+                    no_bulge=False,
+                    no_agn=False,
+                    verbose_model=False,
+                )
+            else:
+                self._builders[band] = descwl.model.GalaxyBuilder(
+                    survey=self._surveys[band],
+                    no_disk=False,
+                    no_bulge=False,
+                    no_agn=False,
+                    verbose_model=False,
+                )
 
             noises.append(np.sqrt(self._surveys[band].mean_sky_level))
 
