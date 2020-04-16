@@ -3,6 +3,7 @@ import numpy as np
 
 from ..se_obs import SEObs
 from ..simple_sim import Sim
+from ..sim_constants import ZERO_POINT
 
 
 def test_simple_sim_smoke():
@@ -342,3 +343,40 @@ def test_simple_sim_grid_stars_and_gals_smoke():
                 fig, axs = plt.subplots(nrows=1, ncols=1, figsize=(8, 8))
                 axs.imshow(se_obs.image.array)
                 assert False
+
+
+@pytest.mark.parametrize('gals_type', ['exp', 'wldeblend'])
+def test_simple_sim_mag_zp(gals_type):
+    """
+    simulate a single star and make sure we get back the right
+    magnitude
+    """
+
+    try:
+        star_mag = 16
+        sim = Sim(
+            rng=10,
+            epochs_per_band=1,
+            bands=['r'],
+            coadd_dim=33,
+            buff=0,
+            edge_width=2,
+            gals=False,
+            gals_type=gals_type,
+            layout_type='grid',
+            layout_kws={'dim': 1},
+            stars=True,
+            stars_type='fixed',
+            stars_kws={'mag': star_mag},
+        )
+
+        data = sim.gen_sim()
+
+        for band, bdata in data.items():
+            for se_obs in bdata:
+                im = se_obs.image.array
+                mag = ZERO_POINT - 2.5*np.log10(im.sum())
+                assert abs(mag-star_mag) < 0.1
+
+    except OSError:
+        pass

@@ -1,3 +1,4 @@
+import numpy as np
 from numba import njit
 from .lsst_bits import SAT
 from .sim_constants import ZERO_POINT
@@ -11,15 +12,15 @@ BAND_SAT_VALS = {
     'z': 140000 * 10.0**(0.4*(ZERO_POINT-31.50)),
 }
 
-# From the LSST science book
-# mag to saturate for 30 second exposures, need this for the
-# longer exposures, so for now just add one TODO
+# From the LSST science book at 15 seconds
+# convert for 30 second exposures
+ltwo = np.log10(2)
 BAND_STAR_MAG_SAT = {
-    'u': 14.7+1,
-    'g': 15.7+1,
-    'r': 15.8+1,
-    'i': 15.8+1,
-    'z': 15.3+1,
+    'u': 14.7 + ltwo,
+    'g': 15.7 + ltwo,
+    'r': 15.8 + ltwo,
+    'i': 15.8 + ltwo,
+    'z': 15.3 + ltwo,
 }
 
 

@@ -35,7 +35,7 @@ from .stars import (
 from .ps_psf import PowerSpectrumPSF
 
 # default mask bits from the stack
-from .lsst_bits import BAD_COLUMN, COSMIC_RAY, BRIGHT_STAR
+from .lsst_bits import BAD_COLUMN, COSMIC_RAY, SAT, BRIGHT
 from .saturation import BAND_SAT_VALS, saturate_image_and_mask
 from .cache_tools import cached_catalog_read
 from .sim_constants import ZERO_POINT
@@ -397,6 +397,9 @@ class Sim(object):
         if psf_kws is not None:
             self.psf_kws.update(copy.deepcopy(psf_kws))
 
+        # used when not doing wldeblend
+        self._default_flux_funcs = {b: get_flux for b in self.bands}
+
         ########################################
         # galaxies
         self.gals = gals
@@ -573,10 +576,12 @@ class Sim(object):
 
         if self.stars:
             assert self.stars_type in ('sample', 'fixed')
+            """
             if self.stars_type == 'sample':
                 assert self.gals_type == 'wldeblend', (
                     'gal type must be wldeblend for star type sample',
                 )
+            """
 
             if isinstance(self.stars_kws['density'], dict):
                 ddict = self.stars_kws['density']
@@ -637,6 +642,7 @@ class Sim(object):
 
         self._surveys = {}
         self._builders = {}
+        self._survey_flux_funcs = {}
         noises = []
         for band in self.bands:
             # make the survey and code to build galaxies from it
@@ -662,6 +668,7 @@ class Sim(object):
                 _svy = descwl.survey.Survey(**pars)
 
             self._surveys[band] = _svy
+            self._survey_flux_funcs[band] = _svy.get_flux
             self._builders[band] = descwl.model.GalaxyBuilder(
                 survey=self._surveys[band],
                 no_disk=False,
@@ -721,7 +728,7 @@ class Sim(object):
         all_data = self._generate_objects()
 
         if self.bright_strategy == 'fold':
-            self._set_folding_thresholds(all_data)
+            self._set_gsparams(all_data)
 
         band_data = OrderedDict()
         for band_ind, band in enumerate(self.bands):
@@ -796,9 +803,12 @@ class Sim(object):
                     )
                 )
 
+        if self.stars:
+            add_bright_star_masks(all_data, band_data)
+
         return band_data
 
-    def _set_folding_thresholds(self, all_objs):
+    def _set_gsparams(self, all_objs):
         """Function due to M Jarvis. Attempts to set the folding threshold
         so that we render will into the noise in the final coadded image.
         """
@@ -811,34 +821,50 @@ class Sim(object):
             )
             noises[band] = sky_noise_per_pixel
 
-        for obj_data in all_objs:
-            for band in self.bands:
-                band_data = obj_data[band]
-                if band_data['type'] == 'star':
+        b1 = self.bands[0]
+        for odata in all_objs:
+            do_thresh = do_acc = False
+            if odata[b1]['type'] == 'star':
+                if any(odata[band]['mag'] < 18 for band in odata):
+                    do_thresh = True
+
+                if any(odata[band]['mag'] < 15 for band in odata):
+                    do_acc = True
+
+            if do_thresh or do_acc:
+                for band in self.bands:
+                    kw = {}
+                    band_data = odata[band]
+
                     obj = band_data['obj']
 
-                    sky_noise_per_pixel = noises[band]
+                    if do_thresh:
+                        sky_noise_per_pixel = noises[band]
 
-                    folding_threshold = sky_noise_per_pixel / obj.flux
-                    folding_threshold = np.exp(np.floor(np.log(folding_threshold)))
+                        folding_threshold = sky_noise_per_pixel / obj.flux
+                        folding_threshold = np.exp(
+                            np.floor(np.log(folding_threshold))
+                        )
 
-                    folding_threshold = min(folding_threshold, 0.005)
+                        kw['folding_threshold'] = min(folding_threshold, 0.005)
 
-                    gsp = galsim.GSParams(folding_threshold=folding_threshold)
+                    if do_acc:
+                        kw['kvalue_accuracy'] = 1.0e-8
+                        kw['maxk_threshold'] = 1.0e-5
+
+                    gsp = galsim.GSParams(**kw)
                     band_data['obj'] = obj.withGSParams(gsp)
 
     def _rescale_wldeblend(self, *, image, noise, weight, band):
         """
-        all the wldeblend images are on an instrumental
-        zero point.  Rescale to our common ZERO_POINT
+        Take out the exposure time
         """
+
         survey = self._surveys[band]
 
-        # this brings them to zero point 24.
-        fac = 1.0/survey.exposure_time
-
-        # scale to our chosen zero point
-        fac *= 10.0**(0.4*(ZERO_POINT-24))
+        s_zp = survey.zero_point
+        s_et = survey.exposure_time
+        fac = 10.0**(0.4*(ZERO_POINT - 24.0))/s_zp/s_et
 
         wfac = 1.0/fac**2
 
@@ -908,29 +934,27 @@ class Sim(object):
             se_image.array[msk] = 0.0
 
         if self.stars:
-            for obj_data in objs:
-                if (
-                    obj_data['overlaps'][epoch] and
-                    obj_data['type'] == 'star'
-                ):
-
-                    if obj_data['mag'] < 18:
-                        pos = obj_data['pos'][-1]
-                        add_bright_star_mask(
-                            mask=bmask, x=pos.x, y=pos.y,
-                            radius=3/0.2, val=BRIGHT_STAR,
-                        )
+            for odata in objs:
+                if (odata['overlaps'][epoch]):
+                    pos = odata['pos'][-1]
+                    row, col = int(pos.y), int(pos.x)
+                    if (bmask[row, col] & SAT) != 0:
+                        odata['is_bright'] = True
 
         if self.stars and self.sat_stars:
-            for obj_data in objs:
+            # special stars that get bleeds.  They are marked
+            # saturated, but note there can be saturated pixels
+            # even without this set (see saturate_image_and_mask)
+            # TODO rename saturated key to has_bleed or something
+            for odata in objs:
                 if (
-                    obj_data['overlaps'][epoch] and
-                    obj_data['type'] == 'star' and
-                    obj_data['saturated']
+                    odata['overlaps'][epoch] and
+                    odata['type'] == 'star' and
+                    odata['saturated']
                 ):
-                    pos = obj_data['pos'][epoch]
+                    pos = odata['pos'][epoch]
 
-                    sat_data = obj_data['sat_data']
+                    sat_data = odata['sat_data']
                     add_star_and_bleed(
                         mask=bmask,
                         image=se_image.array,
@@ -1029,21 +1053,18 @@ class Sim(object):
         return all_data
 
     def _keep_star(self, star):
-        """remove stars under certain conditions
+        """
+        remove stars under certain conditions
+        Note this no longer checks saturated
 
         the conditions are:
           - too bright
-          - saturated
         """
         keep = True
 
         min_mag = self.stars_kws.get('min_mag', None)
         if min_mag is not None:
             if any((star[band]['mag'] < min_mag for band in star)):
-                keep = False
-
-        if not self.sat_stars:
-            if any((star[band]['saturated'] for band in star)):
                 keep = False
 
         return keep
@@ -1097,8 +1118,8 @@ class Sim(object):
     def _get_gal_exp(self):
         """Return an OrderedDict keyed on band with the galsim object for
         a given exp gal."""
-        # flux = 10**(0.4 * (ZERO_POINT - EXP_GAL_MAG))
-        flux = 10**(0.4 * (ZERO_POINT - self._fixed_gal_mag))
+        # flux = 10**(0.4 * (ZERO_POINT - self._fixed_gal_mag))
+        flux = get_flux(self._fixed_gal_mag)
 
         use_kwargs = copy.deepcopy(self.gals_kws)
         use_kwargs.pop('mag', None)
@@ -1109,7 +1130,11 @@ class Sim(object):
             obj = galsim.Exponential(
                 **use_kwargs
             ).withFlux(flux)
-            _gal[band] = {'obj': obj, 'type': 'galaxy'}
+            _gal[band] = {
+                'obj': obj,
+                'type': 'galaxy',
+                'is_bright': False,
+            }
 
         return _gal
 
@@ -1129,7 +1154,11 @@ class Sim(object):
             ).model.rotate(
                 angle * galsim.degrees,
             )
-            _gal[band] = {'obj': obj, 'type': 'galaxy'}
+            _gal[band] = {
+                'obj': obj,
+                'type': 'galaxy',
+                'is_bright': False,
+            }
 
         return _gal
 
@@ -1142,11 +1171,16 @@ class Sim(object):
             {'obj': Gaussian, 'type': 'star'}
         """
 
+        if self.gals_type == 'wldeblend':
+            flux_funcs = self._survey_flux_funcs
+        else:
+            flux_funcs = self._default_flux_funcs
+
         if self.stars_type == 'sample':
             star = sample_star(
                 rng=self._rng,
                 star_data=self._example_stars,
-                surveys=self._surveys,
+                flux_funcs=flux_funcs,
                 bands=self.bands,
                 sat_stars=self.sat_stars,
                 star_mask_pdf=self._star_mask_pdf,
@@ -1159,7 +1193,14 @@ class Sim(object):
                 sat_stars=self.sat_stars,
                 sat_stars_frac=self._sat_stars_frac,
                 star_mask_pdf=self._star_mask_pdf,
+                flux_funcs=flux_funcs,
             )
+
+        # we want to mask it in all bands
+        is_bright = any(star[band]['saturated'] for band in star)
+
+        for band in star:
+            star[band]['is_bright'] = is_bright
 
         return star
 
@@ -1269,3 +1310,27 @@ class Sim(object):
                 return gsimage
 
         return _psf_galsim_func, _psf_render_func
+
+
+def add_bright_star_masks(obj_data, band_data):
+    """
+    add a bright star mask in all bands
+    """
+
+    bands = list(band_data.keys())
+    for odata in obj_data:
+        if odata[bands[0]]['type'] == 'star':
+
+            if any(odata[band]['is_bright'] for band in odata):
+
+                for band in band_data:
+                    for epoch, pos in zip(band_data[band], odata[band]['pos']):
+                        bmask = epoch.bmask.array
+                        add_bright_star_mask(
+                            mask=bmask, x=pos.x, y=pos.y,
+                            radius=3/0.2, val=BRIGHT,
+                        )
+
+
+def get_flux(mag):
+    return 10**(0.4 * (ZERO_POINT - mag))
