@@ -36,6 +36,10 @@ def test_simple_sim_wldeblend(make_round):
             gals_type='wldeblend',
         )
         sim.gen_sim()
+
+        if make_round:
+            from ..galaxy_builder import RoundGalaxyBuilder
+            assert isinstance(sim._builders['r'], RoundGalaxyBuilder)
     except OSError:
         # the catalog is probably not present
         pass
