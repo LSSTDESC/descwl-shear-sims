@@ -23,7 +23,7 @@ data = Sim(rng=10, epochs_per_band=3).gen_sim()
 
 for band_ind, band in enumerate(data):
     for epoch_ind, obs in enumerate(data[band]):
-        # do something with obs here
+        # do something with obs here.
         # obs.image is the image
         # obs.weight is the weight map
         # obs.get_psf(x, y) will produce an image of the PSF
