@@ -593,17 +593,14 @@ class Sim(object):
                 'stars_kws',
             )
             if ('density' in self.stars_kws and
-                    isinstance(stars_kws['density'], dict)):
+                    isinstance(self.stars_kws['density'], dict)):
                 check_keys(
                     self.stars_kws['density'],
                     ('min_density', 'max_density'),
                     'stars_kws["density"]',
                 )
-
-            if stars_type == 'sample':
-                assert list(self.stars_kws.keys()) == 'density'
-            else:
-                assert list(self.stars_kws.keys()) == 'mag'
+                # make sure both are there
+                assert len(self.stars_kws['density'].keys()) == 2
 
             if isinstance(self.stars_kws['density'], dict):
                 ddict = self.stars_kws['density']
