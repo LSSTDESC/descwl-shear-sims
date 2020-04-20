@@ -250,9 +250,12 @@ class Sim(object):
         A dictionary of options for generating stars
 
             density: float
-                number per square arcmin, default 1
+                number per square arcmin, default 1.  For stars_type 'sample',
+                can also be a dict with min_density and max_density
             mag: float
                 magnitude for fixed stars, default 19.0
+            min_mag: float
+                Minimum alowed mag in any band.  Used for stars_type 'sample'
 
     sat_stars: bool, optional
         If `True` then add star and bleed trail masks. Default is `False`.
@@ -407,6 +410,14 @@ class Sim(object):
         self.gals_kws = copy.deepcopy(GALS_KWS_DEFAULTS[self.gals_type])
         if gals_kws:
             self.gals_kws.update(copy.deepcopy(gals_kws))
+        if gals_type == 'exp':
+            check_keys(
+                self.gals_kws,
+                ('half_light_radius', 'mag', 'density'),
+                'gals_kws',
+            )
+        else:
+            check_keys(self.gals_kws, ('catalog', 'make_round'), 'gals_kws')
 
         if self.gals_type == 'exp':
             self._fixed_gal_mag = self.gals_kws['mag']
@@ -576,12 +587,23 @@ class Sim(object):
 
         if self.stars:
             assert self.stars_type in ('sample', 'fixed')
-            """
-            if self.stars_type == 'sample':
-                assert self.gals_type == 'wldeblend', (
-                    'gal type must be wldeblend for star type sample',
+            check_keys(
+                self.stars_kws,
+                ('density', 'mag', 'min_mag'),
+                'stars_kws',
+            )
+            if ('density' in self.stars_kws and
+                    isinstance(stars_kws['density'], dict)):
+                check_keys(
+                    self.stars_kws['density'],
+                    ('min_density', 'max_density'),
+                    'stars_kws["density"]',
                 )
-            """
+
+            if stars_type == 'sample':
+                assert list(self.stars_kws.keys()) == 'density'
+            else:
+                assert list(self.stars_kws.keys()) == 'mag'
 
             if isinstance(self.stars_kws['density'], dict):
                 ddict = self.stars_kws['density']
@@ -1346,3 +1368,9 @@ def add_bright_star_masks(obj_data, band_data):
 
 def get_flux(mag):
     return 10**(0.4 * (ZERO_POINT - mag))
+
+
+def check_keys(dct, allowed_keys, name):
+    for key in dct.keys():
+        if key not in allowed_keys:
+            raise ValueError("'%s' is not a valid key for %s" % (key, name))
