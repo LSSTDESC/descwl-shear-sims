@@ -50,6 +50,8 @@ STARS_KWS_DEFAULTS = {
     'density': 1,
     'mag': 19.0,
 }
+SAMPLE_DENSITY_KEYS = ('min_density', 'max_density')
+
 SAT_STARS_KWS_DEFAULTS = {
     # density of sat starsper square arcmin when star type is fixed
     # not used for star type sample, instead the MAG_SAT is used
@@ -596,11 +598,14 @@ class Sim(object):
                     isinstance(self.stars_kws['density'], dict)):
                 check_keys(
                     self.stars_kws['density'],
-                    ('min_density', 'max_density'),
+                    SAMPLE_DENSITY_KEYS,
                     'stars_kws["density"]',
                 )
                 # make sure both are there
-                assert len(self.stars_kws['density'].keys()) == 2
+                assert (
+                    len(self.stars_kws['density'].keys())
+                    == len(SAMPLE_DENSITY_KEYS)
+                )
 
             if isinstance(self.stars_kws['density'], dict):
                 ddict = self.stars_kws['density']
