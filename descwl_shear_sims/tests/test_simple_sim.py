@@ -57,9 +57,8 @@ def test_simple_sim_fixed_stars():
 def test_simple_sim_sample_stars():
     try:
         sim = Sim(
-            gals_kws={'density': 10},
-            rng=335,
             gals_type='wldeblend',
+            rng=335,
             stars=True,
             stars_type='sample',
         )
@@ -74,12 +73,11 @@ def test_simple_sim_sample_star_density():
     max_density = 20
     try:
         sim = Sim(
-            gals_kws={'density': 10},
             rng=335,
             gals_type='wldeblend',
             stars=True,
+            stars_type='sample',
             stars_kws={
-                'type': 'sample',
                 'density': {
                     'min_density': min_density,
                     'max_density': max_density,
@@ -97,12 +95,11 @@ def test_simple_sim_sample_star_density():
 def test_simple_sim_sample_star_minmag_smoke():
     try:
         sim = Sim(
-            gals_kws={'density': 10},
             rng=335,
             gals_type='wldeblend',
             stars=True,
+            stars_type='sample',
             stars_kws={
-                'type': 'sample',
                 'min_mag': 20,
             },
         )
@@ -138,6 +135,21 @@ def test_simple_sim_noise():
             nvar = epoch_obs.noise.array.var()
             expected_var = 1/epoch_obs.weight.array[0, 0]
             assert abs(nvar/expected_var-1) < 0.015
+
+
+def test_bad_keys():
+
+    stars_kws = {
+        'type': 'sample',
+    }
+    with pytest.raises(ValueError):
+        _ = Sim(rng=10, stars=True, stars_kws=stars_kws)
+
+    gals_kws = {
+        'density': 10,
+    }
+    with pytest.raises(ValueError):
+        _ = Sim(rng=10, gals_type='wldeblend', gals_kws=gals_kws)
 
 
 def test_simple_sim_double_call_raises():
