@@ -4,6 +4,7 @@ import fitsio
 import numpy as np
 from glob import glob
 import esutil as eu
+from numba import njit
 
 
 def add_bleed(*, bmask, pos, mag, band):
@@ -25,51 +26,49 @@ def add_bleed(*, bmask, pos, mag, band):
     bleed_stamp = get_bleed_stamp(mag=mag, band=band)
 
     stamp_nrow, stamp_ncol = bleed_stamp.shape
-    stamp_cen = (np.array([stamp_nrow, stamp_ncol]) - 1)/2
+    stamp_cen = (np.array(bleed_stamp.shape) - 1)/2
     stamp_cen = stamp_cen.astype('i4')
 
-    stamp_start_row = 0
-    stamp_end_row = stamp_nrow-1
-    stamp_start_col = 0
-    stamp_end_col = stamp_ncol-1
-
     row_off_left = stamp_cen[0]
-    row_off_right = stamp_nrow - stamp_cen[0]
     col_off_left = stamp_cen[1]
-    col_off_right = stamp_ncol - stamp_cen[1]
 
-    bmask_nrow, bmask_ncol = bmask.shape
     bmask_row = int(pos.y)
     bmask_col = int(pos.x)
+    print('stamp dims:', stamp_nrow, stamp_ncol)
+    print('bmask pos:', bmask_row, bmask_col)
 
     bmask_start_row = bmask_row - row_off_left
-    bmask_end_row = bmask_row + row_off_right
     bmask_start_col = bmask_col - col_off_left
-    bmask_end_col = bmask_col + col_off_right
 
-    if bmask_start_row < 0:
-        stamp_start_row = 0 - bmask_start_row
-        bmask_start_row = 0
+    _or_stamp(
+        bmask=bmask,
+        stamp=bleed_stamp,
+        start_row=bmask_start_row,
+        start_col=bmask_start_col,
+    )
 
-    if bmask_start_col < 0:
-        stamp_start_col = 0 - bmask_start_col
-        bmask_start_col = 0
 
-    if bmask_end_row > (bmask_nrow - 1):
-        stamp_end_row = (bmask_nrow - 1) - bmask_end_row
-        bmask_end_row = bmask_nrow-1
+@njit
+def _or_stamp(*, bmask, stamp, start_row, start_col):
+    """
+    or the stamp into the indicated bitmask image
+    """
+    nrows, ncols = bmask.shape
 
-    if bmask_end_col > (bmask_ncol - 1):
-        stamp_end_col = (bmask_ncol - 1) - bmask_end_col
-        bmask_end_col = bmask_ncol-1
+    stamp_nrows, stamp_ncols = stamp.shape
 
-    bmask[
-        bmask_start_row:bmask_end_row+1,
-        bmask_start_col:bmask_end_col+1,
-    ] |= bleed_stamp[
-        stamp_start_row:stamp_end_row+1,
-        stamp_start_col:stamp_end_col+1,
-    ]
+    for row in range(stamp_nrows):
+        bmask_row = start_row + row
+        if bmask_row < 0 or bmask_row > (nrows-1):
+            continue
+
+        for col in range(stamp_ncols):
+            bmask_col = start_col + col
+            if bmask_col < 0 or bmask_col > (ncols-1):
+                continue
+
+            val = stamp[row, col]
+            bmask[bmask_row, bmask_col] |= val
 
 
 def get_bleed_stamp(*, mag, band):
