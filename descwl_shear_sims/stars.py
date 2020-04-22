@@ -14,9 +14,6 @@ def sample_fixed_star(*,
                       rng,
                       mag,
                       bands,
-                      sat_stars,
-                      sat_stars_frac,
-                      star_mask_pdf,
                       flux_funcs):
     """
     Returns
@@ -24,13 +21,6 @@ def sample_fixed_star(*,
     An OrderedDict keyed on band with data of theform
     {'obj': Gaussian, 'type': 'star'}
     """
-
-    saturated = False
-    sat_data = None
-    if sat_stars:
-        if rng.uniform() < sat_stars_frac:
-            saturated = True
-            sat_data = star_mask_pdf.sample()
 
     star = OrderedDict()
     for band in bands:
@@ -43,8 +33,6 @@ def sample_fixed_star(*,
             'obj': obj,
             'type': 'star',
             'mag': mag,
-            'saturated': saturated,
-            'sat_data': deepcopy(sat_data),
         }
 
     return star
@@ -54,10 +42,10 @@ def sample_star(*,
                 rng,
                 star_data,
                 flux_funcs,
-                bands,
-                sat_stars,
-                star_mask_pdf=None):
-
+                bands):
+    """
+    sample a star from the input example star data
+    """
     # same star index for all bands
     star_ind = rng.choice(star_data.size)
 

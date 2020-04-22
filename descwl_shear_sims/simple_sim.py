@@ -1182,17 +1182,12 @@ class Sim(object):
                 star_data=self._example_stars,
                 flux_funcs=flux_funcs,
                 bands=self.bands,
-                sat_stars=self.sat_stars,
-                star_mask_pdf=self._star_mask_pdf,
             )
         else:
             star = sample_fixed_star(
                 rng=self._rng,
                 mag=self.stars_kws['mag'],
                 bands=self.bands,
-                sat_stars=self.sat_stars,
-                sat_stars_frac=self._sat_stars_frac,
-                star_mask_pdf=self._star_mask_pdf,
                 flux_funcs=flux_funcs,
             )
 
