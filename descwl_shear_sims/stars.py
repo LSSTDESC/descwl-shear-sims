@@ -4,10 +4,8 @@ import numpy as np
 import fitsio
 from collections import OrderedDict
 import galsim
-from copy import deepcopy
 
 from .cache_tools import cached_catalog_read
-from .saturation import BAND_STAR_MAG_SAT
 
 
 def sample_fixed_star(*,

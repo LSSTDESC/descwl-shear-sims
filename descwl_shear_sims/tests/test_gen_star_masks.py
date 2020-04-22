@@ -1,17 +1,8 @@
 import numpy as np
 
-from ..gen_star_masks import StarMaskPDFs
 from ..lsst_bits import SAT
 from ..saturation import BAND_SAT_VALS
 from ..simple_sim import Sim
-
-
-def test_star_mask_smoke():
-    """
-    make sure we can generate star masks
-    """
-    rng = np.random.RandomState(2342)
-    StarMaskPDFs(rng=rng)
 
 
 def test_star_mask_keywords():
@@ -24,9 +15,11 @@ def test_star_mask_keywords():
         bands=['r'],
         epochs_per_band=1,
         stars=True,
-        stars_kws={'density': 3},
+        stars_kws={
+            'density': 3,
+            'mag': 15,
+        },
         sat_stars=True,
-        sat_stars_kws={'density': 3},
     )
 
     data = sim.gen_sim()
@@ -53,9 +46,11 @@ def test_star_mask_repeatable():
             bands=['r'],
             epochs_per_band=1,
             stars=True,
-            stars_kws={'density': 3},
+            stars_kws={
+                'density': 3,
+                'mag': 15,
+            },
             sat_stars=True,
-            sat_stars_kws={'density': 3},
         )
 
         data = sim.gen_sim()

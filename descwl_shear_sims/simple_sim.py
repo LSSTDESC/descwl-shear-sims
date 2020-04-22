@@ -943,6 +943,7 @@ class Sim(object):
                     pos = odata['pos'][epoch]
 
                     add_bleed(
+                        image=se_image.array,
                         bmask=bmask,
                         pos=pos,
                         mag=odata['mag'],

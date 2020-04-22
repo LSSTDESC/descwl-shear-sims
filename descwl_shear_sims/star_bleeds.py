@@ -5,9 +5,10 @@ import numpy as np
 from glob import glob
 import esutil as eu
 from numba import njit
+from .saturation import BAND_SAT_VALS
 
 
-def add_bleed(*, bmask, pos, mag, band):
+def add_bleed(*, image, bmask, pos, mag, band):
     """
     add a bleed mask at the specified location
 
@@ -23,6 +24,9 @@ def add_bleed(*, bmask, pos, mag, band):
     band: string
         The filter band
     """
+
+    assert image.shape == bmask.shape
+
     bleed_stamp = get_bleed_stamp(mag=mag, band=band)
 
     stamp_nrow, stamp_ncol = bleed_stamp.shape
@@ -40,16 +44,18 @@ def add_bleed(*, bmask, pos, mag, band):
     bmask_start_row = bmask_row - row_off_left
     bmask_start_col = bmask_col - col_off_left
 
-    _or_stamp(
+    _add_bleed(
+        image=image,
         bmask=bmask,
         stamp=bleed_stamp,
         start_row=bmask_start_row,
         start_col=bmask_start_col,
+        val=BAND_SAT_VALS[band],
     )
 
 
 @njit
-def _or_stamp(*, bmask, stamp, start_row, start_col):
+def _add_bleed(*, image, bmask, stamp, start_row, start_col, val):
     """
     or the stamp into the indicated bitmask image
     """
@@ -67,8 +73,9 @@ def _or_stamp(*, bmask, stamp, start_row, start_col):
             if bmask_col < 0 or bmask_col > (ncols-1):
                 continue
 
-            val = stamp[row, col]
-            bmask[bmask_row, bmask_col] |= val
+            mask_val = stamp[row, col]
+            bmask[bmask_row, bmask_col] |= mask_val
+            image[bmask_row, bmask_col] = val
 
 
 def get_bleed_stamp(*, mag, band):
