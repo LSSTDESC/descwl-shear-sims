@@ -57,7 +57,8 @@ def add_bleed(*, image, bmask, pos, mag, band):
 @njit
 def _add_bleed(*, image, bmask, stamp, start_row, start_col, val):
     """
-    or the stamp into the indicated bitmask image
+    or the stamp into the indicated bitmask image and set the
+    saturation value
     """
     nrows, ncols = bmask.shape
 
