@@ -231,7 +231,8 @@ class Sim(object):
 
         See descwl_shear_sims.gen_masks.generate_bad_columns for the defaults.
     saturate: bool
-        If True, saturate values above a threshold.  Default is False.
+        If True, saturate values above a threshold.  Default is False.  If
+        sat_stars is True, then saturate is also set to True
     stars: bool, optional
         If True, draw stars in the sim. Default is False.
     stars_type : str, optional
@@ -333,7 +334,7 @@ class Sim(object):
         # rendering
         self.bright_strategy = bright_strategy
         self.trim_stamps = trim_stamps
-        self.saturate = saturate
+        self.saturate = saturate  # will be forced True if sat_stars is True
 
         ########################################
         # band structure
@@ -413,6 +414,8 @@ class Sim(object):
             stars_kws=stars_kws,
         )
         self.sat_stars = sat_stars
+        if self.sat_stars:
+            self.saturate = True
 
         ####################################
         # grids
