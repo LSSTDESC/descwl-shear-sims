@@ -115,6 +115,9 @@ def get_cached_bleeds():
 
     the read is cached
     """
+    if 'CATSIM_DIR' not in os.environ:
+        raise OSError('CATSIM_DIR not defined')
+
     dir = os.environ['CATSIM_DIR']
     pattern = os.path.join(dir, 'extracted-*.fits.gz')
 
