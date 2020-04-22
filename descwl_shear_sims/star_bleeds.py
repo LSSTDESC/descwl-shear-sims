@@ -6,6 +6,7 @@ from glob import glob
 import esutil as eu
 from numba import njit
 from .saturation import BAND_SAT_VALS
+from .lsst_bits import SAT
 
 
 def add_bleed(*, image, bmask, pos, mag, band):
@@ -38,8 +39,6 @@ def add_bleed(*, image, bmask, pos, mag, band):
 
     bmask_row = int(pos.y)
     bmask_col = int(pos.x)
-    print('stamp dims:', stamp_nrow, stamp_ncol)
-    print('bmask pos:', bmask_row, bmask_col)
 
     bmask_start_row = bmask_row - row_off_left
     bmask_start_col = bmask_col - col_off_left
@@ -76,7 +75,8 @@ def _add_bleed(*, image, bmask, stamp, start_row, start_col, val):
 
             mask_val = stamp[row, col]
             bmask[bmask_row, bmask_col] |= mask_val
-            image[bmask_row, bmask_col] = val
+            if mask_val & SAT != 0:
+                image[bmask_row, bmask_col] = val
 
 
 def get_bleed_stamp(*, mag, band):
