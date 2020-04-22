@@ -74,38 +74,14 @@ def sample_star(*,
             flux=bstar['flux'],
         )
 
-        bstar['saturated'] = is_saturated(mag=bstar['mag'], band=band)
         star[band] = bstar
 
-    if sat_stars:
-        set_sat_data(star=star, star_mask_pdf=star_mask_pdf)
-
     return star
-
-
-def set_sat_data(*, star, star_mask_pdf):
-    sat_data = star_mask_pdf.sample()
-
-    for band, bstar in star.items():
-        bstar['saturated'] = is_saturated(mag=bstar['mag'], band=band)
-        if bstar['saturated']:
-            bstar['sat_data'] = deepcopy(sat_data)
-
-
-def any_saturated(*, star):
-    return any(star[band]['saturated'] for band in star)
 
 
 def get_star_mag(*, stars, index, band):
     magname = '%s_ab' % band
     return stars[magname][index]
-
-
-def is_saturated(*, mag, band):
-    if mag < BAND_STAR_MAG_SAT[band]:
-        return True
-    else:
-        return False
 
 
 def sample_star_density(*, rng, min_density, max_density):

@@ -20,17 +20,16 @@ from .gen_masks import (
     generate_cosmic_rays,
     generate_bad_columns,
 )
-from .gen_star_masks import (
-    StarMaskPDFs,
-    add_star_and_bleed,
-    add_bright_star_mask,
-)
+from .gen_star_masks import add_bright_star_mask
+from .star_bleeds import add_bleed
+
 from .stars import (
     sample_star,
     sample_fixed_star,
     load_sample_stars,
     sample_star_density,
 )
+
 
 from .ps_psf import PowerSpectrumPSF
 
@@ -438,10 +437,7 @@ class Sim(object):
             stars_type=stars_type,
             stars_kws=stars_kws,
         )
-        self._setup_sat_stars(
-            sat_stars=sat_stars,
-            sat_stars_kws=sat_stars_kws,
-        )
+        self.sat_stars = sat_stars
 
         ####################################
         # grids
@@ -624,28 +620,6 @@ class Sim(object):
         else:
             self._star_dens = 0.0
             self._example_stars = None
-
-    def _setup_sat_stars(self, *, sat_stars, sat_stars_kws):
-        self.sat_stars = sat_stars
-        self.sat_stars_kws = copy.deepcopy(SAT_STARS_KWS_DEFAULTS)
-        if sat_stars_kws is not None:
-            self.sat_stars_kws.update(copy.deepcopy(sat_stars_kws))
-
-        if self.stars and self.sat_stars and self.stars_type == 'fixed':
-            # density per square arcmin.
-            sat_density = self.sat_stars_kws.get('density', 0.0)
-
-            use_kws = copy.deepcopy(self.sat_stars_kws)
-            use_kws.pop('density', None)  # pop this since it cannot be fed to the class
-            self._star_mask_pdf = StarMaskPDFs(
-                rng=self._rng,
-                **use_kws
-            )
-
-            self._sat_stars_frac = sat_density / self._star_dens
-        else:
-            self._sat_stars_frac = 0.0
-            self._star_mask_pdf = None
 
     def _extra_init_for_wldeblend(self):
         # guard the import here
@@ -986,21 +960,11 @@ class Sim(object):
                 if (
                     odata['overlaps'][epoch] and
                     odata['type'] == 'star' and
-                    odata['saturated']
+                    odata['is_bright']
                 ):
                     pos = odata['pos'][epoch]
 
-                    sat_data = odata['sat_data']
-                    add_star_and_bleed(
-                        mask=bmask,
-                        image=se_image.array,
-                        band=band,
-                        x=pos.x,
-                        y=pos.y,
-                        radius=sat_data['radius'],
-                        bleed_width=sat_data['bleed_width'],
-                        bleed_length=sat_data['bleed_length'],
-                    )
+                    add_bleed(bmask=bmask, pos=pos, mag=mag, band=band)
 
         bmask_image = galsim.Image(
             bmask,
@@ -1231,12 +1195,6 @@ class Sim(object):
                 star_mask_pdf=self._star_mask_pdf,
                 flux_funcs=flux_funcs,
             )
-
-        # we want to mask it in all bands
-        is_bright = any(star[band]['saturated'] for band in star)
-
-        for band in star:
-            star[band]['is_bright'] = is_bright
 
         return star
 
