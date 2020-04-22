@@ -33,6 +33,7 @@ def sample_fixed_star(*,
             'obj': obj,
             'type': 'star',
             'mag': mag,
+            'is_bright': False,
         }
 
     return star
@@ -52,7 +53,10 @@ def sample_star(*,
     star = OrderedDict()
 
     for band in bands:
-        bstar = {'type': 'star'}
+        bstar = {
+            'type': 'star',
+            'is_bright': False,
+        }
         bstar['mag'] = get_star_mag(stars=star_data, index=star_ind, band=band)
         bstar['flux'] = flux_funcs[band](bstar['mag'])
 
