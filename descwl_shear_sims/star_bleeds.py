@@ -74,8 +74,8 @@ def _add_bleed(*, image, bmask, stamp, start_row, start_col, val):
                 continue
 
             mask_val = stamp[row, col]
-            bmask[bmask_row, bmask_col] |= mask_val
             if mask_val & SAT != 0:
+                bmask[bmask_row, bmask_col] |= SAT
                 image[bmask_row, bmask_col] = val
 
 
