@@ -1,3 +1,4 @@
+import os
 import pytest
 import numpy as np
 
@@ -20,6 +21,9 @@ def test_simple_sim_smoke():
             assert epoch_obs.noise is not None
 
 
+@pytest.mark.skipif(
+    "CATSIM_DIR" not in os.environ,
+    reason='simulation input data is not present')
 @pytest.mark.parametrize('make_round', [False, True])
 def test_simple_sim_wldeblend(make_round):
     """
@@ -29,20 +33,16 @@ def test_simple_sim_wldeblend(make_round):
     gals_kws = {
         'make_round': make_round,
     }
-    try:
-        sim = Sim(
-            rng=101,
-            gals_kws=gals_kws,
-            gals_type='wldeblend',
-        )
-        sim.gen_sim()
+    sim = Sim(
+        rng=101,
+        gals_kws=gals_kws,
+        gals_type='wldeblend',
+    )
+    sim.gen_sim()
 
-        if make_round:
-            from ..galaxy_builder import RoundGalaxyBuilder
-            assert isinstance(sim._builders['r'], RoundGalaxyBuilder)
-    except OSError:
-        # the catalog is probably not present
-        pass
+    if make_round:
+        from ..galaxy_builder import RoundGalaxyBuilder
+        assert isinstance(sim._builders['r'], RoundGalaxyBuilder)
 
 
 def test_simple_sim_fixed_stars():
@@ -54,59 +54,56 @@ def test_simple_sim_fixed_stars():
     sim.gen_sim()
 
 
+@pytest.mark.skipif(
+    "CATSIM_DIR" not in os.environ,
+    reason='simulation input data is not present')
 def test_simple_sim_sample_stars():
-    try:
-        sim = Sim(
-            gals_type='wldeblend',
-            rng=335,
-            stars=True,
-            stars_type='sample',
-        )
-        sim.gen_sim()
-    except OSError:
-        # the catalog is probably not present
-        pass
+    sim = Sim(
+        gals_type='wldeblend',
+        rng=335,
+        stars=True,
+        stars_type='sample',
+    )
+    sim.gen_sim()
 
 
+@pytest.mark.skipif(
+    "CATSIM_DIR" not in os.environ,
+    reason='simulation input data is not present')
 def test_simple_sim_sample_star_density():
     min_density = 2
     max_density = 20
-    try:
-        sim = Sim(
-            rng=335,
-            gals_type='wldeblend',
-            stars=True,
-            stars_type='sample',
-            stars_kws={
-                'density': {
-                    'min_density': min_density,
-                    'max_density': max_density,
-                }
-            },
-        )
-        sim.gen_sim()
+    sim = Sim(
+        rng=335,
+        gals_type='wldeblend',
+        stars=True,
+        stars_type='sample',
+        stars_kws={
+            'density': {
+                'min_density': min_density,
+                'max_density': max_density,
+            }
+        },
+    )
+    sim.gen_sim()
 
-        assert min_density < sim.star_density < max_density
-    except OSError:
-        # the catalog is probably not present
-        pass
+    assert min_density < sim.star_density < max_density
 
 
+@pytest.mark.skipif(
+    "CATSIM_DIR" not in os.environ,
+    reason='simulation input data is not present')
 def test_simple_sim_sample_star_minmag_smoke():
-    try:
-        sim = Sim(
-            rng=335,
-            gals_type='wldeblend',
-            stars=True,
-            stars_type='sample',
-            stars_kws={
-                'min_mag': 20,
-            },
-        )
-        sim.gen_sim()
-    except OSError:
-        # the catalog is probably not present
-        pass
+    sim = Sim(
+        rng=335,
+        gals_type='wldeblend',
+        stars=True,
+        stars_type='sample',
+        stars_kws={
+            'min_mag': 20,
+        },
+    )
+    sim.gen_sim()
 
 
 def test_simple_sim_cap_radius_smoke():
@@ -369,6 +366,9 @@ def test_simple_sim_grid_stars_and_gals_smoke():
                 assert False
 
 
+@pytest.mark.skipif(
+    "CATSIM_DIR" not in os.environ,
+    reason='simulation input data is not present')
 @pytest.mark.parametrize('gals_type', ['exp', 'wldeblend'])
 def test_simple_sim_mag_zp(gals_type):
     """
@@ -376,31 +376,27 @@ def test_simple_sim_mag_zp(gals_type):
     magnitude
     """
 
-    try:
-        star_mag = 16
-        sim = Sim(
-            rng=10,
-            epochs_per_band=1,
-            bands=['r'],
-            coadd_dim=33,
-            buff=0,
-            edge_width=2,
-            gals=False,
-            gals_type=gals_type,
-            layout_type='grid',
-            layout_kws={'dim': 1},
-            stars=True,
-            stars_type='fixed',
-            stars_kws={'mag': star_mag},
-        )
+    star_mag = 16
+    sim = Sim(
+        rng=10,
+        epochs_per_band=1,
+        bands=['r'],
+        coadd_dim=33,
+        buff=0,
+        edge_width=2,
+        gals=False,
+        gals_type=gals_type,
+        layout_type='grid',
+        layout_kws={'dim': 1},
+        stars=True,
+        stars_type='fixed',
+        stars_kws={'mag': star_mag},
+    )
 
-        data = sim.gen_sim()
+    data = sim.gen_sim()
 
-        for band, bdata in data.items():
-            for se_obs in bdata:
-                im = se_obs.image.array
-                mag = ZERO_POINT - 2.5*np.log10(im.sum())
-                assert abs(mag-star_mag) < 0.1
-
-    except OSError:
-        pass
+    for band, bdata in data.items():
+        for se_obs in bdata:
+            im = se_obs.image.array
+            mag = ZERO_POINT - 2.5*np.log10(im.sum())
+            assert abs(mag-star_mag) < 0.1
