@@ -232,7 +232,7 @@ class Sim(object):
         See descwl_shear_sims.gen_masks.generate_bad_columns for the defaults.
     saturate: bool
         If True, saturate values above a threshold.  Default is False.  If
-        sat_stars is True, then saturate is also set to True
+        star_bleeds is True, then saturate is also set to True
     stars: bool, optional
         If True, draw stars in the sim. Default is False.
     stars_type : str, optional
@@ -254,7 +254,7 @@ class Sim(object):
             min_mag: float
                 Minimum alowed mag in any band.  Used for stars_type 'sample'
 
-    sat_stars: bool, optional
+    star_bleeds: bool, optional
         If `True` then add bleeds. Default is `False`.
 
     Methods
@@ -305,7 +305,7 @@ class Sim(object):
         stars=False,
         stars_type='fixed',
         stars_kws=None,
-        sat_stars=False,
+        star_bleeds=False,
     ):
         self._rng = (
             rng
@@ -322,7 +322,7 @@ class Sim(object):
 
         ########################################
         # rendering
-        self.saturate = saturate  # will be forced True if sat_stars is True
+        self.saturate = saturate  # will be forced True if star_bleeds is True
 
         ########################################
         # band structure
@@ -401,8 +401,8 @@ class Sim(object):
             stars_type=stars_type,
             stars_kws=stars_kws,
         )
-        self.sat_stars = sat_stars
-        if self.sat_stars:
+        self.star_bleeds = star_bleeds
+        if self.star_bleeds:
             self.saturate = True
 
         ####################################
@@ -908,12 +908,14 @@ class Sim(object):
         if self.stars:
             for odata in objs:
                 if (odata['overlaps'][epoch]):
-                    pos = odata['pos'][-1]
+                    assert len(odata['pos']) == len(odata['overlaps'])
+
+                    pos = odata['pos'][epoch]
                     row, col = int(pos.y), int(pos.x)
                     if (bmask[row, col] & SAT) != 0:
                         odata['is_bright'] = True
 
-        if self.stars and self.sat_stars:
+        if self.stars and self.star_bleeds:
             # special stars that get bleeds.  They are marked
             # saturated, but note there can be saturated pixels
             # even without this set (see saturate_image_and_mask)

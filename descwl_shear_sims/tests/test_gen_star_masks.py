@@ -20,7 +20,7 @@ def test_star_mask_keywords():
                 'density': 3,
                 'mag': 15,
             },
-            sat_stars=True,
+            star_bleeds=True,
         )
 
         data = sim.gen_sim()
@@ -55,7 +55,7 @@ def test_star_mask_repeatable():
                     'density': 3,
                     'mag': 15,
                 },
-                sat_stars=True,
+                star_bleeds=True,
             )
 
             data = sim.gen_sim()

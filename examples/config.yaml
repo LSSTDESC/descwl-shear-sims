@@ -238,4 +238,4 @@ gals_type: 'wldeblend'
 #   density: 1
 
 # If `True` then add star bleed trail masks. Default is `False`.
-# sat_stars: false
+# star_bleeds: false
