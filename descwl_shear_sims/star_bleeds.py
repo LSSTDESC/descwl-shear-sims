@@ -99,6 +99,8 @@ def get_bleed_stamp(*, mag, band):
     bleeds = get_cached_bleeds()[band]
 
     index = bleeds['mag'].searchsorted(mag)
+    if index > bleeds.size-1:
+        index = bleeds.size-1
 
     stamp = bleeds['stamp'][index].copy()
     stamp = stamp.reshape(
