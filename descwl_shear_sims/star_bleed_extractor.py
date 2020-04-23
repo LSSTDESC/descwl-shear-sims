@@ -21,6 +21,7 @@ def extract_bleeds(*, image_file, cat_file, out_file):
     """
     import lsst.afw.image as afw_image
 
+    print('will read from:', image_file)
     print('will write to:', out_file)
 
     assert image_file != out_file
@@ -31,27 +32,45 @@ def extract_bleeds(*, image_file, cat_file, out_file):
 
     cat = _read_catalog(fname=cat_file, magzero=magzero)
 
-    mask = calib.mask.array
+    mask = exp.mask.array
+
+    print('extracting stamps')
+    keep = np.ones(cat.size, dtype='bool')
 
     for i in range(cat.size):
         row = int(cat['row_orig'][i])
         col = int(cat['col_orig'][i])
+
+        if mask[row, col] & SAT == 0:
+            keep[i] = False
+            continue
+
         row_start, row_end, col_start, col_end = _get_bleed_bbox(
             mask=mask,
             row=row,
             col=col,
         )
-        stamp = mask[
+
+        stamp_full = mask[
             row_start:row_end+1,
             col_start:col_end+1,
         ]
+        stamp = stamp_full*0
+        w = np.where(stamp_full & SAT != 0)
+        stamp[w] = SAT
+
         cat['row'][i] = row - row_start
         cat['col'][i] = col - col_start
         cat['stamp'][i] = stamp
         cat['stamp_nrow'][i] = stamp.shape[0]
         cat['stamp_ncol'][i] = stamp.shape[1]
 
-    with fitsio.FITS(out_file, vstorage='object', clobber=True) as fits:
+    w, = np.where(keep)
+    print('keeping: %d/%d' % (w.size, cat.size))
+    cat = cat[w]
+
+    print('writing:', out_file)
+    with fitsio.FITS(out_file, 'rw', vstorage='object', clobber=True) as fits:
         fits.write(cat)
 
 
@@ -106,8 +125,10 @@ def _read_catalog(*, fname, magzero):
             d['id'] = int(ls[0])
             flux = float(ls[2])
             d['mag'] = magzero - 2.5*np.log10(flux)
-            d['row_orig'] = float(ls[4])
-            d['col_orig'] = float(ls[3])
+            # d['row_orig'] = float(ls[4])
+            # d['col_orig'] = float(ls[3])
+            d['row_orig'] = float(ls[3])
+            d['col_orig'] = float(ls[4])
 
             dlist.append(d)
 
