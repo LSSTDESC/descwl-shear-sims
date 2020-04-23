@@ -1,3 +1,4 @@
+import os
 import numpy as np
 from numba import njit
 from .lsst_bits import SAT
@@ -72,6 +73,77 @@ def extract_bleeds(*, image_file, cat_file, out_file):
     print('writing:', out_file)
     with fitsio.FITS(out_file, 'rw', vstorage='object', clobber=True) as fits:
         fits.write(cat)
+
+
+def extract_bleeds_flist(*, calexp_flist):
+    """
+    for each of the input calexp, extract star saturation/bleed regions to a
+    file
+
+    Parameters
+    ----------
+    calexp_flist: list
+        The list of calexp files
+    """
+    fdict_list = _get_fdict_list(calexp_flist)
+
+    for i, fdict in enumerate(fdict_list):
+        print('-'*70)
+        print('%d/%d' % (i+1, len(fdict_list)))
+        extract_bleeds(
+            image_file=fdict['calexp'],
+            cat_file=fdict['catfile'],
+            out_file=fdict['exfile'],
+        )
+
+    return fdict_list
+
+
+def _get_fdict_list(calexps):
+    """
+    get the list of dicts for inputs and outputs
+
+    Parameters
+    ----------
+    calexp_flist: list
+        The list of calexp files
+
+    Returns
+    -------
+    list of dict, wach dict with keys 'calexp', 'catfile', 'exfile'
+    """
+    flist = []
+    for calexp in calexps:
+        cs = calexp[7:].split('-')
+
+        ind_string = cs[0]
+        ind = int(ind_string)
+        band = cs[1]
+        raft = cs[2]
+        sensor = cs[3]
+        det = cs[4].split('.')[0]
+
+        d = {
+            'ind_string': ind_string,
+            'ind': ind,
+            'raft': raft,
+            'sensor': sensor,
+            'band': band,
+            'det': det,
+        }
+
+        catfile = 'centroid_%(ind)d_%(raft)s_%(sensor)s_%(band)s.txt' % d
+        assert os.path.exists(catfile)
+
+        exfile = 'extracted-%(ind_string)s-%(band)s-%(raft)s-%(sensor)s-%(det)s.fits.gz' % d  # noqa
+
+        flist.append({
+            'calexp': calexp,
+            'catfile': catfile,
+            'exfile': exfile,
+        })
+
+    return flist
 
 
 @njit
