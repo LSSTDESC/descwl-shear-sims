@@ -65,13 +65,8 @@ def test_render_sim_smoke():
     assert np.allclose(expected_img.array, se_img.array, rtol=0, atol=1e-9)
 
 
-@pytest.mark.parametrize('expand_star_stamps,trim_stamps', [
-    (True, True),
-    (True, False),
-    (False, True),
-    (False, False),
-])
-def test_render_opt_smoke(expand_star_stamps, trim_stamps):
+@pytest.mark.parametrize('trim_stamps', [True, False])
+def test_render_opt_smoke(trim_stamps):
     img_dim = 103
     img_cen = (img_dim - 1)/2
     scale = 0.25
@@ -110,7 +105,6 @@ def test_render_opt_smoke(expand_star_stamps, trim_stamps):
         objs=objs, psf_function=_psf_function,
         wcs=wcs, img_dim=img_dim, method=method,
         g1=g1, g2=g2, shear_scene=shear_scene,
-        expand_star_stamps=expand_star_stamps,
         trim_stamps=trim_stamps,
     )
 
