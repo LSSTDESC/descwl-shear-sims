@@ -239,12 +239,3 @@ gals_type: 'wldeblend'
 
 # If `True` then add star bleed trail masks. Default is `False`.
 # sat_stars: false
-
-# How to deal with bright star stamps. 'expand' means simply expand
-# the stamp sizes, 'fold' means adjust the folding threshold. Default
-# is 'expand'.
-# bright_strategy: 'expand'
-
-# If True, trim stamps in renderer to avoid huge FFT errors from galsim.
-# Default is True.
-# trim_stamps: true

@@ -257,14 +257,6 @@ class Sim(object):
     sat_stars: bool, optional
         If `True` then add bleeds. Default is `False`.
 
-    bright_strategy: str
-        How to deal with bright star stamps. 'expand' means simply expand
-        the stamp sizes, 'fold' means adjust the folding threshold. Default
-        is 'expand'.
-    trim_stamps: bool
-        If True, trim stamps in renderer to avoid huge FFT errors from galsim.
-        Default is True.
-
     Methods
     -------
     gen_sim()
@@ -314,8 +306,6 @@ class Sim(object):
         stars_type='fixed',
         stars_kws=None,
         sat_stars=False,
-        bright_strategy='expand',
-        trim_stamps=True,
     ):
         self._rng = (
             rng
@@ -332,8 +322,6 @@ class Sim(object):
 
         ########################################
         # rendering
-        self.bright_strategy = bright_strategy
-        self.trim_stamps = trim_stamps
         self.saturate = saturate  # will be forced True if sat_stars is True
 
         ########################################
@@ -715,8 +703,7 @@ class Sim(object):
 
         all_data = self._generate_objects()
 
-        if self.bright_strategy == 'fold':
-            self._set_gsparams(all_data)
+        self._set_gsparams(all_data)
 
         band_data = OrderedDict()
         for band_ind, band in enumerate(self.bands):
@@ -743,9 +730,6 @@ class Sim(object):
                     g1=self.g1,
                     g2=self.g2,
                     shear_scene=self.shear_scene,
-                    expand_star_stamps=(
-                        True if self.bright_strategy == 'expand' else False),
-                    trim_stamps=self.trim_stamps,
                 )
 
                 se_image += self._generate_noise_image(band_ind)
