@@ -22,7 +22,7 @@ def test_simple_sim_smoke():
 
 
 @pytest.mark.skipif(
-    "CATSIM_DIR" not in os.eviron,
+    "CATSIM_DIR" not in os.environ,
     reason='simulation input data is not present')
 @pytest.mark.parametrize('make_round', [False, True])
 def test_simple_sim_wldeblend(make_round):
@@ -55,7 +55,7 @@ def test_simple_sim_fixed_stars():
 
 
 @pytest.mark.skipif(
-    "CATSIM_DIR" not in os.eviron,
+    "CATSIM_DIR" not in os.environ,
     reason='simulation input data is not present')
 def test_simple_sim_sample_stars():
     sim = Sim(
@@ -68,7 +68,7 @@ def test_simple_sim_sample_stars():
 
 
 @pytest.mark.skipif(
-    "CATSIM_DIR" not in os.eviron,
+    "CATSIM_DIR" not in os.environ,
     reason='simulation input data is not present')
 def test_simple_sim_sample_star_density():
     min_density = 2
@@ -91,7 +91,7 @@ def test_simple_sim_sample_star_density():
 
 
 @pytest.mark.skipif(
-    "CATSIM_DIR" not in os.eviron,
+    "CATSIM_DIR" not in os.environ,
     reason='simulation input data is not present')
 def test_simple_sim_sample_star_minmag_smoke():
     sim = Sim(
@@ -367,7 +367,7 @@ def test_simple_sim_grid_stars_and_gals_smoke():
 
 
 @pytest.mark.skipif(
-    "CATSIM_DIR" not in os.eviron,
+    "CATSIM_DIR" not in os.environ,
     reason='simulation input data is not present')
 @pytest.mark.parametrize('gals_type', ['exp', 'wldeblend'])
 def test_simple_sim_mag_zp(gals_type):

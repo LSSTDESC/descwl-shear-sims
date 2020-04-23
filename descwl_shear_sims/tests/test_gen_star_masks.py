@@ -8,7 +8,7 @@ from ..simple_sim import Sim
 
 
 @pytest.mark.skipif(
-    "CATSIM_DIR" not in os.eviron,
+    "CATSIM_DIR" not in os.environ,
     reason='simulation input data is not present')
 def test_star_mask_keywords():
     """
@@ -40,7 +40,7 @@ def test_star_mask_keywords():
 
 
 @pytest.mark.skipif(
-    "CATSIM_DIR" not in os.eviron,
+    "CATSIM_DIR" not in os.environ,
     reason='simulation input data is not present')
 def test_star_mask_repeatable():
     """
