@@ -113,31 +113,32 @@ def get_cached_bleeds():
     """
     get a dict keyed by filter with example bleeds
 
+    the data are sorted for mag, so one can use searchsorted
+    to get a match
+
     the read is cached
     """
     if 'CATSIM_DIR' not in os.environ:
         raise OSError('CATSIM_DIR not defined')
 
     dir = os.environ['CATSIM_DIR']
-    pattern = os.path.join(dir, 'extracted-*.fits.gz')
+    bdict = {}
 
-    flist = glob(pattern)
-    assert len(flist) != 0
+    for band in ['g', 'r', 'i', 'z']:
+        pattern = os.path.join(dir, 'extracted-*-%s-*.fits.gz' % band)
 
-    dlist = []
-    for f in flist:
-        with fitsio.FITS(f, vstorage='object') as fits:
-            d = fits[1].read()
-        dlist.append(d)
+        flist = glob(pattern)
+        assert len(flist) != 0
 
-    data = eu.numpy_util.combine_arrlist(dlist)
-    s = data['mag'].argsort()
-    data = data[s]
+        dlist = []
+        for f in flist:
+            with fitsio.FITS(f, vstorage='object') as fits:
+                d = fits[1].read()
+            dlist.append(d)
 
-    # same for all bands for now
-    return {
-        'g': data,
-        'r': data,
-        'i': data,
-        'z': data,
-    }
+        data = eu.numpy_util.combine_arrlist(dlist)
+        s = data['mag'].argsort()
+        data = data[s]
+        bdict[band] = data
+
+    return bdict
