@@ -4,7 +4,7 @@ Copied from https://github.com/beckermr/metadetect-coadding-sims under BSD
 """
 
 import logging
-
+from numba import njit
 import numpy as np
 import galsim
 
@@ -15,6 +15,7 @@ def append_wcs_info_and_render_objs_with_psf_shear(
         *,
         objs, psf_function,
         wcs, img_dim, method, g1, g2, shear_scene,
+        threshold,
         trim_stamps=True):
     """Render objects into a scene with some PSF function, shear, and WCS.
 
@@ -45,6 +46,9 @@ def append_wcs_info_and_render_objs_with_psf_shear(
     shear_scene : bool
         If True, the object positions and their shapes are sheared. Otherwise,
         only the object shapes are sheared.
+    threshold: float
+        For bright stars we will calculate the radius at which we reach
+        the profile reaches this threshold
     trim_stamps: bool
         If true, trim stamps larger than the input image to avoid huge
         ffts.  Default True.
@@ -121,14 +125,24 @@ def append_wcs_info_and_render_objs_with_psf_shear(
         dx = pos.x - (x_ll + (shape[1] - 1)/2)
         dy = pos.y - (y_ll + (shape[0] - 1)/2)
 
+        offset = galsim.PositionD(x=dx, y=dy)
+
         # draw and set the proper origin
         stamp = convolved_obj.drawImage(
             nx=shape[1],
             ny=shape[0],
             wcs=local_wcs,
-            offset=galsim.PositionD(x=dx, y=dy),
+            offset=offset,
             method=method,
         )
+
+        radius = get_mask_radius(
+            obj_data=obj_data,
+            stamp=stamp.array,
+            offset=(offset.y, offset.x),
+            threshold=threshold,
+        )
+
         stamp.setOrigin(x_ll, y_ll)
 
         # intersect and add to total image
@@ -148,4 +162,97 @@ def append_wcs_info_and_render_objs_with_psf_shear(
             obj_data['pos'] = []
         obj_data['pos'].append(pos)
 
+        if 'radius' not in obj_data:
+            obj_data['radius'] = []
+        obj_data['radius'].append(radius)
+
     return se_im
+
+
+def get_mask_radius(*, obj_data, stamp, offset, threshold, mag_thresh=18):
+    """
+    get the radius at which the profile drops to frac*noise, or 0.0
+    for faint stars or galaxies
+
+    Parameters
+    ----------
+    obj_data: dict
+        Object data.
+    stamp: 2d array
+        The stamp
+    offset: tuple
+        Offset in stamp (row_offset, col_offset)
+    threshold: float
+        Radius goes out to this level
+    mag_thresh: float
+        Magnitude threshold for doing the calculation.  Default 18
+
+    Returns
+    -------
+    radius: float
+        The radius if the object is a star and brighter than minmag,
+        otherwise 0.0
+    """
+
+    radius = 0.0
+
+    if obj_data['type'] == 'star' and obj_data['mag'] < mag_thresh:
+        radius = calculate_mask_radius(
+            stamp=stamp,
+            offset=offset,
+            threshold=threshold,
+        )
+
+    return radius
+
+
+@njit
+def calculate_mask_radius(*, stamp, offset, threshold):
+    """
+    get the radius at which the profile drops to frac*noise.
+
+    Parameters
+    ----------
+    obj_data: dict
+        Object data.
+    stamp: 2d array
+        The stamp
+    offset: tuple
+        Offset in stamp (row_offset, col_offset)
+    threshold: float
+        Radius goes out to this level
+    mag_thresh: float
+        Magnitude threshold for doing the calculation.  Default 18
+
+    Returns
+    -------
+    radius: float
+        The radius
+    """
+
+    nrows, ncols = stamp.shape
+
+    row_offset, col_offset = offset
+
+    rowcen = int((nrows-1.0)/2.0 + row_offset)
+    colcen = int((ncols-1.0)/2.0 + col_offset)
+
+    radius2 = 0.0
+
+    for row in range(nrows):
+        row2 = (rowcen - row)**2
+
+        for col in range(ncols):
+            col2 = (colcen - col)**2
+
+            tradius2 = row2 + col2
+            if tradius2 < radius2:
+                # we are already within a previously calculated radius
+                continue
+
+            val = stamp[row, col]
+            if val > threshold:
+                radius2 = tradius2
+
+    radius = np.sqrt(radius2)
+    return radius

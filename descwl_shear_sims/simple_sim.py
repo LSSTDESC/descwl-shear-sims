@@ -730,6 +730,7 @@ class Sim(object):
                     g1=self.g1,
                     g2=self.g2,
                     shear_scene=self.shear_scene,
+                    threshold=self.noise_per_band[band_ind],
                 )
 
                 se_image += self._generate_noise_image(band_ind)
@@ -1283,12 +1284,19 @@ def add_bright_star_masks(obj_data, band_data):
             if any(odata[band]['is_bright'] for band in odata):
 
                 for band in band_data:
-                    for epoch, pos in zip(band_data[band], odata[band]['pos']):
-                        bmask = epoch.bmask.array
-                        add_bright_star_mask(
-                            mask=bmask, x=pos.x, y=pos.y,
-                            radius=3/0.2, val=BRIGHT,
-                        )
+
+                    nepoch = len(band_data[band])
+                    for epoch in range(nepoch):
+                        radius = odata[band]['radius'][epoch]
+
+                        if radius > 0:
+                            pos = odata[band]['pos'][epoch]
+                            bmask = band_data[band][epoch].bmask.array
+                            add_bright_star_mask(
+                                mask=bmask, x=pos.x, y=pos.y,
+                                radius=radius,
+                                val=BRIGHT,
+                            )
 
 
 def get_flux(mag):

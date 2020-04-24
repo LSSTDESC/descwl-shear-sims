@@ -49,10 +49,12 @@ def test_render_sim_smoke():
     se_img = append_wcs_info_and_render_objs_with_psf_shear(
         objs=objs, psf_function=_psf_function,
         wcs=wcs, img_dim=img_dim, method=method,
+        threshold=.01,
         g1=g1, g2=g2, shear_scene=shear_scene)
 
     for obj in objs:
         assert 'pos' in obj
+        assert 'radius' in obj
         assert 'overlaps' in obj
         assert obj['overlaps'][0] is True
         assert obj['pos'][0] == galsim.PositionD(x=img_cen, y=img_cen)
@@ -105,11 +107,13 @@ def test_render_opt_smoke(trim_stamps):
         objs=objs, psf_function=_psf_function,
         wcs=wcs, img_dim=img_dim, method=method,
         g1=g1, g2=g2, shear_scene=shear_scene,
+        threshold=.01,
         trim_stamps=trim_stamps,
     )
 
     for obj in objs:
         assert 'pos' in obj
+        assert 'radius' in obj
         assert 'overlaps' in obj
         assert obj['overlaps'][0] is True
         assert np.allclose(
@@ -167,10 +171,12 @@ def test_render_sim_star_smoke():
     se_img = append_wcs_info_and_render_objs_with_psf_shear(
         objs=objs, psf_function=_psf_function,
         wcs=wcs, img_dim=img_dim, method=method,
+        threshold=.01,
         g1=g1, g2=g2, shear_scene=shear_scene)
 
     for obj in objs:
         assert 'pos' in obj
+        assert 'radius' in obj
         assert 'overlaps' in obj
         assert obj['overlaps'][0] is True
 
@@ -189,6 +195,56 @@ def test_render_sim_star_smoke():
         nx=img_dim, ny=img_dim, scale=scale)
 
     assert np.allclose(expected_img.array, se_img.array, rtol=0, atol=2e-8)
+
+
+def test_render_sim_bright_star_smoke():
+    img_dim = 103
+    img_cen = (img_dim - 1)/2
+    scale = 0.25
+    method = 'auto'
+    g1 = -0.1
+    g2 = 0.2
+    shear_scene = False
+    world_origin = galsim.CelestialCoord(
+        ra=0 * galsim.degrees,
+        dec=0 * galsim.degrees,
+    )
+    objs = [
+        {
+            'obj': galsim.Gaussian(half_light_radius=1.0e-4),
+            'mag': 17,
+            'type': 'star',
+            'dudv': galsim.PositionD(x=0.0, y=0.0),
+        },
+    ]
+
+    def _psf_function(*, x, y):
+        return galsim.Gaussian(fwhm=0.9)
+
+    wcs = galsim.TanWCS(
+        affine=galsim.AffineTransform(
+            scale, 0.0, 0.0, scale,
+            origin=galsim.PositionD(x=img_cen, y=img_cen),
+            world_origin=galsim.PositionD(0, 0),
+        ),
+        world_origin=world_origin,
+        units=galsim.arcsec,
+    )
+
+    _ = append_wcs_info_and_render_objs_with_psf_shear(
+        objs=objs, psf_function=_psf_function,
+        wcs=wcs, img_dim=img_dim, method=method,
+        threshold=.01,
+        g1=g1, g2=g2, shear_scene=shear_scene)
+
+    for obj in objs:
+        assert 'pos' in obj
+        assert 'radius' in obj
+        assert 'overlaps' in obj
+        assert obj['overlaps'][0] is True
+
+        for radius in obj['radius']:
+            assert radius > 0
 
 
 @pytest.mark.parametrize('shear_scene', [True, False])
@@ -230,6 +286,7 @@ def test_render_sim_centered_shear_scene(shear_scene):
     se_img = append_wcs_info_and_render_objs_with_psf_shear(
         objs=objs, psf_function=_psf_function,
         wcs=wcs, img_dim=img_dim, method=method,
+        threshold=.01,
         g1=g1, g2=g2, shear_scene=shear_scene)
 
     for obj in objs:
@@ -293,6 +350,7 @@ def test_render_sim_shear_scene(shear_scene):
         objs=objs, psf_function=_psf_function,
         wcs=wcs, img_dim=img_dim, method=method,
         g1=g1, g2=g2, shear_scene=not shear_scene,
+        threshold=.01,
         trim_stamps=False,
     )
 
@@ -309,6 +367,7 @@ def test_render_sim_shear_scene(shear_scene):
         objs=objs_shear_scene, psf_function=_psf_function,
         wcs=wcs, img_dim=img_dim, method=method,
         g1=g1, g2=g2, shear_scene=shear_scene,
+        threshold=.01,
         trim_stamps=False,
     )
 

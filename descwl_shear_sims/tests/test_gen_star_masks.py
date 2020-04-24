@@ -2,7 +2,7 @@ import os
 import numpy as np
 import pytest
 
-from ..lsst_bits import SAT
+from ..lsst_bits import SAT, BRIGHT
 from ..saturation import BAND_SAT_VALS
 from ..simple_sim import Sim
 
@@ -35,8 +35,10 @@ def test_star_mask_keywords():
 
     w = np.where((mask & SAT) != 0)
     assert w[0].size > 0
-
     assert np.all(image[w] == BAND_SAT_VALS['r'])
+
+    w = np.where(mask & BRIGHT != 0)
+    assert w[0].size > 0
 
 
 @pytest.mark.skipif(
