@@ -47,8 +47,8 @@ def append_wcs_info_and_render_objs_with_psf_shear(
         If True, the object positions and their shapes are sheared. Otherwise,
         only the object shapes are sheared.
     threshold: float
-        For bright stars we will calculate the radius at which we reach
-        the profile reaches this threshold
+        For bright stars we will calculate the radius at which the profile
+        reaches this threshold
     trim_stamps: bool
         If true, trim stamps larger than the input image to avoid huge
         ffts.  Default True.
