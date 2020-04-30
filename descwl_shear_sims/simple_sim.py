@@ -462,6 +462,17 @@ class Sim(object):
         """
         return self._gal_dens
 
+    @property
+    def object_data(self):
+        """
+        get the object data
+
+        Returns
+        -------
+        list of dict, on element per object.  Each dict is keyed by band
+        """
+        return self._object_data
+
     def _setup_wcs(
             self, *,
             scale, coadd_dim, buff, cap_radius, wcs_kws, se_dim,
@@ -701,13 +712,13 @@ class Sim(object):
             raise RuntimeError("A `Sim` object can only be called once!")
         self.called = True
 
-        all_data = self._generate_objects()
+        self._object_data = self._generate_objects()
 
-        self._set_gsparams(all_data)
+        self._set_gsparams(self._object_data)
 
         band_data = OrderedDict()
         for band_ind, band in enumerate(self.bands):
-            band_objs = [o[band] for o in all_data]
+            band_objs = [o[band] for o in self._object_data]
 
             wcs_objects = self._get_wcs_for_band(band)
 
@@ -777,7 +788,7 @@ class Sim(object):
                 )
 
         if self.stars:
-            add_bright_star_masks(all_data, band_data)
+            add_bright_star_masks(self._object_data, band_data)
 
         return band_data
 
@@ -969,13 +980,13 @@ class Sim(object):
 
         Returns
         -------
-        all_data : list of OrderedDicts
+        object_data : list of OrderedDicts
             A list the length of the number of objects with an OrderedDict
             for each object holding each objects galsim representation in each band,
             the object type, and it's offset in u,v in the image.
         """
 
-        all_data = []
+        object_data = []
         nobj = self._get_nobj()
         LOGGER.info('drawing %d objects for a %f square arcmin patch',
                     nobj, self.area_sqr_arcmin)
@@ -1019,9 +1030,9 @@ class Sim(object):
 
             for band in self.bands:
                 obj_data[band]['dudv'] = dudv
-            all_data.append(obj_data)
+            object_data.append(obj_data)
 
-        return all_data
+        return object_data
 
     def _keep_star(self, star):
         """
