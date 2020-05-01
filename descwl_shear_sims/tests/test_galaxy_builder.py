@@ -1,11 +1,15 @@
 import os
 import numpy as np
 import galsim
+import pytest
 
 from ..galaxy_builder import RoundGalaxyBuilder
 from ..cache_tools import cached_catalog_read
 
 
+@pytest.mark.skipif(
+    "CATSIM_DIR" not in os.environ,
+    reason='simulation input data is not present')
 def test_galaxy_builder_smoke():
     import descwl
 
@@ -13,8 +17,6 @@ def test_galaxy_builder_smoke():
         os.environ.get('CATSIM_DIR', '.'),
         'OneDegSq.fits',
     )
-    if not os.path.exists(fname):
-        return
 
     seed = 55
     rng = np.random.RandomState(seed)
@@ -48,6 +50,9 @@ def test_galaxy_builder_smoke():
     )
 
 
+@pytest.mark.skipif(
+    "CATSIM_DIR" not in os.environ,
+    reason='simulation input data is not present')
 def test_galaxy_builder():
     import descwl
 
@@ -55,8 +60,6 @@ def test_galaxy_builder():
         os.environ.get('CATSIM_DIR', '.'),
         'OneDegSq.fits',
     )
-    if not os.path.exists(fname):
-        return
 
     seed = 55
     rng = np.random.RandomState(seed)

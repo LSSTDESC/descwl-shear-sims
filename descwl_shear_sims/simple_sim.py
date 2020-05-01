@@ -20,17 +20,16 @@ from .gen_masks import (
     generate_cosmic_rays,
     generate_bad_columns,
 )
-from .gen_star_masks import (
-    StarMaskPDFs,
-    add_star_and_bleed,
-    add_bright_star_mask,
-)
+from .gen_star_masks import add_bright_star_mask
+from .star_bleeds import add_bleed
+
 from .stars import (
     sample_star,
     sample_fixed_star,
     load_sample_stars,
     sample_star_density,
 )
+
 
 from .ps_psf import PowerSpectrumPSF
 
@@ -52,11 +51,6 @@ STARS_KWS_DEFAULTS = {
 }
 SAMPLE_DENSITY_KEYS = ('min_density', 'max_density')
 
-SAT_STARS_KWS_DEFAULTS = {
-    # density of sat starsper square arcmin when star type is fixed
-    # not used for star type sample, instead the MAG_SAT is used
-    'density': 0.0555,  # per square arcmin, 200 per sq degree
-}
 PSF_KWS_DEFAULTS = {
     'gauss': {'fwhm': 0.8, 'g1': 0.0, 'g2': 0.0},
     'ps': {},  # the defaults for the ps PSF are in the class
@@ -237,7 +231,8 @@ class Sim(object):
 
         See descwl_shear_sims.gen_masks.generate_bad_columns for the defaults.
     saturate: bool
-        If True, saturate values above a threshold.  Default is False.
+        If True, saturate values above a threshold.  Default is False.  If
+        star_bleeds is True, then saturate is also set to True
     stars: bool, optional
         If True, draw stars in the sim. Default is False.
     stars_type : str, optional
@@ -259,35 +254,8 @@ class Sim(object):
             min_mag: float
                 Minimum alowed mag in any band.  Used for stars_type 'sample'
 
-    sat_stars: bool, optional
-        If `True` then add star and bleed trail masks. Default is `False`.
-    sat_stars_kws : dict, optional
-        A dictionary of options for generating star and bleed trail masks
-
-            density: float
-                Number of saturated stars per square arcmin, default 0.055
-            radmean: float
-                Mean star mask radius in pixels for log normal distribution,
-                default 3
-            radstd: float
-                Radius standard deviation in pixels for log normal distribution,
-                default 5
-            radmin: float
-                Minimum radius in pixels of star masks.  The log normal values
-                will be clipped to more than this value.  Default 3
-            radmax: float
-                Maximum radius in pixels of star masks.  The log normal values
-                will be clipped to less than this value. Default 500
-            bleed_length_fac: float
-                The bleed length is this factor times the *diameter* of the
-                circular star mask, default 2
-    bright_strategy: str
-        How to deal with bright star stamps. 'expand' means simply expand
-        the stamp sizes, 'fold' means adjust the folding threshold. Default
-        is 'expand'.
-    trim_stamps: bool
-        If True, trim stamps in renderer to avoid huge FFT errors from galsim.
-        Default is True.
+    star_bleeds: bool, optional
+        If `True` then add bleeds. Default is `False`.
 
     Methods
     -------
@@ -337,10 +305,7 @@ class Sim(object):
         stars=False,
         stars_type='fixed',
         stars_kws=None,
-        sat_stars=False,
-        sat_stars_kws=None,
-        bright_strategy='expand',
-        trim_stamps=True,
+        star_bleeds=False,
     ):
         self._rng = (
             rng
@@ -357,9 +322,7 @@ class Sim(object):
 
         ########################################
         # rendering
-        self.bright_strategy = bright_strategy
-        self.trim_stamps = trim_stamps
-        self.saturate = saturate
+        self.saturate = saturate  # will be forced True if star_bleeds is True
 
         ########################################
         # band structure
@@ -438,10 +401,9 @@ class Sim(object):
             stars_type=stars_type,
             stars_kws=stars_kws,
         )
-        self._setup_sat_stars(
-            sat_stars=sat_stars,
-            sat_stars_kws=sat_stars_kws,
-        )
+        self.star_bleeds = star_bleeds
+        if self.star_bleeds:
+            self.saturate = True
 
         ####################################
         # grids
@@ -499,6 +461,17 @@ class Sim(object):
         the density of stars
         """
         return self._gal_dens
+
+    @property
+    def object_data(self):
+        """
+        get the object data
+
+        Returns
+        -------
+        list of dict, on element per object.  Each dict is keyed by band
+        """
+        return self._object_data
 
     def _setup_wcs(
             self, *,
@@ -625,28 +598,6 @@ class Sim(object):
             self._star_dens = 0.0
             self._example_stars = None
 
-    def _setup_sat_stars(self, *, sat_stars, sat_stars_kws):
-        self.sat_stars = sat_stars
-        self.sat_stars_kws = copy.deepcopy(SAT_STARS_KWS_DEFAULTS)
-        if sat_stars_kws is not None:
-            self.sat_stars_kws.update(copy.deepcopy(sat_stars_kws))
-
-        if self.stars and self.sat_stars and self.stars_type == 'fixed':
-            # density per square arcmin.
-            sat_density = self.sat_stars_kws.get('density', 0.0)
-
-            use_kws = copy.deepcopy(self.sat_stars_kws)
-            use_kws.pop('density', None)  # pop this since it cannot be fed to the class
-            self._star_mask_pdf = StarMaskPDFs(
-                rng=self._rng,
-                **use_kws
-            )
-
-            self._sat_stars_frac = sat_density / self._star_dens
-        else:
-            self._sat_stars_frac = 0.0
-            self._star_mask_pdf = None
-
     def _extra_init_for_wldeblend(self):
         # guard the import here
         import descwl
@@ -761,14 +712,13 @@ class Sim(object):
             raise RuntimeError("A `Sim` object can only be called once!")
         self.called = True
 
-        all_data = self._generate_objects()
+        self._object_data = self._generate_objects()
 
-        if self.bright_strategy == 'fold':
-            self._set_gsparams(all_data)
+        self._set_gsparams(self._object_data)
 
         band_data = OrderedDict()
         for band_ind, band in enumerate(self.bands):
-            band_objs = [o[band] for o in all_data]
+            band_objs = [o[band] for o in self._object_data]
 
             wcs_objects = self._get_wcs_for_band(band)
 
@@ -791,9 +741,7 @@ class Sim(object):
                     g1=self.g1,
                     g2=self.g2,
                     shear_scene=self.shear_scene,
-                    expand_star_stamps=(
-                        True if self.bright_strategy == 'expand' else False),
-                    trim_stamps=self.trim_stamps,
+                    threshold=self.noise_per_band[band_ind],
                 )
 
                 se_image += self._generate_noise_image(band_ind)
@@ -840,7 +788,7 @@ class Sim(object):
                 )
 
         if self.stars:
-            add_bright_star_masks(all_data, band_data)
+            add_bright_star_masks(self._object_data, band_data)
 
         return band_data
 
@@ -972,12 +920,14 @@ class Sim(object):
         if self.stars:
             for odata in objs:
                 if (odata['overlaps'][epoch]):
-                    pos = odata['pos'][-1]
+                    assert len(odata['pos']) == len(odata['overlaps'])
+
+                    pos = odata['pos'][epoch]
                     row, col = int(pos.y), int(pos.x)
                     if (bmask[row, col] & SAT) != 0:
                         odata['is_bright'] = True
 
-        if self.stars and self.sat_stars:
+        if self.stars and self.star_bleeds:
             # special stars that get bleeds.  They are marked
             # saturated, but note there can be saturated pixels
             # even without this set (see saturate_image_and_mask)
@@ -986,20 +936,16 @@ class Sim(object):
                 if (
                     odata['overlaps'][epoch] and
                     odata['type'] == 'star' and
-                    odata['saturated']
+                    odata['is_bright']
                 ):
                     pos = odata['pos'][epoch]
 
-                    sat_data = odata['sat_data']
-                    add_star_and_bleed(
-                        mask=bmask,
+                    add_bleed(
                         image=se_image.array,
+                        bmask=bmask,
+                        pos=pos,
+                        mag=odata['mag'],
                         band=band,
-                        x=pos.x,
-                        y=pos.y,
-                        radius=sat_data['radius'],
-                        bleed_width=sat_data['bleed_width'],
-                        bleed_length=sat_data['bleed_length'],
                     )
 
         bmask_image = galsim.Image(
@@ -1034,13 +980,13 @@ class Sim(object):
 
         Returns
         -------
-        all_data : list of OrderedDicts
+        object_data : list of OrderedDicts
             A list the length of the number of objects with an OrderedDict
             for each object holding each objects galsim representation in each band,
             the object type, and it's offset in u,v in the image.
         """
 
-        all_data = []
+        object_data = []
         nobj = self._get_nobj()
         LOGGER.info('drawing %d objects for a %f square arcmin patch',
                     nobj, self.area_sqr_arcmin)
@@ -1084,9 +1030,9 @@ class Sim(object):
 
             for band in self.bands:
                 obj_data[band]['dudv'] = dudv
-            all_data.append(obj_data)
+            object_data.append(obj_data)
 
-        return all_data
+        return object_data
 
     def _keep_star(self, star):
         """
@@ -1218,25 +1164,14 @@ class Sim(object):
                 star_data=self._example_stars,
                 flux_funcs=flux_funcs,
                 bands=self.bands,
-                sat_stars=self.sat_stars,
-                star_mask_pdf=self._star_mask_pdf,
             )
         else:
             star = sample_fixed_star(
                 rng=self._rng,
                 mag=self.stars_kws['mag'],
                 bands=self.bands,
-                sat_stars=self.sat_stars,
-                sat_stars_frac=self._sat_stars_frac,
-                star_mask_pdf=self._star_mask_pdf,
                 flux_funcs=flux_funcs,
             )
-
-        # we want to mask it in all bands
-        is_bright = any(star[band]['saturated'] for band in star)
-
-        for band in star:
-            star[band]['is_bright'] = is_bright
 
         return star
 
@@ -1360,12 +1295,19 @@ def add_bright_star_masks(obj_data, band_data):
             if any(odata[band]['is_bright'] for band in odata):
 
                 for band in band_data:
-                    for epoch, pos in zip(band_data[band], odata[band]['pos']):
-                        bmask = epoch.bmask.array
-                        add_bright_star_mask(
-                            mask=bmask, x=pos.x, y=pos.y,
-                            radius=3/0.2, val=BRIGHT,
-                        )
+
+                    nepoch = len(band_data[band])
+                    for epoch in range(nepoch):
+                        radius = odata[band]['radius'][epoch]
+
+                        if radius > 0:
+                            pos = odata[band]['pos'][epoch]
+                            bmask = band_data[band][epoch].bmask.array
+                            add_bright_star_mask(
+                                mask=bmask, x=pos.x, y=pos.y,
+                                radius=radius,
+                                val=BRIGHT,
+                            )
 
 
 def get_flux(mag):

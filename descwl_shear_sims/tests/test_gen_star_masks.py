@@ -1,19 +1,15 @@
+import os
 import numpy as np
+import pytest
 
-from ..gen_star_masks import StarMaskPDFs
-from ..lsst_bits import SAT
+from ..lsst_bits import SAT, BRIGHT
 from ..saturation import BAND_SAT_VALS
 from ..simple_sim import Sim
 
 
-def test_star_mask_smoke():
-    """
-    make sure we can generate star masks
-    """
-    rng = np.random.RandomState(2342)
-    StarMaskPDFs(rng=rng)
-
-
+@pytest.mark.skipif(
+    "CATSIM_DIR" not in os.environ,
+    reason='simulation input data is not present')
 def test_star_mask_keywords():
     """
     test star masking using the keyword to the sim
@@ -24,9 +20,11 @@ def test_star_mask_keywords():
         bands=['r'],
         epochs_per_band=1,
         stars=True,
-        stars_kws={'density': 3},
-        sat_stars=True,
-        sat_stars_kws={'density': 3},
+        stars_kws={
+            'density': 3,
+            'mag': 15,
+        },
+        star_bleeds=True,
     )
 
     data = sim.gen_sim()
@@ -37,10 +35,15 @@ def test_star_mask_keywords():
 
     w = np.where((mask & SAT) != 0)
     assert w[0].size > 0
-
     assert np.all(image[w] == BAND_SAT_VALS['r'])
 
+    w = np.where(mask & BRIGHT != 0)
+    assert w[0].size > 0
 
+
+@pytest.mark.skipif(
+    "CATSIM_DIR" not in os.environ,
+    reason='simulation input data is not present')
 def test_star_mask_repeatable():
     """
     test star masking using the keyword to the sim
@@ -53,9 +56,11 @@ def test_star_mask_repeatable():
             bands=['r'],
             epochs_per_band=1,
             stars=True,
-            stars_kws={'density': 3},
-            sat_stars=True,
-            sat_stars_kws={'density': 3},
+            stars_kws={
+                'density': 3,
+                'mag': 15,
+            },
+            star_bleeds=True,
         )
 
         data = sim.gen_sim()
