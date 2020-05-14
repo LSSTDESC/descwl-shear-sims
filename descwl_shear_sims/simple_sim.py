@@ -183,6 +183,11 @@ class Sim(object):
     wcs_kws : dict, optional
         A dictionary of options for constructing the WCS. These are any of
 
+            type: str
+                Type of the wcs.  Options are
+                    'tan' for a pure tangent plane
+                    'tan-sip' to include distortioins in sip convention
+                Default is 'tan'
             position_angle_range : 2-tuple of floats
                 The range of position angles to select from for rotating the image
                 WCS coordinares. In degrees.
