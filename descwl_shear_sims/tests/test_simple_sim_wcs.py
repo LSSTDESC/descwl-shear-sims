@@ -17,7 +17,5 @@ def test_simple_sim_smoke(wcs_type):
         gals_kws={'density': 10},
         wcs_kws={'type': wcs_type},
     )
-    if wcs_type == 'tan-sip':
-        assert sim.wcs_func == gen_sip_wcs
-    else:
-        assert sim.wcs_func == gen_tanwcs
+
+    assert sim.wcs_func == EXPECTED_FUNCS[wcs_type]
