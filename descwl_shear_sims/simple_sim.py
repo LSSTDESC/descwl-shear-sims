@@ -14,6 +14,7 @@ from collections import OrderedDict
 from .se_obs import SEObs
 from .render_sim import append_wcs_info_and_render_objs_with_psf_shear
 from .gen_tanwcs import gen_tanwcs
+from .gen_sip_wcs import gen_sip_wcs
 from .randsphere import randsphere, randcap
 from .gen_masks import (
     generate_basic_mask,
@@ -483,7 +484,8 @@ class Sim(object):
         self.cap_radius = cap_radius
         if self.cap_radius is not None:
             self.buff = 0
-        self.wcs_kws = wcs_kws or {}
+
+        self._set_wcs_kws(wcs_kws)
 
         # the SE image could be rotated, so we make it big enough to cover the
         # whole coadd region plus we make sure it is odd
@@ -547,6 +549,18 @@ class Sim(object):
         # info about coadd PSF image
         self.psf_dim = 53
         self._psf_cen = (self.psf_dim - 1)/2
+
+    def _set_wcs_kws(self, wcs_kws):
+        self.wcs_kws = wcs_kws or {}
+        if 'type' not in self.wcs_kws:
+            self.wcs_kws['type'] = 'tan'
+
+        if self.wcs_kws['type'] == 'tan':
+            self.wcs_func = gen_tanwcs
+        elif self.wcs_kws['type'] == 'tan-sip':
+            self.wcs_func = gen_sip_wcs
+        else:
+            raise ValueError("bad wcs type '%s'" % self.wcs_kws['type'])
 
     def _setup_stars(
         self, *,
@@ -1206,7 +1220,7 @@ class Sim(object):
         for band in self.bands:
             self._band_wcs_objs[band] = []
             for i in range(self.epochs_per_band):
-                twcs = gen_tanwcs(**wcs_kws)
+                twcs = self.wcs_func(**wcs_kws)
                 self._band_wcs_objs[band].append(twcs)
 
     def _init_ps_psfs(self):
