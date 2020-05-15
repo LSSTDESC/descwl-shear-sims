@@ -1,9 +1,11 @@
 import os
+import gzip
+import json
 import logging
+import functools
 import copy
 import numpy as np
 import galsim
-from .cache_tools import cached_header_read
 
 LOGGER = logging.getLogger(__name__)
 
@@ -49,8 +51,6 @@ def gen_sip_wcs(
         The randomly generated TanWCS object.
     """
 
-    hdr = get_sip_example()
-
     # an se wcs is generated from
     # 1) a pixel scale
     # 2) a shear
@@ -89,6 +89,7 @@ def gen_sip_wcs(
         np.array([[costheta, -sintheta], [sintheta, costheta]])
     )
 
+    hdr = get_sip_example(rng)
     hdr['CD1_1'] = jac_matrix[0, 0]/3600
     hdr['CD1_2'] = jac_matrix[0, 1]/3600
     hdr['CD2_1'] = jac_matrix[1, 0]/3600
@@ -113,11 +114,28 @@ def gen_sip_wcs(
     return wcs
 
 
-def get_sip_example():
+def get_sip_example(rng):
+    """
+    get a random example header
+    """
     fname = os.path.join(
         os.environ['CATSIM_DIR'],
-        'example-sip-small.fits.gz',
+        'sample-headers.json.gz',
     )
 
-    hdr = cached_header_read(fname=fname, ext=0)
-    return copy.deepcopy(hdr)
+    dlist = get_cached_header_examples(fname)
+
+    rind = rng.randint(0, len(dlist))
+
+    hdr = copy.deepcopy(dlist[rind])
+    return hdr
+
+
+@functools.lru_cache(maxsize=8)
+def get_cached_header_examples(fname):
+    with gzip.GzipFile(fname, 'r') as gzfile:
+        gzbytes = gzfile.read()
+
+    json_str = gzbytes.decode('utf-8')
+    dlist = json.loads(json_str)
+    return dlist
