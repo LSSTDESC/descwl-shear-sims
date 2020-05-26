@@ -40,6 +40,9 @@ epochs_per_band: 1
 # However, odd dimensions are not required.
 # coadd_dim: 351
 
+# Dimensions of the psf image
+# psf_dim: 53
+
 # The width of the buffer region in the coadd image where no objects are
 # drawn. Default is 50.
 # buff: 50

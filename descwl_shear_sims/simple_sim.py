@@ -89,6 +89,8 @@ class Sim(object):
         is chosen, along with that of the single epoch images, so that the
         grids will match perfectly in the case of no dithers/rotations etc.
         However, odd dimensions are not required.
+    psf_dim: int, optional
+        Dimensions of the psf image.  Default is 53
     buff : int, optional
         The width of the buffer region in the coadd image where no objects are
         drawn. Default is 50.
@@ -294,6 +296,7 @@ class Sim(object):
         shear_scene=True,
         scale=0.2,
         coadd_dim=351,
+        psf_dim=53,
         buff=50,
         cap_radius=None,
         edge_width=5,
@@ -376,6 +379,10 @@ class Sim(object):
 
         # used when not doing wldeblend
         self._default_flux_funcs = {b: get_flux for b in self.bands}
+
+        # info about coadd PSF image
+        self.psf_dim = int(psf_dim)
+        self._psf_cen = (self.psf_dim - 1)/2
 
         ########################################
         # galaxies
@@ -553,10 +560,6 @@ class Sim(object):
             self.area_sqr_arcmin = area_radians * (60*180/np.pi)**2
 
         LOGGER.info('area is %f arcmin**2', self.area_sqr_arcmin)
-
-        # info about coadd PSF image
-        self.psf_dim = 53
-        self._psf_cen = (self.psf_dim - 1)/2
 
     def _set_wcs_kws(self, wcs_kws):
         self.wcs_kws = wcs_kws or {}
