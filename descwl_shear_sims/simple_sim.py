@@ -49,6 +49,7 @@ GALS_KWS_DEFAULTS = {
 STARS_KWS_DEFAULTS = {
     'density': 1,
     'mag': 19.0,
+    'subtract_bright': False,
 }
 SAMPLE_DENSITY_KEYS = ('min_density', 'max_density')
 
@@ -259,6 +260,8 @@ class Sim(object):
                 magnitude for fixed stars, default 19.0
             min_mag: float
                 Minimum alowed mag in any band.  Used for stars_type 'sample'
+            subtract_bright: bool
+                If True, subtract off the bright stars that are saturated.
 
     star_bleeds: bool, optional
         If `True` then add bleeds. Default is `False`.
@@ -583,7 +586,7 @@ class Sim(object):
             assert self.stars_type in ('sample', 'fixed')
             check_keys(
                 self.stars_kws,
-                ('density', 'mag', 'min_mag'),
+                ('density', 'mag', 'min_mag', 'subtract_bright'),
                 'stars_kws',
             )
             if ('density' in self.stars_kws and
@@ -808,6 +811,14 @@ class Sim(object):
 
         if self.stars:
             add_bright_star_masks(self._object_data, band_data)
+            if self.stars_kws['subtract_bright']:
+
+                if self.gals_type == 'wldeblend':
+                    factors = self._get_wldeblend_rescale_factors()
+                else:
+                    factors = [None]*len(self.bands)
+
+                subtract_bright_stars(self._object_data, band_data, factors)
 
         return band_data
 
@@ -858,17 +869,26 @@ class Sim(object):
                     gsp = galsim.GSParams(**kw)
                     band_data['obj'] = obj.withGSParams(gsp)
 
+    def _get_wldeblend_rescale_factors(self):
+        factors = []
+        for band in self.bands:
+            fac = self._get_wldeblend_rescale_fac(band)
+            factors.append(fac)
+        return factors
+
+    def _get_wldeblend_rescale_fac(self, band):
+        survey = self._surveys[band]
+
+        s_zp = survey.zero_point
+        s_et = survey.exposure_time
+        return 10.0**(0.4*(ZERO_POINT - 24.0))/s_zp/s_et
+
     def _rescale_wldeblend(self, *, image, noise, weight, band):
         """
         Take out the exposure time
         """
 
-        survey = self._surveys[band]
-
-        s_zp = survey.zero_point
-        s_et = survey.exposure_time
-        fac = 10.0**(0.4*(ZERO_POINT - 24.0))/s_zp/s_et
-
+        fac = self._get_wldeblend_rescale_fac(band)
         wfac = 1.0/fac**2
 
         image *= fac
@@ -1327,6 +1347,33 @@ def add_bright_star_masks(obj_data, band_data):
                                 radius=radius,
                                 val=BRIGHT,
                             )
+
+
+def subtract_bright_stars(obj_data, band_data, factors):
+    """
+    subtract bright stars in all bands
+    """
+
+    bands = list(band_data.keys())
+    for odata in obj_data:
+        if odata[bands[0]]['type'] == 'star':
+
+            if any(odata[band]['is_bright'] for band in odata):
+
+                for iband, band in enumerate(band_data):
+                    fac = factors[iband]
+
+                    nepoch = len(band_data[band])
+                    for epoch in range(nepoch):
+                        if odata[band]['overlaps'][epoch]:
+                            overlap = odata[band]['overlap'][epoch]
+                            stamp = odata[band]['stamp'][epoch]
+
+                            if fac is not None:
+                                stamp = stamp*fac
+
+                            image = band_data[band][epoch].image
+                            image[overlap] -= stamp[overlap]
 
 
 def get_flux(mag):

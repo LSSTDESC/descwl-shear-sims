@@ -156,7 +156,11 @@ def append_wcs_info_and_render_objs_with_psf_shear(
 
         if 'overlaps' not in obj_data:
             obj_data['overlaps'] = []
+            obj_data['overlap'] = []
+            obj_data['stamp'] = []
+
         obj_data['overlaps'].append(overlaps)
+        obj_data['overlap'].append(overlap)
 
         if 'pos' not in obj_data:
             obj_data['pos'] = []
@@ -165,6 +169,11 @@ def append_wcs_info_and_render_objs_with_psf_shear(
         if 'radius' not in obj_data:
             obj_data['radius'] = []
         obj_data['radius'].append(radius)
+
+        if obj_data['type'] == 'star':
+            obj_data['stamp'].append(stamp)
+        else:
+            obj_data['stamp'].append(None)
 
     return se_im
 
