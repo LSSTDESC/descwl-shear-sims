@@ -55,6 +55,7 @@ SAMPLE_DENSITY_KEYS = ('min_density', 'max_density')
 
 PSF_KWS_DEFAULTS = {
     'gauss': {'fwhm': 0.8, 'g1': 0.0, 'g2': 0.0},
+    'moffat': {'fwhm': 0.8, 'g1': 0.0, 'g2': 0.0, 'beta': 2.5},
     'ps': {},  # the defaults for the ps PSF are in the class
 }
 
@@ -151,6 +152,7 @@ class Sim(object):
         A string indicating the kind of PSF. Possible options are
 
             'gauss' : a Gaussian PSF
+            'moffat': a Moffat PSF
             'ps' : an approximate spatially varying PSF constructed with a
                 power spectrum model
 
@@ -166,6 +168,16 @@ class Sim(object):
                     The shape of the PSF on the 1-axis. Default is 0.
                 'g2': float, optional
                     The shape of the PSF on the 2-axis. Default is 0.
+            'moffat' - any of the following keywords
+                'fwhm': float, optional
+                    The FWHM of the Gaussian. Default is 0.8.
+                'beta': float, optional
+                    The beta of the moffat, default 2.5
+                'g1': float, optional
+                    The shape of the PSF on the 1-axis. Default is 0.
+                'g2': float, optional
+                    The shape of the PSF on the 2-axis. Default is 0.
+
 
             'ps' - any of the following keywords
                 trunc : float
@@ -1295,11 +1307,23 @@ class Sim(object):
                     .shear(g1=g1, g2=g2)
                     .withFlux(1.0)
                 )
-                return psf
+
+            elif self.psf_type == 'moffat':
+                kws = copy.deepcopy(self.psf_kws)
+                g1 = kws.pop('g1')
+                g2 = kws.pop('g2')
+                psf = (
+                    galsim.Moffat(**kws)
+                    .shear(g1=g1, g2=g2)
+                    .withFlux(1.0)
+                )
             elif self.psf_type == 'ps':
-                return self._ps_psf_objs[band][epoch].getPSF(galsim.PositionD(x=x, y=y))
+                pos = galsim.PositionD(x=x, y=y)
+                psf = self._ps_psf_objs[band][epoch].getPSF(pos)
             else:
                 raise ValueError('psf_type "%s" not valid!' % self.psf_type)
+
+            return psf
 
         def _psf_render_func(*, x, y, center_psf, get_offset=False):
             image_pos = galsim.PositionD(x=x, y=y)
