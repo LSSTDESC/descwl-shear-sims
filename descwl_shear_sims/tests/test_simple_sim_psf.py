@@ -1,6 +1,5 @@
 import pytest
 import numpy as np
-import galsim
 
 from ..simple_sim import Sim
 
