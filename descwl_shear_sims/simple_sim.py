@@ -280,6 +280,11 @@ class Sim(object):
     star_bleeds: bool, optional
         If `True` then add bleeds. Default is `False`.
 
+    trim_stamps: bool, optional
+        If True, trim the stamps copied into the images.  This is to prevent
+        the star images from getting too large and galsim raising exceptions.
+        Default True.
+
     Methods
     -------
     gen_sim()
@@ -330,6 +335,7 @@ class Sim(object):
         stars_type='fixed',
         stars_kws=None,
         star_bleeds=False,
+        trim_stamps=True,
     ):
         self._rng = (
             rng
@@ -347,6 +353,7 @@ class Sim(object):
         ########################################
         # rendering
         self.saturate = saturate  # will be forced True if star_bleeds is True
+        self.trim_stamps = trim_stamps
 
         ########################################
         # band structure
@@ -779,6 +786,7 @@ class Sim(object):
                     g2=self.g2,
                     shear_scene=self.shear_scene,
                     threshold=self.noise_per_band[band_ind],
+                    trim_stamps=self.trim_stamps,
                 )
 
                 se_image += self._generate_noise_image(band_ind)
