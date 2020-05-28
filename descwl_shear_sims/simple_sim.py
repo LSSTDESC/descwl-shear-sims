@@ -280,6 +280,11 @@ class Sim(object):
     star_bleeds: bool, optional
         If `True` then add bleeds. Default is `False`.
 
+    trim_stamps: bool, optional
+        If True, trim the stamps copied into the images.  This is to prevent
+        the star images from getting too large and galsim raising exceptions.
+        Default True.
+
     Methods
     -------
     gen_sim()
