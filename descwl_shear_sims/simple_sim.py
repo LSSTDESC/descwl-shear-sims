@@ -44,7 +44,7 @@ LOGGER = logging.getLogger(__name__)
 
 GALS_KWS_DEFAULTS = {
     'exp': {'half_light_radius': 0.5, 'mag': 17.75},
-    'wldeblend': {'make_round': False},
+    'wldeblend': {'make_round': False, 'noise_factor': 1.0},
 }
 STARS_KWS_DEFAULTS = {
     'density': 1,
@@ -147,6 +147,10 @@ class Sim(object):
                     given, you need to have the one square degree catsim catalog
                     in the current working directory or in the directory given by
                     the environment variable 'CATSIM_DIR'.
+                'make_round': bool
+                    If True, make the objects round
+                'noise_factor': float
+                    Factor by which to scale the noise, default 1
 
     psf_type : str, optional
         A string indicating the kind of PSF. Possible options are
@@ -417,7 +421,11 @@ class Sim(object):
                 'gals_kws',
             )
         else:
-            check_keys(self.gals_kws, ('catalog', 'make_round'), 'gals_kws')
+            check_keys(
+                self.gals_kws,
+                ('catalog', 'make_round', 'noise_factor'),
+                'gals_kws',
+            )
 
         if self.gals_type == 'exp':
             self._fixed_gal_mag = self.gals_kws['mag']
@@ -709,7 +717,7 @@ class Sim(object):
 
             noises.append(np.sqrt(self._surveys[band].mean_sky_level))
 
-        self.noise_per_band = np.array(noises)
+        self.noise_per_band = np.array(noises)*self.gals_kws['noise_factor']
         self.noise_per_epoch = self.noise_per_band * np.sqrt(self.epochs_per_band)
 
         # when we sample from the catalog, we need to pull the right number
