@@ -5,6 +5,12 @@ from ..simple_sim import Sim
 
 @pytest.mark.parametrize('gals_type', ['exp', 'wldeblend'])
 def test_simple_sim_noise_repeat(gals_type):
+    """
+    test that the noise in the signal image is repeated for different shear
+    values
+
+    Test that the noise image, used for metacal corrections, is repeated
+    """
     seed = 100
 
     if gals_type == 'exp':
@@ -35,9 +41,14 @@ def test_simple_sim_noise_repeat(gals_type):
             obs_plus = data_plus[band][epoch]
             obs_minus = data_minus[band][epoch]
 
-            assert np.all(obs_plus.image == obs_minus.image)
-            assert np.all(obs_plus.noise == obs_minus.noise)
-            assert np.all(obs_plus.image != 0)
-            assert np.all(obs_plus.noise != 0)
-            assert np.all(obs_minus.image != 0)
-            assert np.all(obs_minus.noise != 0)
+            # repeatability tests
+            assert np.all(obs_plus.image.array == obs_minus.image.array)
+            assert np.all(obs_plus.noise.array == obs_minus.noise.array)
+
+            # sanity checks
+            assert np.all(obs_plus.image.array != 0)
+            assert np.all(obs_plus.noise.array != 0)
+            assert np.all(obs_minus.image.array != 0)
+            assert np.all(obs_minus.noise.array != 0)
+            assert np.all(obs_plus.image.array != obs_plus.noise.array)
+            assert np.all(obs_minus.image.array != obs_minus.noise.array)
