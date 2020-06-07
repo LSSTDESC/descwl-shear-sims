@@ -1057,11 +1057,19 @@ class Sim(object):
         """
 
         object_data = []
+
+        if not self.gals and not self.stars:
+            return object_data
+
         nobj = self._get_nobj()
         LOGGER.info('drawing %d objects for a %f square arcmin patch',
                     nobj, self.area_sqr_arcmin)
 
-        gal_frac = self._gal_dens / (self._star_dens + self._gal_dens)
+        total_density = (self._star_dens + self._gal_dens)
+        if total_density > 0:
+            gal_frac = self._gal_dens / (self._star_dens + self._gal_dens)
+        else:
+            gal_frac = 0
 
         for i in range(nobj):
             # unsheared offset from center of uv image
