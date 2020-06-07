@@ -13,23 +13,16 @@ def test_simple_sim_noise_repeat(gals_type):
     """
     seed = 100
 
-    if gals_type == 'exp':
-        gals_kws = {'density': 0}
-    else:
-        gals_kws = {}
-
     sim_plus = Sim(
         rng=np.random.RandomState(seed),
         gals=False,
         gals_type=gals_type,
-        gals_kws=gals_kws,
         g1=0.02,
     )
     sim_minus = Sim(
         rng=np.random.RandomState(seed),
         gals=False,
         gals_type=gals_type,
-        gals_kws=gals_kws,
         g1=-0.02,
     )
 
