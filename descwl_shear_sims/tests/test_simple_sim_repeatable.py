@@ -39,9 +39,14 @@ def test_simple_sim_noise_repeat(gals_type):
             assert np.all(obs_plus.noise.array == obs_minus.noise.array)
 
             # sanity checks
+            # testing plus is enough, we showed they are the same above
             assert np.all(obs_plus.image.array != 0)
             assert np.all(obs_plus.noise.array != 0)
-            assert np.all(obs_minus.image.array != 0)
-            assert np.all(obs_minus.noise.array != 0)
             assert np.all(obs_plus.image.array != obs_plus.noise.array)
-            assert np.all(obs_minus.image.array != obs_minus.noise.array)
+
+            expected_var = 1/obs_plus.weight.array[0, 0]
+
+            nvar = obs_plus.noise.array.var()
+            assert abs(nvar/expected_var-1) < 0.015
+            nvar = obs_plus.image.array.var()
+            assert abs(nvar/expected_var-1) < 0.015
