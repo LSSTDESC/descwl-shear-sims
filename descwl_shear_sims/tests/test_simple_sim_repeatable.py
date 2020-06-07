@@ -10,7 +10,10 @@ def test_simple_sim_noise_repeat(gals_type):
     values
 
     Test that the noise image, used for metacal corrections, is repeated
+
+    We can test wldeblend here because there are no galaxies present
     """
+
     seed = 100
 
     sim_plus = Sim(
