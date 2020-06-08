@@ -44,7 +44,6 @@ def make_trivial_sim(*, rng, noise, g1, g2):
             dx = scale*(x - cen[0])
             dy = scale*(y - cen[1])
 
-            print(dx, dy)
             obj = galsim.Exponential(
                 half_light_radius=0.5,
             ).shift(
@@ -71,7 +70,7 @@ def make_trivial_sim(*, rng, noise, g1, g2):
     weight[:, :] = 1.0/noise**2
 
     image += rng.normal(scale=noise, size=image.shape)
-    noise += rng.normal(scale=noise, size=image.shape)
+    noise_image = rng.normal(scale=noise, size=image.shape)
 
     psf_cen = (np.array(psf_image.shape)-1)/2
     psf_jacobian = ngmix.DiagonalJacobian(
@@ -93,8 +92,10 @@ def make_trivial_sim(*, rng, noise, g1, g2):
     obs = ngmix.Observation(
         image=image,
         weight=weight,
-        noise=noise,
+        noise=noise_image,
         psf=psf_obs,
+        bmask=np.zeros(image.shape, dtype='i4'),
+        ormask=np.zeros(image.shape, dtype='i4'),
         jacobian=jacobian,
         store_pixels=False,
     )
