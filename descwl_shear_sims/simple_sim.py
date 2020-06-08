@@ -656,17 +656,18 @@ class Sim(object):
         from .galaxy_builder import RoundGalaxyBuilder
 
         # make sure to find the proper catalog
-        if 'catalog' not in self.gals_kws:
-            fname = os.path.join(
-                os.environ.get('CATSIM_DIR', '.'),
-                'OneDegSq.fits')
-        else:
-            fname = self.gals_kws['catalog']
+        if self.gals:
+            if 'catalog' not in self.gals_kws:
+                fname = os.path.join(
+                    os.environ.get('CATSIM_DIR', '.'),
+                    'OneDegSq.fits')
+            else:
+                fname = self.gals_kws['catalog']
 
-        self._wldeblend_cat = cached_catalog_read(fname)
-        self._wldeblend_cat['pa_disk'] = self._rng.uniform(
-            low=0.0, high=360.0, size=self._wldeblend_cat.size)
-        self._wldeblend_cat['pa_bulge'] = self._wldeblend_cat['pa_disk']
+            self._wldeblend_cat = cached_catalog_read(fname)
+            self._wldeblend_cat['pa_disk'] = self._rng.uniform(
+                low=0.0, high=360.0, size=self._wldeblend_cat.size)
+            self._wldeblend_cat['pa_bulge'] = self._wldeblend_cat['pa_disk']
 
         self._surveys = {}
         self._builders = {}
@@ -725,7 +726,11 @@ class Sim(object):
         # and we fill a fraction of the image, we need to set the
         # base source density `ngal`. This is in units of number per
         # square arcminute.
-        self._gal_dens = self._wldeblend_cat.size / (60 * 60)
+        if self.gals:
+            self._gal_dens = self._wldeblend_cat.size / (60 * 60)
+        else:
+            self._gal_dens = 0.0
+
         LOGGER.info('catalog density: %f per sqr arcmin', self._gal_dens)
 
     def _get_patch_ranges(self):
@@ -1057,11 +1062,19 @@ class Sim(object):
         """
 
         object_data = []
+
+        if not self.gals and not self.stars:
+            return object_data
+
         nobj = self._get_nobj()
         LOGGER.info('drawing %d objects for a %f square arcmin patch',
                     nobj, self.area_sqr_arcmin)
 
-        gal_frac = self._gal_dens / (self._star_dens + self._gal_dens)
+        total_density = (self._star_dens + self._gal_dens)
+        if total_density > 0:
+            gal_frac = self._gal_dens / (self._star_dens + self._gal_dens)
+        else:
+            gal_frac = 0
 
         for i in range(nobj):
             # unsheared offset from center of uv image
