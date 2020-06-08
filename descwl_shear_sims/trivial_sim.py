@@ -30,7 +30,7 @@ def make_trivial_sim(*, rng, noise, g1, g2):
     cen = (np.array(dims)-1)/2
     n_on_side = 6
 
-    spacing = dim/n_on_side
+    spacing = dim/(n_on_side+1)
 
     objlist = []
 
@@ -44,17 +44,18 @@ def make_trivial_sim(*, rng, noise, g1, g2):
             dx = scale*(x - cen[0])
             dy = scale*(y - cen[1])
 
+            print(dx, dy)
             obj = galsim.Exponential(
                 half_light_radius=0.5,
             ).shift(
                 dx=dx,
                 dy=dy,
             )
-            obj = galsim.Convolve(obj, psf)
             objlist.append(obj)
 
     all_obj = galsim.Add(objlist)
     all_obj = all_obj.shear(g1=g1, g2=g2)
+    all_obj = galsim.Convolve(all_obj, psf)
 
     psf_image = psf.drawImage(scale=scale).array
     psf_image += rng.normal(scale=psf_noise, size=psf_image.shape)
@@ -69,8 +70,8 @@ def make_trivial_sim(*, rng, noise, g1, g2):
     weight = image.copy()
     weight[:, :] = 1.0/noise**2
 
-    image += rng.gaussian(scale=noise, size=image.shape)
-    noise += rng.gaussian(scale=noise, size=image.shape)
+    image += rng.normal(scale=noise, size=image.shape)
+    noise += rng.normal(scale=noise, size=image.shape)
 
     psf_cen = (np.array(psf_image.shape)-1)/2
     psf_jacobian = ngmix.DiagonalJacobian(
