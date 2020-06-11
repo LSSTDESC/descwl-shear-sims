@@ -1,102 +1,136 @@
 import galsim
-import ngmix
 import numpy as np
+from .se_obs import SEObs
+from .gen_tanwcs import gen_tanwcs
 
 
-def make_trivial_sim(*, rng, noise, g1, g2):
-    """
-    make a grid sim with trivial pixel scale, fixed sized
-    exponentials and gaussian psf
+class TrivialSim(object):
+    def __init__(self, *, rng, noise, g1, g2):
+        """
+        make a grid sim with trivial pixel scale, fixed sized
+        exponentials and gaussian psf
 
-    Parameters
-    ----------
-    rng: numpy.RandomState
-        The random number generator
-    noise: float
-        Gaussian noise level
-    g1: float
-        Shear g1
-    g2: float
-        Shear g2
+        Parameters
+        ----------
+        rng: numpy.RandomState
+            The random number generator
+        noise: float
+            Gaussian noise level
+        g1: float
+            Shear g1
+        g2: float
+            Shear g2
+        """
 
-    Returns
-    --------
-    obs: ngmix.Observation
-    """
-    psf_noise = 1.0e-6
-    dim = 351
-    scale = 0.2
-    dims = [dim]*2
-    cen = (np.array(dims)-1)/2
-    n_on_side = 6
+        self.object_data = None
+        dim = 351
+        self.psf_dim = 51
+        scale = 0.2
+        dims = [dim]*2
+        cen = (np.array(dims)-1)/2
+        n_on_side = 6
 
-    spacing = dim/(n_on_side+1)
+        spacing = dim/(n_on_side+1)
 
-    objlist = []
+        objlist = []
 
-    psf = galsim.Gaussian(fwhm=0.8)
+        psf = galsim.Gaussian(fwhm=0.8)
 
-    for ix in range(n_on_side):
-        for iy in range(n_on_side):
-            x = spacing + ix*spacing + rng.uniform(low=-0.5, high=0.5)
-            y = spacing + iy*spacing + rng.uniform(low=-0.5, high=0.5)
+        for ix in range(n_on_side):
+            for iy in range(n_on_side):
+                x = spacing + ix*spacing + rng.uniform(low=-0.5, high=0.5)
+                y = spacing + iy*spacing + rng.uniform(low=-0.5, high=0.5)
 
-            dx = scale*(x - cen[0])
-            dy = scale*(y - cen[1])
+                dx = scale*(x - cen[0])
+                dy = scale*(y - cen[1])
 
-            obj = galsim.Exponential(
-                half_light_radius=0.5,
-            ).shift(
-                dx=dx,
-                dy=dy,
-            )
-            objlist.append(obj)
+                obj = galsim.Exponential(
+                    half_light_radius=0.5,
+                ).shift(
+                    dx=dx,
+                    dy=dy,
+                )
+                objlist.append(obj)
 
-    all_obj = galsim.Add(objlist)
-    all_obj = all_obj.shear(g1=g1, g2=g2)
-    all_obj = galsim.Convolve(all_obj, psf)
+        all_obj = galsim.Add(objlist)
+        all_obj = all_obj.shear(g1=g1, g2=g2)
+        all_obj = galsim.Convolve(all_obj, psf)
 
-    psf_image = psf.drawImage(scale=scale).array
-    psf_image += rng.normal(scale=psf_noise, size=psf_image.shape)
-    psf_weight = psf_image.copy()
-    psf_weight[:, :] = 1/psf_noise**2
+        image = all_obj.drawImage(
+            nx=dim,
+            ny=dim,
+            scale=scale,
+        )
+        weight = image.copy()
+        weight.array[:, :] = 1.0/noise**2
 
-    image = all_obj.drawImage(
-        nx=dim,
-        ny=dim,
-        scale=scale,
-    ).array
-    weight = image.copy()
-    weight[:, :] = 1.0/noise**2
+        image.array[:, :] += rng.normal(scale=noise, size=dims)
+        noise_image = image.copy()
+        noise_image.array[:, :] = rng.normal(scale=noise, size=dims)
 
-    image += rng.normal(scale=noise, size=image.shape)
-    noise_image = rng.normal(scale=noise, size=image.shape)
+        self._psf = psf
 
-    psf_cen = (np.array(psf_image.shape)-1)/2
-    psf_jacobian = ngmix.DiagonalJacobian(
-        row=psf_cen[0],
-        col=psf_cen[1],
-        scale=scale,
-    )
-    jacobian = ngmix.DiagonalJacobian(
-        row=cen[0],
-        col=cen[1],
-        scale=scale,
-    )
+        world_origin = galsim.CelestialCoord(
+            ra=200 * galsim.degrees,
+            dec=0 * galsim.degrees,
+        )
+        se_origin = galsim.PositionD(x=cen[1], y=cen[0])
 
-    psf_obs = ngmix.Observation(
-        image=psf_image,
-        weight=psf_weight,
-        jacobian=psf_jacobian,
-    )
-    obs = ngmix.Observation(
-        image=image,
-        weight=weight,
-        noise=noise_image,
-        psf=psf_obs,
-        bmask=np.zeros(image.shape, dtype='i4'),
-        ormask=np.zeros(image.shape, dtype='i4'),
-        jacobian=jacobian,
-        store_pixels=False,
-    )
-    return obs
+        self._tan_wcs = gen_tanwcs(
+            position_angle_range=(0, 0),
+            dither_range=(0, 0),
+            scale_frac_std=0,
+            shear_std=0,
+            scale=scale,
+            world_origin=world_origin,
+            origin=se_origin,
+            rng=rng,
+        )
+        self.coadd_wcs = self._tan_wcs
+        self.coadd_dim = dim
+
+        bmask = galsim.Image(
+            np.zeros(dims, dtype='i4'),
+            bounds=image.bounds,
+            wcs=image.wcs,
+            dtype=np.int32,
+        )
+
+        self._seobs = SEObs(
+            image=image,
+            noise=noise_image,
+            weight=weight,
+            wcs=self._tan_wcs,
+            psf_function=self._psf_func,
+            bmask=bmask,
+        )
+
+    def gen_sim(self):
+        """
+        Returns a dict, keyed by band, with values lists
+        of SEObs.  Currently the band is always 'i' and the
+        lists are length 1
+        """
+        return {
+            'i': [self._seobs],
+        }
+
+    def _psf_func(self, *, x, y, center_psf, get_offset=False):
+
+        image_pos = galsim.PositionD(x=x, y=y)
+
+        offset = galsim.PositionD(x=0.0, y=0.0)
+
+        if not center_psf:
+            print("ignoring request to not center psf")
+
+        gsimage = self._psf.drawImage(
+            nx=self.psf_dim,
+            ny=self.psf_dim,
+            offset=offset,
+            wcs=self._tan_wcs.local(image_pos=image_pos),
+        )
+        if get_offset:
+            return gsimage, offset
+        else:
+            return gsimage
