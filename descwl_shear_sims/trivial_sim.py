@@ -1,5 +1,4 @@
 import galsim
-import ngmix
 import numpy as np
 from .se_obs import SEObs
 from .gen_tanwcs import gen_tanwcs
@@ -21,10 +20,6 @@ class TrivialSim(object):
             Shear g1
         g2: float
             Shear g2
-
-        Returns
-        --------
-        obs: ngmix.Observation
         """
 
         self.object_data = None
@@ -111,6 +106,11 @@ class TrivialSim(object):
         )
 
     def gen_sim(self):
+        """
+        Returns a dict, keyed by band, with values lists
+        of SEObs.  Currently the band is always 'i' and the
+        lists are length 1
+        """
         return {
             'i': [self._seobs],
         }
