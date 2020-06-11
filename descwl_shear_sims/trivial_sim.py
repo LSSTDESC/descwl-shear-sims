@@ -1,11 +1,10 @@
 import galsim
 import numpy as np
 from .se_obs import SEObs
-from .gen_tanwcs import gen_tanwcs
 
 
 class TrivialSim(object):
-    def __init__(self, *, rng, noise, g1, g2):
+    def __init__(self, *, rng, noise, g1, g2, dither):
         """
         make a grid sim with trivial pixel scale, fixed sized
         exponentials and gaussian psf
@@ -20,6 +19,8 @@ class TrivialSim(object):
             Shear g1
         g2: float
             Shear g2
+        dither: bool
+            If set to True, dither randomly by a pixel width
         """
 
         self.object_data = None
@@ -29,6 +30,22 @@ class TrivialSim(object):
         dims = [dim]*2
         cen = (np.array(dims)-1)/2
         n_on_side = 6
+
+        world_origin = galsim.CelestialCoord(
+            ra=200 * galsim.degrees,
+            dec=0 * galsim.degrees,
+        )
+
+        se_origin = galsim.PositionD(x=cen[1], y=cen[0])
+        if dither:
+            offset = rng.uniform(low=-0.5, high=0.5, size=2)
+            se_origin = se_origin + galsim.PositionD(x=offset[0], y=offset[1])
+        else:
+            offset = None
+
+        # the coadd will be placed on the undithered grid
+        self.coadd_dim = dim
+        coadd_origin = galsim.PositionD(x=cen[1], y=cen[0])
 
         spacing = dim/(n_on_side+1)
 
@@ -56,10 +73,12 @@ class TrivialSim(object):
         all_obj = all_obj.shear(g1=g1, g2=g2)
         all_obj = galsim.Convolve(all_obj, psf)
 
+        # everything gets shifted by the dither offset
         image = all_obj.drawImage(
             nx=dim,
             ny=dim,
             scale=scale,
+            offset=offset,
         )
         weight = image.copy()
         weight.array[:, :] = 1.0/noise**2
@@ -70,24 +89,16 @@ class TrivialSim(object):
 
         self._psf = psf
 
-        world_origin = galsim.CelestialCoord(
-            ra=200 * galsim.degrees,
-            dec=0 * galsim.degrees,
-        )
-        se_origin = galsim.PositionD(x=cen[1], y=cen[0])
-
-        self._tan_wcs = gen_tanwcs(
-            position_angle_range=(0, 0),
-            dither_range=(0, 0),
-            scale_frac_std=0,
-            shear_std=0,
+        se_wcs = make_wcs(
             scale=scale,
+            image_origin=se_origin,
             world_origin=world_origin,
-            origin=se_origin,
-            rng=rng,
         )
-        self.coadd_wcs = self._tan_wcs
-        self.coadd_dim = dim
+        self.coadd_wcs = make_wcs(
+            scale=scale,
+            image_origin=coadd_origin,
+            world_origin=world_origin,
+        )
 
         bmask = galsim.Image(
             np.zeros(dims, dtype='i4'),
@@ -100,7 +111,7 @@ class TrivialSim(object):
             image=image,
             noise=noise_image,
             weight=weight,
-            wcs=self._tan_wcs,
+            wcs=se_wcs,
             psf_function=self._psf_func,
             bmask=bmask,
         )
@@ -134,3 +145,15 @@ class TrivialSim(object):
             return gsimage, offset
         else:
             return gsimage
+
+
+def make_wcs(*, scale, image_origin, world_origin):
+    return galsim.TanWCS(
+        affine=galsim.AffineTransform(
+            scale, 0, 0, scale,
+            origin=image_origin,
+            world_origin=galsim.PositionD(0, 0),
+        ),
+        world_origin=world_origin,
+        units=galsim.arcsec,
+    )
