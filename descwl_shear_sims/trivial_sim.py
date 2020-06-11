@@ -137,7 +137,7 @@ class TrivialSim(object):
         offset = copy.deepcopy(self._offset)
 
         if center_psf:
-            print("ignoring request to not center psf, using internal offset")
+            print("ignoring request to center psf, using internal offset")
 
         gsimage = self._psf.drawImage(
             nx=self.psf_dim,
