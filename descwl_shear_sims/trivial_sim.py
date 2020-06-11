@@ -1,10 +1,11 @@
+import copy
 import galsim
 import numpy as np
 from .se_obs import SEObs
 
 
 class TrivialSim(object):
-    def __init__(self, *, rng, noise, g1, g2, dither):
+    def __init__(self, *, rng, noise, g1, g2, dither=False):
         """
         make a grid sim with trivial pixel scale, fixed sized
         exponentials and gaussian psf
@@ -38,10 +39,11 @@ class TrivialSim(object):
 
         se_origin = galsim.PositionD(x=cen[1], y=cen[0])
         if dither:
-            offset = rng.uniform(low=-0.5, high=0.5, size=2)
-            se_origin = se_origin + galsim.PositionD(x=offset[0], y=offset[1])
+            off = rng.uniform(low=-0.5, high=0.5, size=2)
+            self._offset = galsim.PositionD(x=off[0], y=off[1])
+            se_origin = se_origin + self._offset
         else:
-            offset = None
+            self._offset = None
 
         # the coadd will be placed on the undithered grid
         self.coadd_dim = dim
@@ -78,7 +80,7 @@ class TrivialSim(object):
             nx=dim,
             ny=dim,
             scale=scale,
-            offset=offset,
+            offset=self._offset,
         )
         weight = image.copy()
         weight.array[:, :] = 1.0/noise**2
@@ -89,7 +91,7 @@ class TrivialSim(object):
 
         self._psf = psf
 
-        se_wcs = make_wcs(
+        self.se_wcs = make_wcs(
             scale=scale,
             image_origin=se_origin,
             world_origin=world_origin,
@@ -111,7 +113,7 @@ class TrivialSim(object):
             image=image,
             noise=noise_image,
             weight=weight,
-            wcs=se_wcs,
+            wcs=self.se_wcs,
             psf_function=self._psf_func,
             bmask=bmask,
         )
@@ -127,19 +129,21 @@ class TrivialSim(object):
         }
 
     def _psf_func(self, *, x, y, center_psf, get_offset=False):
-
+        """
+        center_psf is ignored
+        """
         image_pos = galsim.PositionD(x=x, y=y)
 
-        offset = galsim.PositionD(x=0.0, y=0.0)
+        offset = copy.deepcopy(self._offset)
 
-        if not center_psf:
-            print("ignoring request to not center psf")
+        if center_psf:
+            print("ignoring request to not center psf, using internal offset")
 
         gsimage = self._psf.drawImage(
             nx=self.psf_dim,
             ny=self.psf_dim,
             offset=offset,
-            wcs=self._tan_wcs.local(image_pos=image_pos),
+            wcs=self.se_wcs.local(image_pos=image_pos),
         )
         if get_offset:
             return gsimage, offset
