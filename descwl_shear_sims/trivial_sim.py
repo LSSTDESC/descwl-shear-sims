@@ -11,6 +11,30 @@ WORLD_ORIGIN = galsim.CelestialCoord(
 
 
 class TrivialSim(object):
+    """
+    simple sim with round galaxies on a grid, with dithers, rotations, possibly
+    multiple epochs
+
+    Parameters
+    ----------
+    rng: np.RandomState
+        The input random state
+    noise: float
+        Noise level.  If there are multiple epochs, the noise per epoch is set
+        to noise*sqrt(nepochs) to keep s/n constant
+    g1: float
+        Shear g1
+    g2: float
+        Shear g2
+    dither: bool
+        If True, dither the images by +/- 0.5 pixels, default False
+    rotate: bool
+        If True, rotate randomly, default False
+    bands: sequence
+        List of band names, default ['i']
+    epochs_per_band: int
+        Number of epochs per band, default 1
+    """
     def __init__(self,
                  *, rng, noise, g1, g2,
                  dither=False, rotate=False,
@@ -19,6 +43,7 @@ class TrivialSim(object):
         self.psf_dim = 51
         self.coadd_dim = 351
         self.object_data = None
+        noise_per_epoch = noise*np.sqrt(epochs_per_band)
 
         self._sim_data = {}
         for band in bands:
@@ -26,7 +51,7 @@ class TrivialSim(object):
             for epoch in range(epochs_per_band):
                 tim = TrivialImage(
                     rng=rng,
-                    noise=noise,
+                    noise=noise_per_epoch,
                     g1=g1,
                     g2=g2,
                     coadd_dim=self.coadd_dim,
@@ -99,7 +124,7 @@ class TrivialImage(object):
 
         se_origin = galsim.PositionD(x=cen[1], y=cen[0])
         if dither:
-            dither_range = 10
+            dither_range = 0.5
             off = rng.uniform(low=-dither_range, high=dither_range, size=2)
             self._offset = galsim.PositionD(x=off[0], y=off[1])
             se_origin = se_origin + self._offset
@@ -212,18 +237,6 @@ def make_wcs(*, scale, image_origin, world_origin, theta=None):
     return galsim.TanWCS(
         affine=galsim.AffineTransform(
             mat[0, 0], mat[0, 1], mat[1, 0], mat[1, 1],
-            origin=image_origin,
-            world_origin=galsim.PositionD(0, 0),
-        ),
-        world_origin=world_origin,
-        units=galsim.arcsec,
-    )
-
-
-def make_wcs_norot(*, scale, image_origin, world_origin):
-    return galsim.TanWCS(
-        affine=galsim.AffineTransform(
-            scale, 0, 0, scale,
             origin=image_origin,
             world_origin=galsim.PositionD(0, 0),
         ),
