@@ -3,9 +3,93 @@ import galsim
 import numpy as np
 from .se_obs import SEObs
 
+SCALE = 0.2
+WORLD_ORIGIN = galsim.CelestialCoord(
+    ra=200 * galsim.degrees,
+    dec=0 * galsim.degrees,
+)
+
 
 class TrivialSim(object):
-    def __init__(self, *, rng, noise, g1, g2, dither=False):
+    """
+    simple sim with round galaxies on a grid, with dithers, rotations, possibly
+    multiple epochs
+
+    Parameters
+    ----------
+    rng: np.RandomState
+        The input random state
+    noise: float
+        Noise level.  If there are multiple epochs, the noise per epoch is set
+        to noise*sqrt(nepochs) to keep s/n constant
+    g1: float
+        Shear g1
+    g2: float
+        Shear g2
+    dither: bool
+        If True, dither the images by +/- 0.5 pixels, default False
+    rotate: bool
+        If True, rotate randomly, default False
+    bands: sequence
+        List of band names, default ['i']
+    epochs_per_band: int
+        Number of epochs per band, default 1
+    """
+    def __init__(self,
+                 *, rng, noise, g1, g2,
+                 dither=False, rotate=False,
+                 bands=['i'], epochs_per_band=1):
+
+        self.psf_dim = 51
+        self.coadd_dim = 351
+        self.object_data = None
+        noise_per_epoch = noise*np.sqrt(epochs_per_band)
+
+        self._sim_data = {}
+        for band in bands:
+            se_obslist = []
+            for epoch in range(epochs_per_band):
+                tim = TrivialImage(
+                    rng=rng,
+                    noise=noise_per_epoch,
+                    g1=g1,
+                    g2=g2,
+                    coadd_dim=self.coadd_dim,
+                    psf_dim=self.psf_dim,
+                    dither=dither,
+                    rotate=rotate,
+                )
+                se_obslist.append(tim.seobs)
+
+            self._sim_data[band] = se_obslist
+
+        self._set_coadd_wcs()
+
+    def gen_sim(self):
+        """
+        Returns a dict, keyed by band, with values lists
+        of SEObs.  Currently the band is always 'i' and the
+        lists are length 1
+        """
+        return self._sim_data
+
+    def _set_coadd_wcs(self):
+        # the coadd will be placed on the undithered grid
+        coadd_dims = [self.coadd_dim]*2
+        coadd_cen = (np.array(coadd_dims)-1)/2
+        coadd_origin = galsim.PositionD(x=coadd_cen[1], y=coadd_cen[0])
+        self.coadd_wcs = make_wcs(
+            scale=SCALE,
+            image_origin=coadd_origin,
+            world_origin=WORLD_ORIGIN,
+        )
+
+
+class TrivialImage(object):
+    def __init__(self, *, rng, noise, g1, g2,
+                 coadd_dim,
+                 psf_dim,
+                 dither=False, rotate=False):
         """
         make a grid sim with trivial pixel scale, fixed sized
         exponentials and gaussian psf
@@ -22,46 +106,54 @@ class TrivialSim(object):
             Shear g2
         dither: bool
             If set to True, dither randomly by a pixel width
+        rotate: bool
+            If set to True, rotate the image randomly
         """
 
-        self.object_data = None
-        dim = 351
-        self.psf_dim = 51
-        scale = 0.2
-        dims = [dim]*2
-        cen = (np.array(dims)-1)/2
-        n_on_side = 6
+        self.psf_dim = psf_dim
 
-        world_origin = galsim.CelestialCoord(
-            ra=200 * galsim.degrees,
-            dec=0 * galsim.degrees,
+        self._psf = galsim.Gaussian(fwhm=0.8)
+
+        se_dim = (
+            int(np.ceil(coadd_dim * np.sqrt(2))) + 20
         )
+
+        se_dims = [se_dim]*2
+        cen = (np.array(se_dims)-1)/2
+        n_on_side = 6
 
         se_origin = galsim.PositionD(x=cen[1], y=cen[0])
         if dither:
-            off = rng.uniform(low=-0.5, high=0.5, size=2)
+            dither_range = 0.5
+            off = rng.uniform(low=-dither_range, high=dither_range, size=2)
             self._offset = galsim.PositionD(x=off[0], y=off[1])
             se_origin = se_origin + self._offset
         else:
             self._offset = None
 
-        # the coadd will be placed on the undithered grid
-        self.coadd_dim = dim
-        coadd_origin = galsim.PositionD(x=cen[1], y=cen[0])
+        if rotate:
+            theta = rng.uniform(low=0, high=2*np.pi)
+        else:
+            theta = None
 
-        spacing = dim/(n_on_side+1)
+        self.se_wcs = make_wcs(
+            scale=SCALE,
+            theta=theta,
+            image_origin=se_origin,
+            world_origin=WORLD_ORIGIN,
+        )
+
+        # we want to fit them into the coadd region
+        spacing = coadd_dim/(n_on_side+1)*SCALE
 
         objlist = []
 
-        psf = galsim.Gaussian(fwhm=0.8)
-
+        # ix/iy are really on the sky
+        grid = spacing*(np.arange(n_on_side) - (n_on_side-1)/2)
         for ix in range(n_on_side):
             for iy in range(n_on_side):
-                x = spacing + ix*spacing + rng.uniform(low=-0.5, high=0.5)
-                y = spacing + iy*spacing + rng.uniform(low=-0.5, high=0.5)
-
-                dx = scale*(x - cen[0])
-                dy = scale*(y - cen[1])
+                dx = grid[ix] + SCALE*rng.uniform(low=-0.5, high=0.5)
+                dy = grid[iy] + SCALE*rng.uniform(low=-0.5, high=0.5)
 
                 obj = galsim.Exponential(
                     half_light_radius=0.5,
@@ -73,43 +165,30 @@ class TrivialSim(object):
 
         all_obj = galsim.Add(objlist)
         all_obj = all_obj.shear(g1=g1, g2=g2)
-        all_obj = galsim.Convolve(all_obj, psf)
+        all_obj = galsim.Convolve(all_obj, self._psf)
 
         # everything gets shifted by the dither offset
         image = all_obj.drawImage(
-            nx=dim,
-            ny=dim,
-            scale=scale,
+            nx=se_dim,
+            ny=se_dim,
+            wcs=self.se_wcs,
             offset=self._offset,
         )
         weight = image.copy()
         weight.array[:, :] = 1.0/noise**2
 
-        image.array[:, :] += rng.normal(scale=noise, size=dims)
+        image.array[:, :] += rng.normal(scale=noise, size=se_dims)
         noise_image = image.copy()
-        noise_image.array[:, :] = rng.normal(scale=noise, size=dims)
-
-        self._psf = psf
-
-        self.se_wcs = make_wcs(
-            scale=scale,
-            image_origin=se_origin,
-            world_origin=world_origin,
-        )
-        self.coadd_wcs = make_wcs(
-            scale=scale,
-            image_origin=coadd_origin,
-            world_origin=world_origin,
-        )
+        noise_image.array[:, :] = rng.normal(scale=noise, size=se_dims)
 
         bmask = galsim.Image(
-            np.zeros(dims, dtype='i4'),
+            np.zeros(se_dims, dtype='i4'),
             bounds=image.bounds,
             wcs=image.wcs,
             dtype=np.int32,
         )
 
-        self._seobs = SEObs(
+        self.seobs = SEObs(
             image=image,
             noise=noise_image,
             weight=weight,
@@ -117,16 +196,6 @@ class TrivialSim(object):
             psf_function=self._psf_func,
             bmask=bmask,
         )
-
-    def gen_sim(self):
-        """
-        Returns a dict, keyed by band, with values lists
-        of SEObs.  Currently the band is always 'i' and the
-        lists are length 1
-        """
-        return {
-            'i': [self._seobs],
-        }
 
     def _psf_func(self, *, x, y, center_psf, get_offset=False):
         """
@@ -151,10 +220,23 @@ class TrivialSim(object):
             return gsimage
 
 
-def make_wcs(*, scale, image_origin, world_origin):
+def make_wcs(*, scale, image_origin, world_origin, theta=None):
+    mat = np.array(
+        [[scale, 0.0],
+         [0.0, scale]],
+    )
+    if theta is not None:
+        costheta = np.cos(theta)
+        sintheta = np.sin(theta)
+        rot = np.array(
+            [[costheta, -sintheta],
+             [sintheta, costheta]],
+        )
+        mat = np.dot(mat, rot)
+
     return galsim.TanWCS(
         affine=galsim.AffineTransform(
-            scale, 0, 0, scale,
+            mat[0, 0], mat[0, 1], mat[1, 0], mat[1, 1],
             origin=image_origin,
             world_origin=galsim.PositionD(0, 0),
         ),
