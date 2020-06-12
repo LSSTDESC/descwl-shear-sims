@@ -40,10 +40,19 @@ class TrivialSim(object):
                  dither=False, rotate=False,
                  bands=['i'], epochs_per_band=1):
 
+        self.rng = rng
         self.psf_dim = 51
         self.coadd_dim = 351
+        self.g1 = g1
+        self.g2 = g2
         self.object_data = None
         noise_per_epoch = noise*np.sqrt(epochs_per_band)
+
+        all_obj = self.get_objects()
+
+        se_dim = (
+            int(np.ceil(self.coadd_dim * np.sqrt(2))) + 20
+        )
 
         self._sim_data = {}
         for band in bands:
@@ -52,9 +61,8 @@ class TrivialSim(object):
                 tim = TrivialImage(
                     rng=rng,
                     noise=noise_per_epoch,
-                    g1=g1,
-                    g2=g2,
-                    coadd_dim=self.coadd_dim,
+                    all_obj=all_obj,
+                    dim=se_dim,
                     psf_dim=self.psf_dim,
                     dither=dither,
                     rotate=rotate,
@@ -64,6 +72,32 @@ class TrivialSim(object):
             self._sim_data[band] = se_obslist
 
         self._set_coadd_wcs()
+
+    def get_objects(self):
+
+        n_on_side = 6
+        spacing = self.coadd_dim/(n_on_side+1)*SCALE
+
+        # ix/iy are really on the sky
+        grid = spacing*(np.arange(n_on_side) - (n_on_side-1)/2)
+
+        objlist = []
+        for ix in range(n_on_side):
+            for iy in range(n_on_side):
+                dx = grid[ix] + SCALE*self.rng.uniform(low=-0.5, high=0.5)
+                dy = grid[iy] + SCALE*self.rng.uniform(low=-0.5, high=0.5)
+
+                obj = galsim.Exponential(
+                    half_light_radius=0.5,
+                ).shift(
+                    dx=dx,
+                    dy=dy,
+                )
+                objlist.append(obj)
+
+        all_obj = galsim.Add(objlist)
+        all_obj = all_obj.shear(g1=self.g1, g2=self.g2)
+        return all_obj
 
     def gen_sim(self):
         """
@@ -86,8 +120,7 @@ class TrivialSim(object):
 
 
 class TrivialImage(object):
-    def __init__(self, *, rng, noise, g1, g2,
-                 coadd_dim,
+    def __init__(self, *, rng, noise, all_obj, dim,
                  psf_dim,
                  dither=False, rotate=False):
         """
@@ -114,13 +147,8 @@ class TrivialImage(object):
 
         self._psf = galsim.Gaussian(fwhm=0.8)
 
-        se_dim = (
-            int(np.ceil(coadd_dim * np.sqrt(2))) + 20
-        )
-
-        se_dims = [se_dim]*2
-        cen = (np.array(se_dims)-1)/2
-        n_on_side = 6
+        dims = [dim]*2
+        cen = (np.array(dims)-1)/2
 
         se_origin = galsim.PositionD(x=cen[1], y=cen[0])
         if dither:
@@ -144,45 +172,24 @@ class TrivialImage(object):
         )
 
         # we want to fit them into the coadd region
-        spacing = coadd_dim/(n_on_side+1)*SCALE
-
-        objlist = []
-
-        # ix/iy are really on the sky
-        grid = spacing*(np.arange(n_on_side) - (n_on_side-1)/2)
-        for ix in range(n_on_side):
-            for iy in range(n_on_side):
-                dx = grid[ix] + SCALE*rng.uniform(low=-0.5, high=0.5)
-                dy = grid[iy] + SCALE*rng.uniform(low=-0.5, high=0.5)
-
-                obj = galsim.Exponential(
-                    half_light_radius=0.5,
-                ).shift(
-                    dx=dx,
-                    dy=dy,
-                )
-                objlist.append(obj)
-
-        all_obj = galsim.Add(objlist)
-        all_obj = all_obj.shear(g1=g1, g2=g2)
-        all_obj = galsim.Convolve(all_obj, self._psf)
+        convolved_obj = galsim.Convolve(all_obj, self._psf)
 
         # everything gets shifted by the dither offset
-        image = all_obj.drawImage(
-            nx=se_dim,
-            ny=se_dim,
+        image = convolved_obj.drawImage(
+            nx=dim,
+            ny=dim,
             wcs=self.se_wcs,
             offset=self._offset,
         )
         weight = image.copy()
         weight.array[:, :] = 1.0/noise**2
 
-        image.array[:, :] += rng.normal(scale=noise, size=se_dims)
+        image.array[:, :] += rng.normal(scale=noise, size=dims)
         noise_image = image.copy()
-        noise_image.array[:, :] = rng.normal(scale=noise, size=se_dims)
+        noise_image.array[:, :] = rng.normal(scale=noise, size=dims)
 
         bmask = galsim.Image(
-            np.zeros(se_dims, dtype='i4'),
+            np.zeros(dims, dtype='i4'),
             bounds=image.bounds,
             wcs=image.wcs,
             dtype=np.int32,
