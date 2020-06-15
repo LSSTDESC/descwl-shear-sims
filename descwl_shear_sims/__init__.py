@@ -6,4 +6,5 @@ from .simple_sim import Sim
 from .trivial_sim import (
     make_trivial_sim,
     get_trivial_sim_config,
+    make_galaxy_catalog,
 )

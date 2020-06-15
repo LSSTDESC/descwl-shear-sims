@@ -1,6 +1,7 @@
 import copy
 import galsim
 import numpy as np
+import descwl
 from .se_obs import SEObs
 
 SCALE = 0.2
@@ -13,6 +14,7 @@ GRID_N_ON_SIDE = 6
 RANDOM_DENSITY = 80  # per square arcmin
 
 DEFAULT_TRIVIAL_SIM_CONFIG = {
+    'gal_type': 'fixed',
     'psf_dim': 51,
     'coadd_dim': 351,
     'buff': 50,
@@ -23,14 +25,17 @@ DEFAULT_TRIVIAL_SIM_CONFIG = {
     'epochs_per_band': 1,
 }
 
+DEFAULT_FIXED_GAL_CONFIG = {
+    'flux': 150000.0,
+    'hlr': 0.5,
+}
+
 
 def make_trivial_sim(
     *,
     rng,
-    noise,
+    galaxy_catalog,
     coadd_dim,
-    buff,
-    layout,
     g1,
     g2,
     psf_dim=51,
@@ -46,31 +51,16 @@ def make_trivial_sim(
     ----------
     rng: numpy.random.RandomState
         Numpy random state
-    noise: float
-        Noise level for images
     coadd_dim: int
         Default 351
-    buff: int
-        Buffer region where no objects will be drawn, default 50
-    layout: string
-        'grid' or 'random'
     g1: float
         Shear g1 for galaxies
     g2: float
         Shear g2 for galaxies
 
     """
-    offsets = get_offsets(
-        rng=rng,
-        coadd_dim=coadd_dim,
-        buff=buff,
-        layout=layout,
-    )
 
-    galaxy_catalog = FixedGalaxyCatalog(offsets=offsets, g1=g1, g2=g2)
     psf = galsim.Gaussian(fwhm=0.8)
-
-    noise_per_epoch = noise*np.sqrt(epochs_per_band)
 
     se_dim = (
         int(np.ceil(coadd_dim * np.sqrt(2))) + 20
@@ -78,8 +68,17 @@ def make_trivial_sim(
 
     band_data = {}
     for band in bands:
-        all_obj = galaxy_catalog.get_objects(band=band)
-        seobj_list = []
+
+        if galaxy_catalog.gal_type == 'wldeblend':
+            survey = WLDeblendSurvey(band=band)
+        else:
+            survey = TrivialSurvey()
+
+        noise_per_epoch = survey.noise*np.sqrt(epochs_per_band)
+
+        all_obj = galaxy_catalog.get_all_obj(survey=survey, g1=g1, g2=g2)
+
+        seobs_list = []
         for epoch in range(epochs_per_band):
             seobs = make_seobs(
                 rng=rng,
@@ -91,9 +90,9 @@ def make_trivial_sim(
                 dither=dither,
                 rotate=rotate,
             )
-            seobj_list.append(seobs)
+            seobs_list.append(seobs)
 
-        band_data[band] = seobj_list
+        band_data[band] = seobs_list
 
     coadd_wcs = make_coadd_wcs(coadd_dim)
 
@@ -105,44 +104,50 @@ def make_trivial_sim(
     }
 
 
-class FixedGalaxyCatalog(object):
+def make_galaxy_catalog(
+    *,
+    rng,
+    gal_type,
+    coadd_dim,
+    buff,
+    layout,
+    gal_config=None,
+):
     """
-    Galaxies of fixed galsim type, flux, and size
-
-    Same for all bands
+    rng: numpy.random.RandomState
+        Numpy random state
+    gal_type: string
+        'exp' or 'wldeblend'
+    coadd_dim: int
+        Dimensions of coadd
+    buff: int
+        Buffer around the edge where no objects are drawn
+    layout: string
+        'grid' or 'random'
+    gal_config: dict or None
+        Can be sent for fixed galaxy catalog.  See DEFAULT_FIXED_GAL_CONFIG
+        for defaults
     """
-    def __init__(self, *, offsets, g1, g2):
-        self.offsets = offsets
-        self.g1 = g1
-        self.g2 = g2
+    if gal_type == 'wldeblend':
+        galaxy_catalog = WLDeblendGalaxyCatalog(
+            rng=rng,
+            coadd_dim=coadd_dim,
+            buff=buff,
+            layout=layout,
+        )
+    else:
 
-    def get_objects(self, *, band):
-        """
-        get a list of galsim objects
+        gal_config = get_fixed_gal_config(config=gal_config)
+        galaxy_catalog = FixedGalaxyCatalog(
+            rng=rng,
+            coadd_dim=coadd_dim,
+            buff=buff,
+            layout=layout,
+            flux=gal_config['flux'],
+            hlr=gal_config['hlr'],
+        )
 
-        Parameters
-        ----------
-        band: string
-            Get objects for this band.  For the fixed
-            catalog, the objects are the same for every band
-
-        Returns
-        -------
-        list of galsim objects
-        """
-        objlist = []
-        for i in range(self.offsets.size):
-            obj = galsim.Exponential(
-                half_light_radius=0.5,
-            ).shift(
-                dx=self.offsets['dx'][i],
-                dy=self.offsets['dy'][i]
-            )
-            objlist.append(obj)
-
-        all_obj = galsim.Add(objlist)
-        all_obj = all_obj.shear(g1=self.g1, g2=self.g2)
-        return all_obj
+    return galaxy_catalog
 
 
 def make_wcs(*, scale, image_origin, world_origin, theta=None):
@@ -421,7 +426,185 @@ def make_seobs(
 
 def get_trivial_sim_config(config=None):
     out_config = copy.deepcopy(DEFAULT_TRIVIAL_SIM_CONFIG)
+    sub_configs = ['gal_config']
 
     if config is not None:
+        for key in config:
+            if key not in out_config and key not in sub_configs:
+                raise ValueError("bad key for sim: '%s'" % key)
         out_config.update(config)
     return out_config
+
+
+def get_fixed_gal_config(config=None):
+    out_config = copy.deepcopy(DEFAULT_FIXED_GAL_CONFIG)
+
+    if config is not None:
+        for key in config:
+            if key not in out_config:
+                raise ValueError("bad key for fixed gals: '%s'" % key)
+        out_config.update(config)
+    return out_config
+
+
+class WLDeblendSurvey(object):
+    def __init__(self, *, band):
+
+        pars = descwl.survey.Survey.get_defaults(
+            survey_name='LSST',
+            filter_band=band,
+        )
+
+        pars['survey_name'] = 'LSST'
+        pars['filter_band'] = band
+        pars['pixel_scale'] = SCALE
+
+        # note in the way we call the descwl package, the image width
+        # and height is not actually used
+        pars['image_width'] = 10
+        pars['image_height'] = 10
+
+        # some versions take in the PSF and will complain if it is not
+        # given
+        try:
+            svy = descwl.survey.Survey(**pars)
+        except Exception:
+            pars['psf_model'] = None
+            svy = descwl.survey.Survey(**pars)
+
+        self._survey = svy
+        self.noise = np.sqrt(self._survey.mean_sky_level)
+
+
+class TrivialSurvey(object):
+    def __init__(self):
+        self.noise = 1.0
+
+
+class FixedGalaxyCatalog(object):
+    """
+    Galaxies of fixed galsim type, flux, and size
+
+    Same for all bands
+    """
+    def __init__(self, *, rng, coadd_dim, buff, layout, flux, hlr):
+        self.gal_type = 'exp'
+        self.flux = flux
+        self.hlr = hlr
+        self.rng = rng
+
+        self.offsets = get_offsets(
+            rng=rng,
+            coadd_dim=coadd_dim,
+            buff=buff,
+            layout=layout,
+        )
+
+    def get_all_obj(self, *, survey, g1, g2):
+        """
+        get a list of galsim objects
+
+        Parameters
+        ----------
+        band: string
+            Get objects for this band.  For the fixed
+            catalog, the objects are the same for every band
+
+        Returns
+        -------
+        list of galsim objects
+        """
+
+        num = self.offsets.size
+        objlist = [self._get_galaxy(i) for i in range(num)]
+
+        return galsim.Add(
+            objlist,
+        ).shear(
+            g1=g1,
+            g2=g2,
+        )
+
+    def _get_galaxy(self, i):
+        return galsim.Exponential(
+            half_light_radius=self.hlr,
+            flux=self.flux,
+        ).shift(
+            dx=self.offsets['dx'][i],
+            dy=self.offsets['dy'][i]
+        )
+
+
+class WLDeblendGalaxyCatalog(object):
+    """
+    Galaxies from wldeblend
+    """
+    def __init__(self, *, rng, coadd_dim, buff, layout):
+        self.gal_type = 'wldeblend'
+        self.rng = rng
+        self.offsets = get_offsets(
+            rng=rng,
+            coadd_dim=coadd_dim,
+            buff=buff,
+            layout=layout,
+        )
+
+        num = self.offsets.size
+        self.indices = self.rng.randint(
+            0,
+            self._wldeblend_cat.size,
+            size=num,
+        )
+
+        self.angles = self.rng.uniform(low=0, high=360, size=num)
+
+    def get_all_obj(self, *, survey, g1, g2):
+        """
+        get a combined set of galsim objects
+
+        Returns
+        -------
+        equivalent of galsim.Add(list_of_objs)
+        """
+
+        builder = descwl.model.GalaxyBuilder(
+            survey=survey,
+            no_disk=False,
+            no_bulge=False,
+            no_agn=False,
+            verbose_model=False,
+        )
+
+        num = self.offsets.size
+
+        band = survey.filter_band
+        objlist = [self._get_galaxy(builder, i, band) for i in range(num)]
+
+        return galsim.Add(
+            objlist,
+        ).shear(
+            g1=g1,
+            g2=g2,
+        )
+
+    def _get_galaxy(self, builder, band, i):
+
+        index = self.indices[i]
+        dx = self.offsets['dx'][i]
+        dy = self.offsets['dy'][i]
+
+        angle = self.angles[i]
+
+        galaxy = builder.from_catalog(
+            self._wldeblend_cat[index],
+            0,
+            0,
+            band,
+        ).model.rotate(
+            angle * galsim.degrees,
+        ).shift(
+            dx=dx,
+            dy=dy,
+        )
+
+        return galaxy
