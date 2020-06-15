@@ -105,44 +105,6 @@ def make_trivial_sim(
     }
 
 
-def make_galaxy_catalog(
-    *,
-    rng,
-    coadd_dim=351,
-    buff=50,
-    layout='grid',
-    g1=0.0,
-    g2=0.0,
-):
-    """
-    Make an object catalog
-
-    Parameters
-    ----------
-    rng: numpy.random.RandomState
-        Numpy random state
-    coadd_dim: int
-        Default 351
-    buff: int
-        Buffer region where no objects will be drawn, default 50
-    layout: string
-        'grid' or 'random'
-    g1: float
-        Shear g1 for galaxies
-    g2: float
-        Shear g2 for galaxies
-    """
-
-    offsets = get_offsets(
-        rng=rng,
-        coadd_dim=coadd_dim,
-        buff=buff,
-        layout=layout,
-    )
-
-    return FixedGalaxyCatalog(offsets=offsets, g1=g1, g2=g2)
-
-
 class FixedGalaxyCatalog(object):
     """
     Galaxies of fixed galsim type, flux, and size
@@ -256,6 +218,8 @@ def get_offsets(
             buff=buff,
             size=nobj,
         )
+    else:
+        raise ValueError("bad layout: '%s'" % layout)
 
     return offsets
 
