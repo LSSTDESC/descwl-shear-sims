@@ -1,3 +1,4 @@
+import os
 import pytest
 import numpy as np
 from ..trivial_sim import (
@@ -120,6 +121,31 @@ def test_trivial_sim_layout(layout):
         coadd_dim=coadd_dim,
         buff=30,
         layout=layout,
+    )
+
+    _ = make_trivial_sim(
+        rng=rng,
+        galaxy_catalog=galaxy_catalog,
+        coadd_dim=coadd_dim,
+        g1=0.02,
+        g2=0.00,
+    )
+
+
+@pytest.mark.skipif(
+    "CATSIM_DIR" not in os.environ,
+    reason='simulation input data is not present',
+)
+def test_trivial_sim_wldeblend():
+    seed = 7421
+    coadd_dim = 201
+    rng = np.random.RandomState(seed)
+
+    galaxy_catalog = make_galaxy_catalog(
+        rng=rng,
+        gal_type="wldeblend",
+        coadd_dim=coadd_dim,
+        buff=30,
     )
 
     _ = make_trivial_sim(
