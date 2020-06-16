@@ -1,8 +1,10 @@
+import os
 import copy
 import galsim
 import numpy as np
 import descwl
 from .se_obs import SEObs
+from .cache_tools import cached_catalog_read
 
 SCALE = 0.2
 WORLD_ORIGIN = galsim.CelestialCoord(
@@ -69,11 +71,7 @@ def make_trivial_sim(
     band_data = {}
     for band in bands:
 
-        if galaxy_catalog.gal_type == 'wldeblend':
-            survey = WLDeblendSurvey(band=band)
-        else:
-            survey = TrivialSurvey()
-
+        survey = get_survey(gal_type=galaxy_catalog.gal_type, band=band)
         noise_per_epoch = survey.noise*np.sqrt(epochs_per_band)
 
         all_obj = galaxy_catalog.get_all_obj(survey=survey, g1=g1, g2=g2)
@@ -102,6 +100,17 @@ def make_trivial_sim(
         'psf_dims': [psf_dim]*2,
         'coadd_dims': [coadd_dim]*2,
     }
+
+
+def get_survey(*, gal_type, band):
+    if gal_type == 'wldeblend':
+        survey = WLDeblendSurvey(band=band)
+    elif gal_type in ['exp']:
+        survey = TrivialSurvey()
+    else:
+        raise ValueError("bad gal_type: '%s'" % gal_type)
+
+    return survey
 
 
 def make_galaxy_catalog(
@@ -192,6 +201,7 @@ def get_offsets(
     coadd_dim,
     buff,
     layout,
+    nobj=None,
 ):
     """
     make position offsets for objects
@@ -204,6 +214,10 @@ def get_offsets(
         Buffer region where no objects will be drawn
     layout: string
         'grid' or 'random'
+    nobj: int, optional
+        Optional number of objects to draw, defaults to None
+        in which case a poission deviate is draw according
+        to RANDOM_DENSITY
     """
 
     if layout == 'grid':
@@ -214,9 +228,11 @@ def get_offsets(
         )
     elif layout == 'random':
         # area covered by objects
-        area = ((coadd_dim - 2*buff)*SCALE/60)**2
-        nobj_mean = area * RANDOM_DENSITY
-        nobj = rng.poisson(nobj_mean)
+        if nobj is None:
+            area = ((coadd_dim - 2*buff)*SCALE/60)**2
+            nobj_mean = area * RANDOM_DENSITY
+            nobj = rng.poisson(nobj_mean)
+
         offsets = get_random_offsets(
             rng=rng,
             dim=coadd_dim,
@@ -472,8 +488,9 @@ class WLDeblendSurvey(object):
             pars['psf_model'] = None
             svy = descwl.survey.Survey(**pars)
 
-        self._survey = svy
-        self.noise = np.sqrt(self._survey.mean_sky_level)
+        self.noise = np.sqrt(svy.mean_sky_level)
+
+        self.descwl_survey = svy
 
 
 class TrivialSurvey(object):
@@ -542,11 +559,21 @@ class WLDeblendGalaxyCatalog(object):
     def __init__(self, *, rng, coadd_dim, buff, layout):
         self.gal_type = 'wldeblend'
         self.rng = rng
+
+        self._wldeblend_cat = read_wldeblend_cat(rng)
+
+        # one square degree catalog, convert to arcmin
+        gal_dens = self._wldeblend_cat.size / (60 * 60)
+        area = ((coadd_dim - 2*buff)*SCALE/60)**2
+        nobj_mean = area * gal_dens
+        nobj = rng.poisson(nobj_mean)
+
         self.offsets = get_offsets(
             rng=rng,
             coadd_dim=coadd_dim,
             buff=buff,
             layout=layout,
+            nobj=nobj,
         )
 
         num = self.offsets.size
@@ -568,7 +595,7 @@ class WLDeblendGalaxyCatalog(object):
         """
 
         builder = descwl.model.GalaxyBuilder(
-            survey=survey,
+            survey=survey.descwl_survey,
             no_disk=False,
             no_bulge=False,
             no_agn=False,
@@ -577,8 +604,8 @@ class WLDeblendGalaxyCatalog(object):
 
         num = self.offsets.size
 
-        band = survey.filter_band
-        objlist = [self._get_galaxy(builder, i, band) for i in range(num)]
+        band = survey.descwl_survey.filter_band
+        objlist = [self._get_galaxy(builder, band, i) for i in range(num)]
 
         return galsim.Add(
             objlist,
@@ -608,3 +635,24 @@ class WLDeblendGalaxyCatalog(object):
         )
 
         return galaxy
+
+
+def read_wldeblend_cat(rng):
+    """
+    we get it from the cache, but update the position angles
+    each time
+    """
+    fname = os.path.join(
+        os.environ.get('CATSIM_DIR', '.'),
+        'OneDegSq.fits',
+    )
+
+    cat = cached_catalog_read(fname)
+
+    cat['pa_disk'] = rng.uniform(
+        low=0.0,
+        high=360.0,
+        size=cat.size,
+    )
+    cat['pa_bulge'] = cat['pa_disk']
+    return cat
