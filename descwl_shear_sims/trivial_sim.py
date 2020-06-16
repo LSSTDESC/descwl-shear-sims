@@ -344,6 +344,8 @@ class FixedPSF(object):
             wcs=self._wcs.local(image_pos=image_pos),
         )
         if get_offset:
+            if offset is None:
+                offset = galsim.PositionD(x=0.0, y=0.0)
             return gsimage, offset
         else:
             return gsimage
