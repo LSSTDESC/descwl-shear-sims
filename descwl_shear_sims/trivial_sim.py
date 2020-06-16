@@ -28,6 +28,7 @@ DEFAULT_TRIVIAL_SIM_CONFIG = {
     "rotate": False,
     "bands": ["i"],
     "epochs_per_band": 1,
+    "noise_factor": 1.0,
 }
 
 DEFAULT_FIXED_GAL_CONFIG = {
@@ -49,6 +50,7 @@ def make_trivial_sim(
     rotate=False,
     bands=['i'],
     epochs_per_band=1,
+    noise_factor=1.0,
 ):
     """
     Make simulation data
@@ -57,13 +59,26 @@ def make_trivial_sim(
     ----------
     rng: numpy.random.RandomState
         Numpy random state
+    galaxy_catalog: catalog
+        E.g. WLDeblendGalaxyCatalog or FixedGalaxyCatalog
     coadd_dim: int
         Default 351
     g1: float
         Shear g1 for galaxies
     g2: float
         Shear g2 for galaxies
-
+    psf_dim: int, optional
+        Dimensions of psf image.  Default 51
+    dither: bool, optional
+        Whether to dither the images at the pixel level, default False
+    rotate: bool, optional
+        Whether to rotate the images randomly, default False
+    bands: list, optional
+        Default ['i']
+    epochs_per_band: int, optional
+        Number of epochs per band
+    noise_factor: float, optional
+        Factor by which to multiply the noise, default 1
     """
 
     se_dim = (
@@ -74,7 +89,7 @@ def make_trivial_sim(
     for band in bands:
 
         survey = get_survey(gal_type=galaxy_catalog.gal_type, band=band)
-        noise_per_epoch = survey.noise*np.sqrt(epochs_per_band)
+        noise_per_epoch = survey.noise*np.sqrt(epochs_per_band)*noise_factor
 
         all_obj = galaxy_catalog.get_all_obj(survey=survey, g1=g1, g2=g2)
 
