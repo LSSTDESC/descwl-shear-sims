@@ -16,7 +16,7 @@ GRID_N_ON_SIDE = 6
 RANDOM_DENSITY = 80  # per square arcmin
 
 DEFAULT_TRIVIAL_SIM_CONFIG = {
-    'gal_type': 'fixed',
+    'gal_type': 'exp',
     'psf_dim': 51,
     'coadd_dim': 351,
     'buff': 50,
@@ -119,7 +119,7 @@ def make_galaxy_catalog(
     gal_type,
     coadd_dim,
     buff,
-    layout,
+    layout=None,
     gal_config=None,
 ):
     """
@@ -131,8 +131,9 @@ def make_galaxy_catalog(
         Dimensions of coadd
     buff: int
         Buffer around the edge where no objects are drawn
-    layout: string
-        'grid' or 'random'
+    layout: string, optional
+        'grid' or 'random'.  Ignored for gal_type "wldeblend", otherwise
+        required.
     gal_config: dict or None
         Can be sent for fixed galaxy catalog.  See DEFAULT_FIXED_GAL_CONFIG
         for defaults
@@ -142,9 +143,11 @@ def make_galaxy_catalog(
             rng=rng,
             coadd_dim=coadd_dim,
             buff=buff,
-            layout=layout,
         )
     else:
+
+        if layout is None:
+            raise ValueError("send layout= for gal_type '%s'" % gal_type)
 
         gal_config = get_fixed_gal_config(config=gal_config)
         galaxy_catalog = FixedGalaxyCatalog(
@@ -558,7 +561,7 @@ class WLDeblendGalaxyCatalog(object):
     """
     Galaxies from wldeblend
     """
-    def __init__(self, *, rng, coadd_dim, buff, layout):
+    def __init__(self, *, rng, coadd_dim, buff):
         self.gal_type = 'wldeblend'
         self.rng = rng
 
@@ -574,7 +577,7 @@ class WLDeblendGalaxyCatalog(object):
             rng=rng,
             coadd_dim=coadd_dim,
             buff=buff,
-            layout=layout,
+            layout="random",
             nobj=nobj,
         )
 
