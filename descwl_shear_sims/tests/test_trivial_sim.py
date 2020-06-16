@@ -4,6 +4,7 @@ import numpy as np
 from ..trivial_sim import (
     make_trivial_sim,
     make_galaxy_catalog,
+    make_psf,
 )
 
 
@@ -27,12 +28,14 @@ def test_trivial_sim_smoke(dither, rotate):
         layout="grid",
     )
 
+    psf = make_psf(psf_type="gauss")
     _ = make_trivial_sim(
         rng=rng,
         galaxy_catalog=galaxy_catalog,
         coadd_dim=351,
         g1=0.02,
         g2=0.00,
+        psf=psf,
         dither=dither,
         rotate=rotate,
     )
@@ -54,6 +57,7 @@ def test_trivial_sim():
         layout="grid",
     )
 
+    psf = make_psf(psf_type="moffat")
     sim_data = make_trivial_sim(
         rng=rng,
         galaxy_catalog=galaxy_catalog,
@@ -61,6 +65,7 @@ def test_trivial_sim():
         psf_dim=psf_dim,
         g1=0.02,
         g2=0.00,
+        psf=psf,
         bands=bands,
     )
 
@@ -92,6 +97,7 @@ def test_trivial_sim_epochs(epochs_per_band):
         layout="grid",
     )
 
+    psf = make_psf(psf_type="gauss")
     sim_data = make_trivial_sim(
         rng=rng,
         galaxy_catalog=galaxy_catalog,
@@ -99,6 +105,7 @@ def test_trivial_sim_epochs(epochs_per_band):
         psf_dim=psf_dim,
         g1=0.02,
         g2=0.00,
+        psf=psf,
         bands=bands,
         epochs_per_band=epochs_per_band,
     )
@@ -123,12 +130,14 @@ def test_trivial_sim_layout(layout):
         layout=layout,
     )
 
+    psf = make_psf(psf_type="gauss")
     _ = make_trivial_sim(
         rng=rng,
         galaxy_catalog=galaxy_catalog,
         coadd_dim=coadd_dim,
         g1=0.02,
         g2=0.00,
+        psf=psf,
     )
 
 
@@ -148,10 +157,12 @@ def test_trivial_sim_wldeblend():
         buff=30,
     )
 
+    psf = make_psf(psf_type="moffat")
     _ = make_trivial_sim(
         rng=rng,
         galaxy_catalog=galaxy_catalog,
         coadd_dim=coadd_dim,
         g1=0.02,
         g2=0.00,
+        psf=psf,
     )

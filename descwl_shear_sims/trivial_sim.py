@@ -6,6 +6,8 @@ import descwl
 from .se_obs import SEObs
 from .cache_tools import cached_catalog_read
 
+PSF_FWHM = 0.8
+MOFFAT_BETA = 2.5
 SCALE = 0.2
 WORLD_ORIGIN = galsim.CelestialCoord(
     ra=200 * galsim.degrees,
@@ -16,20 +18,21 @@ GRID_N_ON_SIDE = 6
 RANDOM_DENSITY = 80  # per square arcmin
 
 DEFAULT_TRIVIAL_SIM_CONFIG = {
-    'gal_type': 'exp',
-    'psf_dim': 51,
-    'coadd_dim': 351,
-    'buff': 50,
-    'layout': 'grid',
-    'dither': False,
-    'rotate': False,
-    'bands': ['i'],
-    'epochs_per_band': 1,
+    "gal_type": "exp",
+    "psf_type": "gauss",
+    "psf_dim": 51,
+    "coadd_dim": 351,
+    "buff": 50,
+    "layout": "grid",
+    "dither": False,
+    "rotate": False,
+    "bands": ["i"],
+    "epochs_per_band": 1,
 }
 
 DEFAULT_FIXED_GAL_CONFIG = {
-    'flux': 150000.0,
-    'hlr': 0.5,
+    "flux": 150000.0,
+    "hlr": 0.5,
 }
 
 
@@ -40,6 +43,7 @@ def make_trivial_sim(
     coadd_dim,
     g1,
     g2,
+    psf,
     psf_dim=51,
     dither=False,
     rotate=False,
@@ -61,8 +65,6 @@ def make_trivial_sim(
         Shear g2 for galaxies
 
     """
-
-    psf = galsim.Gaussian(fwhm=0.8)
 
     se_dim = (
         int(np.ceil(coadd_dim * np.sqrt(2))) + 20
@@ -661,3 +663,14 @@ def read_wldeblend_cat(rng):
     )
     cat['pa_bulge'] = cat['pa_disk']
     return cat
+
+
+def make_psf(*, psf_type):
+    if psf_type == "gauss":
+        psf = galsim.Gaussian(fwhm=PSF_FWHM)
+    elif psf_type == "moffat":
+        psf = galsim.Moffat(fwhm=PSF_FWHM, beta=MOFFAT_BETA)
+    else:
+        raise ValueError("bad psf_type '%s'" % psf_type)
+
+    return psf
