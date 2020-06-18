@@ -91,7 +91,8 @@ def make_trivial_sim(
         survey = get_survey(gal_type=galaxy_catalog.gal_type, band=band)
         noise_per_epoch = survey.noise*np.sqrt(epochs_per_band)*noise_factor
 
-        all_obj = galaxy_catalog.get_all_obj(survey=survey, g1=g1, g2=g2)
+        # all_obj = galaxy_catalog.get_all_obj(survey=survey, g1=g1, g2=g2)
+        all_obj = galaxy_catalog.get_objlist(survey=survey, g1=g1, g2=g2)
 
         seobs_list = []
         for epoch in range(epochs_per_band):
@@ -426,8 +427,16 @@ def make_seobs(
         world_origin=WORLD_ORIGIN,
     )
 
-    # we want to fit them into the coadd region
-    convolved_objects = galsim.Convolve(all_obj, psf)
+    if False:
+        all_obj = galsim.Add(all_obj)
+        convolved_objects = galsim.Convolve(all_obj, psf)
+    else:
+        # convolving first gives a slightly different result, but is needed for
+        # variable psfs.
+        convolved_objects = [
+            galsim.Convolve(obj, psf) for obj in all_obj
+        ]
+        convolved_objects = galsim.Add(convolved_objects)
 
     # everything gets shifted by the dither offset
     image = convolved_objects.drawImage(
@@ -539,6 +548,28 @@ class FixedGalaxyCatalog(object):
             layout=layout,
         )
 
+    def get_objlist(self, *, survey, g1, g2):
+        """
+        get a list of galsim objects
+
+        Parameters
+        ----------
+        band: string
+            Get objects for this band.  For the fixed
+            catalog, the objects are the same for every band
+
+        Returns
+        -------
+        [galsim objects]
+        """
+
+        num = self.offsets.size
+        objlist = [
+            self._get_galaxy(i).shear(g1=g1, g2=g2)
+            for i in range(num)
+        ]
+        return objlist
+
     def get_all_obj(self, *, survey, g1, g2):
         """
         get a list of galsim objects
@@ -606,6 +637,33 @@ class WLDeblendGalaxyCatalog(object):
         )
 
         self.angles = self.rng.uniform(low=0, high=360, size=num)
+
+    def get_objlist(self, *, survey, g1, g2):
+        """
+        get a list of galsim objects
+
+        Returns
+        -------
+        [galsim objects]
+        """
+
+        builder = descwl.model.GalaxyBuilder(
+            survey=survey.descwl_survey,
+            no_disk=False,
+            no_bulge=False,
+            no_agn=False,
+            verbose_model=False,
+        )
+
+        num = self.offsets.size
+
+        band = survey.descwl_survey.filter_band
+        objlist = [
+            self._get_galaxy(builder, band, i).shear(g1=g1, g2=g2)
+            for i in range(num)
+        ]
+
+        return objlist
 
     def get_all_obj(self, *, survey, g1, g2):
         """
