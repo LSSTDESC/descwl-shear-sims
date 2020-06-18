@@ -5,6 +5,7 @@ import numpy as np
 import descwl
 from .se_obs import SEObs
 from .cache_tools import cached_catalog_read
+from .ps_psf import PowerSpectrumPSF
 
 PSF_FWHM = 0.8
 MOFFAT_BETA = 2.5
@@ -67,6 +68,8 @@ def make_trivial_sim(
         Shear g1 for galaxies
     g2: float
         Shear g2 for galaxies
+    psf: GSObject or PowerSpectrumPSF
+        The psf object or power spectrum psf
     psf_dim: int, optional
         Dimensions of psf image.  Default 51
     dither: bool, optional
@@ -81,9 +84,7 @@ def make_trivial_sim(
         Factor by which to multiply the noise, default 1
     """
 
-    se_dim = (
-        int(np.ceil(coadd_dim * np.sqrt(2))) + 20
-    )
+    se_dim = get_se_dim(coadd_dim=coadd_dim)
 
     band_data = {}
     for band in bands:
@@ -92,14 +93,19 @@ def make_trivial_sim(
         noise_per_epoch = survey.noise*np.sqrt(epochs_per_band)*noise_factor
 
         # all_obj = galaxy_catalog.get_all_obj(survey=survey, g1=g1, g2=g2)
-        all_obj = galaxy_catalog.get_objlist(survey=survey, g1=g1, g2=g2)
+        objlist, shifts = galaxy_catalog.get_objlist(
+            survey=survey,
+            g1=g1,
+            g2=g2,
+        )
 
         seobs_list = []
         for epoch in range(epochs_per_band):
             seobs = make_seobs(
                 rng=rng,
                 noise=noise_per_epoch,
-                all_obj=all_obj,
+                objlist=objlist,
+                shifts=shifts,
                 dim=se_dim,
                 psf=psf,
                 psf_dim=psf_dim,
@@ -216,7 +222,7 @@ def make_coadd_wcs(coadd_dim):
     )
 
 
-def get_offsets(
+def get_shifts(
     *,
     rng,
     coadd_dim,
@@ -225,7 +231,7 @@ def get_offsets(
     nobj=None,
 ):
     """
-    make position offsets for objects
+    make position shifts for objects
 
     rng: numpy.random.RandomState
         Numpy random state
@@ -242,7 +248,7 @@ def get_offsets(
     """
 
     if layout == 'grid':
-        offsets = get_grid_offsets(
+        shifts = get_grid_shifts(
             rng=rng,
             dim=coadd_dim,
             n_on_side=GRID_N_ON_SIDE,
@@ -254,7 +260,7 @@ def get_offsets(
             nobj_mean = area * RANDOM_DENSITY
             nobj = rng.poisson(nobj_mean)
 
-        offsets = get_random_offsets(
+        shifts = get_random_shifts(
             rng=rng,
             dim=coadd_dim,
             buff=buff,
@@ -263,12 +269,12 @@ def get_offsets(
     else:
         raise ValueError("bad layout: '%s'" % layout)
 
-    return offsets
+    return shifts
 
 
-def get_grid_offsets(*, rng, dim, n_on_side):
+def get_grid_shifts(*, rng, dim, n_on_side):
     """
-    get a set of gridded offsets, with random offsets at the pixel scale
+    get a set of gridded shifts, with random shifts at the pixel scale
 
     Parameters
     ----------
@@ -281,7 +287,7 @@ def get_grid_offsets(*, rng, dim, n_on_side):
 
     Returns
     -------
-    offsets: array
+    shifts: array
         Array with dx, dy offset fields for each point, in
         arcsec
     """
@@ -292,7 +298,7 @@ def get_grid_offsets(*, rng, dim, n_on_side):
     # ix/iy are really on the sky
     grid = spacing*(np.arange(n_on_side) - (n_on_side-1)/2)
 
-    offsets = np.zeros(ntot, dtype=[('dx', 'f8'), ('dy', 'f8')])
+    shifts = np.zeros(ntot, dtype=[('dx', 'f8'), ('dy', 'f8')])
 
     i = 0
     for ix in range(n_on_side):
@@ -300,16 +306,16 @@ def get_grid_offsets(*, rng, dim, n_on_side):
             dx = grid[ix] + SCALE*rng.uniform(low=-0.5, high=0.5)
             dy = grid[iy] + SCALE*rng.uniform(low=-0.5, high=0.5)
 
-            offsets['dx'][i] = dx
-            offsets['dy'][i] = dy
+            shifts['dx'][i] = dx
+            shifts['dy'][i] = dy
             i += 1
 
-    return offsets
+    return shifts
 
 
-def get_random_offsets(*, rng, dim, buff, size):
+def get_random_shifts(*, rng, dim, buff, size):
     """
-    get a set of gridded offsets, with random offsets at the pixel scale
+    get a set of gridded shifts, with random shifts at the pixel scale
 
     Parameters
     ----------
@@ -322,7 +328,7 @@ def get_random_offsets(*, rng, dim, buff, size):
 
     Returns
     -------
-    offsets: array
+    shifts: array
         Array with dx, dy offset fields for each point, in
         arcsec
     """
@@ -332,12 +338,12 @@ def get_random_offsets(*, rng, dim, buff, size):
     low = -halfwidth*SCALE
     high = halfwidth*SCALE
 
-    offsets = np.zeros(size, dtype=[('dx', 'f8'), ('dy', 'f8')])
+    shifts = np.zeros(size, dtype=[('dx', 'f8'), ('dy', 'f8')])
 
-    offsets['dx'] = rng.uniform(low=low, high=high, size=size)
-    offsets['dy'] = rng.uniform(low=low, high=high, size=size)
+    shifts['dx'] = rng.uniform(low=low, high=high, size=size)
+    shifts['dy'] = rng.uniform(low=low, high=high, size=size)
 
-    return offsets
+    return shifts
 
 
 class FixedPSF(object):
@@ -376,7 +382,8 @@ def make_seobs(
     *,
     rng,
     noise,
-    all_obj,
+    objlist,
+    shifts,
     dim,
     psf,
     psf_dim,
@@ -393,10 +400,17 @@ def make_seobs(
         The random number generator
     noise: float
         Gaussian noise level
-    g1: float
-        Shear g1
-    g2: float
-        Shear g2
+    objlist: list
+        List of GSObj
+    shifts: array
+        Array with fields dx and dy, which are du, dv offsets
+        in sky coords.
+    dim: int
+        Dimension of image
+    psf: GSObject or PowerSpectrumPSF
+        the psf
+    psf_dim: int
+        Dimensions of psf image that will be drawn when psf func is called
     dither: bool
         If set to True, dither randomly by a pixel width
     rotate: bool
@@ -427,19 +441,23 @@ def make_seobs(
         world_origin=WORLD_ORIGIN,
     )
 
-    if False:
-        all_obj = galsim.Add(all_obj)
-        convolved_objects = galsim.Convolve(all_obj, psf)
+    if isinstance(psf, galsim.GSObject):
+        convolved_objects = [galsim.Convolve(obj, psf) for obj in objlist]
+        psf_gsobj = psf
     else:
-        # convolving first gives a slightly different result, but is needed for
-        # variable psfs.
-        convolved_objects = [
-            galsim.Convolve(obj, psf) for obj in all_obj
-        ]
-        convolved_objects = galsim.Add(convolved_objects)
+        convolved_objects = get_convolved_objlist_variable_psf(
+            objlist=objlist,
+            shifts=shifts,
+            psf=psf,
+            wcs=se_wcs,
+            origin=se_origin,
+        )
+        psf_gsobj = psf.getPSF(se_origin)
+
+    objects = galsim.Add(convolved_objects)
 
     # everything gets shifted by the dither offset
-    image = convolved_objects.drawImage(
+    image = objects.drawImage(
         nx=dim,
         ny=dim,
         wcs=se_wcs,
@@ -459,7 +477,7 @@ def make_seobs(
         dtype=np.int32,
     )
 
-    psf_obj = FixedPSF(psf=psf, offset=offset, psf_dim=psf_dim, wcs=se_wcs)
+    psf_obj = FixedPSF(psf=psf_gsobj, offset=offset, psf_dim=psf_dim, wcs=se_wcs)
 
     return SEObs(
         image=image,
@@ -469,6 +487,51 @@ def make_seobs(
         psf_function=psf_obj,
         bmask=bmask,
     )
+
+
+def get_convolved_objlist_variable_psf(
+    *,
+    objlist,
+    shifts,
+    psf,
+    wcs,
+    origin,  # pixel origin
+):
+    """
+    Get a list of psf convolved objects for a variable psf
+
+    Parameters
+    ----------
+    objlist: list
+        List of GSObject
+    shifts: array
+        Array with fields dx and dy, which are du, dv offsets
+        in sky coords.
+    psf: PowerSpectrumPSF
+        See ps_psf
+    wcs: galsim wcs
+        For the SE image
+    origin: galsim.PositionD
+        Origin of SE image (with offset included)
+    """
+
+    jac_wcs = wcs.jacobian(world_pos=wcs.center)
+
+    new_objlist = []
+    for i, obj in enumerate(objlist):
+        shift_pos = galsim.PositionD(
+            x=shifts['dx'][i],
+            y=shifts['dy'][i],
+        )
+        pos = jac_wcs.toImage(shift_pos) + origin
+
+        psf_gsobj = psf.getPSF(pos)
+
+        obj = galsim.Convolve(obj, psf_gsobj)
+
+        new_objlist.append(obj)
+
+    return new_objlist
 
 
 def get_trivial_sim_config(config=None):
@@ -541,7 +604,7 @@ class FixedGalaxyCatalog(object):
         self.hlr = hlr
         self.rng = rng
 
-        self.offsets = get_offsets(
+        self.shifts = get_shifts(
             rng=rng,
             coadd_dim=coadd_dim,
             buff=buff,
@@ -563,12 +626,14 @@ class FixedGalaxyCatalog(object):
         [galsim objects]
         """
 
-        num = self.offsets.size
+        num = self.shifts.size
         objlist = [
             self._get_galaxy(i).shear(g1=g1, g2=g2)
             for i in range(num)
         ]
-        return objlist
+
+        shifts = self.shifts.copy()
+        return objlist, shifts
 
     def get_all_obj(self, *, survey, g1, g2):
         """
@@ -585,7 +650,7 @@ class FixedGalaxyCatalog(object):
         list of galsim objects
         """
 
-        num = self.offsets.size
+        num = self.shifts.size
         objlist = [self._get_galaxy(i) for i in range(num)]
 
         return galsim.Add(
@@ -600,8 +665,8 @@ class FixedGalaxyCatalog(object):
             half_light_radius=self.hlr,
             flux=self.flux,
         ).shift(
-            dx=self.offsets['dx'][i],
-            dy=self.offsets['dy'][i]
+            dx=self.shifts['dx'][i],
+            dy=self.shifts['dy'][i]
         )
 
 
@@ -621,7 +686,7 @@ class WLDeblendGalaxyCatalog(object):
         nobj_mean = area * gal_dens
         nobj = rng.poisson(nobj_mean)
 
-        self.offsets = get_offsets(
+        self.shifts = get_shifts(
             rng=rng,
             coadd_dim=coadd_dim,
             buff=buff,
@@ -629,7 +694,7 @@ class WLDeblendGalaxyCatalog(object):
             nobj=nobj,
         )
 
-        num = self.offsets.size
+        num = self.shifts.size
         self.indices = self.rng.randint(
             0,
             self._wldeblend_cat.size,
@@ -655,7 +720,7 @@ class WLDeblendGalaxyCatalog(object):
             verbose_model=False,
         )
 
-        num = self.offsets.size
+        num = self.shifts.size
 
         band = survey.descwl_survey.filter_band
         objlist = [
@@ -663,7 +728,8 @@ class WLDeblendGalaxyCatalog(object):
             for i in range(num)
         ]
 
-        return objlist
+        shifts = self.shifts.copy()
+        return objlist, shifts
 
     def get_all_obj(self, *, survey, g1, g2):
         """
@@ -682,7 +748,7 @@ class WLDeblendGalaxyCatalog(object):
             verbose_model=False,
         )
 
-        num = self.offsets.size
+        num = self.shifts.size
 
         band = survey.descwl_survey.filter_band
         objlist = [self._get_galaxy(builder, band, i) for i in range(num)]
@@ -697,8 +763,8 @@ class WLDeblendGalaxyCatalog(object):
     def _get_galaxy(self, builder, band, i):
 
         index = self.indices[i]
-        dx = self.offsets['dx'][i]
-        dy = self.offsets['dy'][i]
+        dx = self.shifts['dx'][i]
+        dy = self.shifts['dy'][i]
 
         angle = self.angles[i]
 
@@ -747,3 +813,20 @@ def make_psf(*, psf_type):
         raise ValueError("bad psf_type '%s'" % psf_type)
 
     return psf
+
+
+def make_ps_psf(*, rng, dim):
+    return PowerSpectrumPSF(
+        rng=rng,
+        im_width=dim,
+        buff=dim/2,
+        scale=SCALE,
+        variation_factor=1,
+    )
+
+
+def get_se_dim(*, coadd_dim):
+    """
+    get se dim given coadd dim
+    """
+    return int(np.ceil(coadd_dim * np.sqrt(2))) + 20

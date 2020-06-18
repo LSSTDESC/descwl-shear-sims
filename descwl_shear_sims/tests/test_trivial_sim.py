@@ -5,6 +5,8 @@ from ..trivial_sim import (
     make_trivial_sim,
     make_galaxy_catalog,
     make_psf,
+    make_ps_psf,
+    get_se_dim,
 )
 
 
@@ -77,6 +79,39 @@ def test_trivial_sim():
     band_data = sim_data['band_data']
     for band in bands:
         assert band in band_data
+
+
+@pytest.mark.parametrize("psf_type", ["gauss", "moffat", "ps"])
+def test_trivial_sim_psf_type(psf_type):
+
+    seed = 431
+    rng = np.random.RandomState(seed)
+
+    coadd_dim = 101
+    galaxy_catalog = make_galaxy_catalog(
+        rng=rng,
+        gal_type="exp",
+        coadd_dim=coadd_dim,
+        buff=5,
+        layout="grid",
+    )
+
+    if psf_type == "ps":
+        se_dim = get_se_dim(coadd_dim=coadd_dim)
+        psf = make_ps_psf(rng=rng, dim=se_dim)
+    else:
+        psf = make_psf(psf_type=psf_type)
+
+    _ = make_trivial_sim(
+        rng=rng,
+        galaxy_catalog=galaxy_catalog,
+        coadd_dim=coadd_dim,
+        g1=0.02,
+        g2=0.00,
+        psf=psf,
+        dither=True,
+        rotate=True,
+    )
 
 
 @pytest.mark.parametrize('epochs_per_band', [1, 2, 3])
