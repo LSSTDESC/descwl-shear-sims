@@ -1027,7 +1027,7 @@ class StarCatalog(object):
         self._star_cat = load_sample_stars()
         density_mean = sample_star_density(
             rng=self.rng,
-            min_density=99,
+            min_density=2,
             max_density=100,
         )
 
