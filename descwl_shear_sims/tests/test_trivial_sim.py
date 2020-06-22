@@ -203,6 +203,7 @@ def test_trivial_sim_wldeblend():
         psf=psf,
     )
 
+
 @pytest.mark.skipif(
     "CATSIM_DIR" not in os.environ,
     reason='simulation input data is not present',
