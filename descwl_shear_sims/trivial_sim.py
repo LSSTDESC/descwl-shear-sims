@@ -1,4 +1,5 @@
 import os
+from numba import njit
 import copy
 import galsim
 import numpy as np
@@ -6,6 +7,10 @@ import descwl
 from .se_obs import SEObs
 from .cache_tools import cached_catalog_read
 from .ps_psf import PowerSpectrumPSF
+from .stars import load_sample_stars, sample_star_density, get_star_mag
+from .saturation import saturate_image_and_mask, BAND_SAT_VALS
+from .lsst_bits import BRIGHT
+from .gen_star_masks import add_bright_star_mask
 
 PSF_FWHM = 0.8
 MOFFAT_BETA = 2.5
@@ -17,6 +22,7 @@ WORLD_ORIGIN = galsim.CelestialCoord(
 
 GRID_N_ON_SIDE = 6
 RANDOM_DENSITY = 80  # per square arcmin
+ZERO_POINT = 30.0
 
 DEFAULT_TRIVIAL_SIM_CONFIG = {
     "gal_type": "exp",
@@ -30,10 +36,11 @@ DEFAULT_TRIVIAL_SIM_CONFIG = {
     "bands": ["i"],
     "epochs_per_band": 1,
     "noise_factor": 1.0,
+    "stars": False,
 }
 
 DEFAULT_FIXED_GAL_CONFIG = {
-    "flux": 150000.0,
+    "mag": 17.0,
     "hlr": 0.5,
 }
 
@@ -46,6 +53,7 @@ def make_trivial_sim(
     g1,
     g2,
     psf,
+    star_catalog=None,
     psf_dim=51,
     dither=False,
     rotate=False,
@@ -70,6 +78,8 @@ def make_trivial_sim(
         Shear g2 for galaxies
     psf: GSObject or PowerSpectrumPSF
         The psf object or power spectrum psf
+    star_catalog: catalog
+        e.g. StarCatalog
     psf_dim: int, optional
         Dimensions of psf image.  Default 51
     dither: bool, optional
@@ -92,11 +102,22 @@ def make_trivial_sim(
         survey = get_survey(gal_type=galaxy_catalog.gal_type, band=band)
         noise_per_epoch = survey.noise*np.sqrt(epochs_per_band)*noise_factor
 
-        # all_obj = galaxy_catalog.get_all_obj(survey=survey, g1=g1, g2=g2)
+        # got down to coadd depth in this band (not dividing by sqrt(nbands)
+        # but we could if we want to be more conservative
+        mask_threshold = survey.noise*noise_factor
+
         objlist, shifts = galaxy_catalog.get_objlist(
             survey=survey,
             g1=g1,
             g2=g2,
+        )
+        objlist, shifts, bright_objlist, bright_shifts = get_objlist(
+            galaxy_catalog=galaxy_catalog,
+            survey=survey,
+            g1=g1,
+            g2=g2,
+            star_catalog=star_catalog,
+            noise=noise_per_epoch,
         )
 
         seobs_list = []
@@ -111,6 +132,22 @@ def make_trivial_sim(
                 psf_dim=psf_dim,
                 dither=dither,
                 rotate=rotate,
+                bright_objlist=bright_objlist,
+                bright_shifts=bright_shifts,
+                mask_threshold=mask_threshold,
+            )
+            if galaxy_catalog.gal_type == 'wldeblend':
+                rescale_wldeblend_images(
+                    survey=survey.descwl_survey,
+                    image=seobs.image,
+                    noise=seobs.noise,
+                    weight=seobs.weight,
+                )
+
+            saturate_image_and_mask(
+                seobs.image.array,
+                seobs.bmask.array,
+                BAND_SAT_VALS[band],
             )
             seobs_list.append(seobs)
 
@@ -130,11 +167,58 @@ def get_survey(*, gal_type, band):
     if gal_type == 'wldeblend':
         survey = WLDeblendSurvey(band=band)
     elif gal_type in ['exp']:
-        survey = TrivialSurvey()
+        survey = TrivialSurvey(band=band)
     else:
         raise ValueError("bad gal_type: '%s'" % gal_type)
 
     return survey
+
+
+def get_objlist(*, galaxy_catalog, survey, g1, g2, star_catalog=None, noise=None):
+    """
+    get the objlist and shifts, possibly combining the galaxy catalog
+    with a star catalog
+
+    Parameters
+    ----------
+    galaxy_catalog: catalog
+        e.g. WLDeblendGalaxyCatalog
+    survey: descwl Survey
+        For the appropriate band
+    g1: float
+        Shear for galaxies
+    g2: float
+        Shear for galaxies
+    star_catalog: catalog
+        e.g. StarCatalog
+    noise: float
+        Needed for star catalog
+
+    Returns
+    -------
+    objlist, shifts
+        objlist is a list of galsim GSObject with transformations applied. Shifts
+        is an array with fields dx and dy for each object
+    """
+    objlist, shifts = galaxy_catalog.get_objlist(
+        survey=survey,
+        g1=g1,
+        g2=g2,
+    )
+
+    if star_catalog is not None:
+        assert noise is not None
+        sobjlist, sshifts, bright_objlist, bright_shifts = star_catalog.get_objlist(
+            survey=survey, noise=noise,
+        )
+        objlist = objlist + sobjlist
+
+        shifts = np.hstack((shifts, sshifts))
+    else:
+        bright_objlist = None
+        bright_shifts = None
+
+    return objlist, shifts, bright_objlist, bright_shifts
 
 
 def make_galaxy_catalog(
@@ -179,7 +263,7 @@ def make_galaxy_catalog(
             coadd_dim=coadd_dim,
             buff=buff,
             layout=layout,
-            flux=gal_config['flux'],
+            mag=gal_config['mag'],
             hlr=gal_config['hlr'],
         )
 
@@ -389,6 +473,9 @@ def make_seobs(
     psf_dim,
     dither=False,
     rotate=False,
+    bright_objlist=None,
+    bright_shifts=None,
+    mask_threshold=None,
 ):
     """
     make a grid sim with trivial pixel scale, fixed sized
@@ -441,18 +528,14 @@ def make_seobs(
         world_origin=WORLD_ORIGIN,
     )
 
-    if isinstance(psf, galsim.GSObject):
-        convolved_objects = [galsim.Convolve(obj, psf) for obj in objlist]
-        psf_gsobj = psf
-    else:
-        convolved_objects = get_convolved_objlist_variable_psf(
-            objlist=objlist,
-            shifts=shifts,
-            psf=psf,
-            wcs=se_wcs,
-            origin=se_origin,
-        )
-        psf_gsobj = psf.getPSF(se_origin)
+    convolved_objects, psf_gsobj = get_convolved_objects(
+        objlist=objlist,
+        psf=psf,
+        shifts=shifts,
+        offset=offset,
+        se_wcs=se_wcs,
+        se_origin=se_origin,
+    )
 
     objects = galsim.Add(convolved_objects)
 
@@ -463,6 +546,7 @@ def make_seobs(
         wcs=se_wcs,
         offset=offset,
     )
+
     weight = image.copy()
     weight.array[:, :] = 1.0/noise**2
 
@@ -477,6 +561,41 @@ def make_seobs(
         dtype=np.int32,
     )
 
+    if bright_objlist is not None:
+        timage = image.copy()
+
+        assert bright_shifts is not None
+        assert mask_threshold is not None
+        bright_convolved_objects, _ = get_convolved_objects(
+            objlist=bright_objlist,
+            psf=psf,
+            shifts=bright_shifts,
+            offset=offset,
+            se_wcs=se_wcs,
+            se_origin=se_origin,
+        )
+        for i, obj in enumerate(bright_convolved_objects):
+
+            obj.drawImage(
+                image=timage,
+                offset=offset,
+                method='phot',
+                n_photons=10_000_000,
+                maxN=1_000_000,
+                rng=galsim.BaseDeviate(rng.randint(0, 2**30)),
+            )
+
+            image += timage
+
+            calculate_and_add_bright_star_mask(
+                image=timage.array,
+                mask=bmask.array,
+                shift=bright_shifts[i],
+                wcs=se_wcs,
+                origin=se_origin,
+                threshold=mask_threshold,
+            )
+
     psf_obj = FixedPSF(psf=psf_gsobj, offset=offset, psf_dim=psf_dim, wcs=se_wcs)
 
     return SEObs(
@@ -487,6 +606,38 @@ def make_seobs(
         psf_function=psf_obj,
         bmask=bmask,
     )
+
+
+def get_convolved_objects(*, objlist, psf, shifts, offset, se_wcs, se_origin):
+    if isinstance(psf, galsim.GSObject):
+        convolved_objects = [galsim.Convolve(obj, psf) for obj in objlist]
+        psf_gsobj = psf
+    else:
+        convolved_objects = get_convolved_objlist_variable_psf(
+            objlist=objlist,
+            shifts=shifts,
+            psf=psf,
+            wcs=se_wcs,
+            origin=se_origin,
+        )
+        psf_gsobj = psf.getPSF(se_origin)
+
+    return convolved_objects, psf_gsobj
+
+
+def rescale_wldeblend_images(*, survey, image, noise, weight):
+    fac = get_wldeblend_rescale_fac(survey)
+    wfac = 1.0/fac**2
+
+    image *= fac
+    noise *= fac
+    weight *= wfac
+
+
+def get_wldeblend_rescale_fac(survey):
+    s_zp = survey.zero_point
+    s_et = survey.exposure_time
+    return 10.0**(0.4*(ZERO_POINT - 24.0))/s_zp/s_et
 
 
 def get_convolved_objlist_variable_psf(
@@ -532,6 +683,102 @@ def get_convolved_objlist_variable_psf(
         new_objlist.append(obj)
 
     return new_objlist
+
+
+def calculate_and_add_bright_star_mask(
+    *,
+    image,
+    mask,
+    shift,
+    wcs,
+    origin,  # pixel origin
+    threshold,
+):
+    """
+    Get a list of psf convolved objects for a variable psf
+
+    Parameters
+    ----------
+    objlist: list
+        List of GSObject
+    shifts: array
+        Array with fields dx and dy, which are du, dv offsets
+        in sky coords.
+    psf: PowerSpectrumPSF
+        See ps_psf
+    wcs: galsim wcs
+        For the SE image
+    origin: galsim.PositionD
+        Origin of SE image (with offset included)
+    """
+
+    jac_wcs = wcs.jacobian(world_pos=wcs.center)
+
+    shift_pos = galsim.PositionD(
+        x=shift['dx'],
+        y=shift['dy'],
+    )
+    pos = jac_wcs.toImage(shift_pos) + origin
+
+    radius = calculate_mask_radius(
+        image=image,
+        objrow=pos.y,
+        objcol=pos.x,
+        threshold=threshold,
+    )
+    add_bright_star_mask(
+        mask=mask,
+        x=pos.x,
+        y=pos.y,
+        radius=radius,
+        val=BRIGHT,
+    )
+
+
+@njit
+def calculate_mask_radius(*, image, objrow, objcol, threshold):
+    """
+    get the radius at which the profile drops to frac*noise.
+
+    Parameters
+    ----------
+    obj_data: dict
+        Object data.
+    image: 2d array
+        The image
+    offset: tuple
+        Offset in image (row_offset, col_offset)
+    threshold: float
+        Radius goes out to this level
+    mag_thresh: float
+        Magnitude threshold for doing the calculation.  Default 18
+
+    Returns
+    -------
+    radius: float
+        The radius
+    """
+
+    nrows, ncols = image.shape
+    radius2 = 0.0
+
+    for row in range(nrows):
+        row2 = (objrow - row)**2
+
+        for col in range(ncols):
+            col2 = (objcol - col)**2
+
+            tradius2 = row2 + col2
+            if tradius2 < radius2:
+                # we are already within a previously calculated radius
+                continue
+
+            val = image[row, col]
+            if val > threshold:
+                radius2 = tradius2
+
+    radius = np.sqrt(radius2)
+    return radius
 
 
 def get_trivial_sim_config(config=None):
@@ -586,10 +833,25 @@ class WLDeblendSurvey(object):
 
         self.descwl_survey = svy
 
+    @property
+    def filter_band(self):
+        return self.descwl_survey.filter_band
+
+    def get_flux(self, mag):
+        """
+        convert mag to flux
+        """
+        return self.descwl_survey.get_flux(mag)
+
 
 class TrivialSurvey(object):
-    def __init__(self):
+    def __init__(self, *, band):
+        self.band = band
         self.noise = 1.0
+        self.filter_band = band
+
+    def get_flux(self, mag):
+        return 10**(0.4 * (ZERO_POINT - mag))
 
 
 class FixedGalaxyCatalog(object):
@@ -598,9 +860,9 @@ class FixedGalaxyCatalog(object):
 
     Same for all bands
     """
-    def __init__(self, *, rng, coadd_dim, buff, layout, flux, hlr):
+    def __init__(self, *, rng, coadd_dim, buff, layout, mag, hlr):
         self.gal_type = 'exp'
-        self.flux = flux
+        self.mag = mag
         self.hlr = hlr
         self.rng = rng
 
@@ -626,44 +888,21 @@ class FixedGalaxyCatalog(object):
         [galsim objects]
         """
 
+        flux = survey.get_flux(self.mag)
+
         num = self.shifts.size
         objlist = [
-            self._get_galaxy(i).shear(g1=g1, g2=g2)
+            self._get_galaxy(i, flux).shear(g1=g1, g2=g2)
             for i in range(num)
         ]
 
         shifts = self.shifts.copy()
         return objlist, shifts
 
-    def get_all_obj(self, *, survey, g1, g2):
-        """
-        get a list of galsim objects
-
-        Parameters
-        ----------
-        band: string
-            Get objects for this band.  For the fixed
-            catalog, the objects are the same for every band
-
-        Returns
-        -------
-        list of galsim objects
-        """
-
-        num = self.shifts.size
-        objlist = [self._get_galaxy(i) for i in range(num)]
-
-        return galsim.Add(
-            objlist,
-        ).shear(
-            g1=g1,
-            g2=g2,
-        )
-
-    def _get_galaxy(self, i):
+    def _get_galaxy(self, i, flux):
         return galsim.Exponential(
             half_light_radius=self.hlr,
-            flux=self.flux,
+            flux=flux,
         ).shift(
             dx=self.shifts['dx'][i],
             dy=self.shifts['dy'][i]
@@ -722,7 +961,10 @@ class WLDeblendGalaxyCatalog(object):
 
         num = self.shifts.size
 
-        band = survey.descwl_survey.filter_band
+        band = survey.filter_band
+
+        # object is already shifted, so this results in the scene
+        # being sheared
         objlist = [
             self._get_galaxy(builder, band, i).shear(g1=g1, g2=g2)
             for i in range(num)
@@ -730,35 +972,6 @@ class WLDeblendGalaxyCatalog(object):
 
         shifts = self.shifts.copy()
         return objlist, shifts
-
-    def get_all_obj(self, *, survey, g1, g2):
-        """
-        get a combined set of galsim objects
-
-        Returns
-        -------
-        equivalent of galsim.Add(list_of_objs)
-        """
-
-        builder = descwl.model.GalaxyBuilder(
-            survey=survey.descwl_survey,
-            no_disk=False,
-            no_bulge=False,
-            no_agn=False,
-            verbose_model=False,
-        )
-
-        num = self.shifts.size
-
-        band = survey.descwl_survey.filter_band
-        objlist = [self._get_galaxy(builder, band, i) for i in range(num)]
-
-        return galsim.Add(
-            objlist,
-        ).shear(
-            g1=g1,
-            g2=g2,
-        )
 
     def _get_galaxy(self, builder, band, i):
 
@@ -802,6 +1015,129 @@ def read_wldeblend_cat(rng):
     )
     cat['pa_bulge'] = cat['pa_disk']
     return cat
+
+
+class StarCatalog(object):
+    """
+    Star catalog with variable density
+    """
+    def __init__(self, *, rng, coadd_dim, buff):
+        self.rng = rng
+
+        self._star_cat = load_sample_stars()
+        density_mean = sample_star_density(
+            rng=self.rng,
+            min_density=99,
+            max_density=100,
+        )
+
+        # one square degree catalog, convert to arcmin
+        area = ((coadd_dim - 2*buff)*SCALE/60)**2
+        nobj_mean = area * density_mean
+        nobj = rng.poisson(nobj_mean)
+
+        self.density = nobj/area
+
+        self.shifts = get_shifts(
+            rng=rng,
+            coadd_dim=coadd_dim,
+            buff=buff,
+            layout="random",
+            nobj=nobj,
+        )
+
+        num = self.shifts.size
+        self.indices = self.rng.randint(
+            0,
+            self._star_cat.size,
+            size=num,
+        )
+
+    def get_objlist(self, *, survey, noise):
+        """
+        get a list of galsim objects
+
+        Returns
+        -------
+        [galsim objects]
+        """
+
+        num = self.shifts.size
+
+        band = survey.filter_band
+        objlist = []
+        shift_ind = []
+        bright_objlist = []
+        bright_shift_ind = []
+        for i in range(num):
+            star, isbright = self._get_star(survey, band, i, noise)
+            if isbright:
+                bright_objlist.append(star)
+                bright_shift_ind.append(i)
+            else:
+                objlist.append(star)
+                shift_ind.append(i)
+
+        # objlist = [
+        #     self._get_star(survey, band, i, noise)
+        #     for i in range(num)
+        # ]
+
+        shifts = self.shifts[shift_ind].copy()
+        bright_shifts = self.shifts[bright_shift_ind].copy()
+        return objlist, shifts, bright_objlist, bright_shifts
+
+    def _get_star(self, survey, band, i, noise):
+
+        index = self.indices[i]
+        dx = self.shifts['dx'][i]
+        dy = self.shifts['dy'][i]
+
+        mag = get_star_mag(stars=self._star_cat, index=index, band=band)
+        flux = survey.get_flux(mag)
+
+        gsparams, isbright = get_star_gsparams(mag, flux, noise)
+        star = galsim.Gaussian(
+            fwhm=1.0e-4,
+            flux=flux,
+            gsparams=gsparams,
+        ).shift(
+            dx=dx,
+            dy=dy,
+        )
+
+        return star, isbright
+
+
+def get_star_gsparams(mag, flux, noise):
+
+    do_thresh = do_acc = False
+    if mag < 18:
+        do_thresh = True
+    if mag < 15:
+        do_acc = True
+
+    if do_thresh or do_acc:
+        isbright = True
+
+        kw = {}
+        if do_thresh:
+            folding_threshold = noise/flux
+            folding_threshold = np.exp(
+                np.floor(np.log(folding_threshold))
+            )
+            kw['folding_threshold'] = min(folding_threshold, 0.005)
+
+        if do_acc:
+            kw['kvalue_accuracy'] = 1.0e-8
+            kw['maxk_threshold'] = 1.0e-5
+
+        gsparams = galsim.GSParams(**kw)
+    else:
+        gsparams = None
+        isbright = False
+
+    return gsparams, isbright
 
 
 def make_psf(*, psf_type):
