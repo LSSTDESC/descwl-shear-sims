@@ -639,7 +639,7 @@ def get_mask(*, image, rng, cosmic_rays, bad_columns):
         c_mask = generate_cosmic_rays(
             shape=shape,
             rng=rng,
-            mean_cosmic_rays=10,
+            mean_cosmic_rays=1,
         )
         mask[c_mask] |= COSMIC_RAY + SAT
 
@@ -651,7 +651,7 @@ def get_mask(*, image, rng, cosmic_rays, bad_columns):
         bc_msk = generate_bad_columns(
             shape=shape,
             rng=rng,
-            mean_bad_cols=10,
+            mean_bad_cols=1,
         )
         mask[bc_msk] |= BAD_COLUMN
         image.array[bc_msk] = 0.0
