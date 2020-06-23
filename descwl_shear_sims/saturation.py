@@ -15,7 +15,8 @@ BAND_SAT_VALS = {
 @njit
 def saturate_image_and_mask(*, image, mask, sat_val):
     """
-    clip image values at saturation and set the SAT mask bit
+    clip image values at saturation and set the SAT mask bit.  Note
+    if the mask already has SAT set, then the value will also be set
 
     Parameters
     ----------
@@ -30,6 +31,6 @@ def saturate_image_and_mask(*, image, mask, sat_val):
 
     for row in range(ny):
         for col in range(nx):
-            if image[row, col] > sat_val:
+            if (mask[row, col] & SAT) != 0 or image[row, col] > sat_val:
                 image[row, col] = sat_val
                 mask[row, col] |= SAT
