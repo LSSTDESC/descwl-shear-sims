@@ -177,8 +177,14 @@ def test_trivial_sim_layout(layout):
     )
 
 
-@pytest.mark.parametrize("cosmic_rays", (True, False))
-def test_trivial_sim_cosmic_rays(cosmic_rays):
+@pytest.mark.parametrize(
+    "cosmic_rays, bad_columns",
+    [(True, True),
+     (True, False),
+     (False, True),
+     (True, True)],
+)
+def test_trivial_sim_defects(cosmic_rays, bad_columns):
     seed = 7421
     coadd_dim = 201
     rng = np.random.RandomState(seed)
@@ -200,31 +206,6 @@ def test_trivial_sim_cosmic_rays(cosmic_rays):
         g2=0.00,
         psf=psf,
         cosmic_rays=cosmic_rays,
-    )
-
-
-@pytest.mark.parametrize("bad_columns", (True, False))
-def test_trivial_sim_bad_columns(bad_columns):
-    seed = 7421
-    coadd_dim = 201
-    rng = np.random.RandomState(seed)
-
-    galaxy_catalog = make_galaxy_catalog(
-        rng=rng,
-        gal_type="exp",
-        coadd_dim=coadd_dim,
-        layout="grid",
-        buff=30,
-    )
-
-    psf = make_psf(psf_type="gauss")
-    _ = make_trivial_sim(
-        rng=rng,
-        galaxy_catalog=galaxy_catalog,
-        coadd_dim=coadd_dim,
-        g1=0.02,
-        g2=0.00,
-        psf=psf,
         bad_columns=bad_columns,
     )
 
