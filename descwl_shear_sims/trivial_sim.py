@@ -9,8 +9,11 @@ from .cache_tools import cached_catalog_read
 from .ps_psf import PowerSpectrumPSF
 from .stars import load_sample_stars, sample_star_density, get_star_mag
 from .saturation import saturate_image_and_mask, BAND_SAT_VALS
-from .lsst_bits import BRIGHT
+from .lsst_bits import BAD_COLUMN, COSMIC_RAY, SAT, BRIGHT
 from .gen_star_masks import add_bright_star_mask
+from .gen_masks import (
+    generate_basic_mask, generate_cosmic_rays, generate_bad_columns,
+)
 
 PSF_FWHM = 0.8
 MOFFAT_BETA = 2.5
@@ -37,6 +40,8 @@ DEFAULT_TRIVIAL_SIM_CONFIG = {
     "epochs_per_band": 1,
     "noise_factor": 1.0,
     "stars": False,
+    "cosmic_rays": False,
+    "bad_columns": False,
 }
 
 DEFAULT_FIXED_GAL_CONFIG = {
@@ -60,6 +65,8 @@ def make_trivial_sim(
     bands=['i'],
     epochs_per_band=1,
     noise_factor=1.0,
+    cosmic_rays=False,
+    bad_columns=False,
 ):
     """
     Make simulation data
@@ -92,6 +99,10 @@ def make_trivial_sim(
         Number of epochs per band
     noise_factor: float, optional
         Factor by which to multiply the noise, default 1
+    cosmic_rays: bool
+        If True, add cosmic rays
+    bad_columns: bool
+        If True, add bad columns
     """
 
     se_dim = get_se_dim(coadd_dim=coadd_dim)
@@ -135,6 +146,8 @@ def make_trivial_sim(
                 bright_objlist=bright_objlist,
                 bright_shifts=bright_shifts,
                 mask_threshold=mask_threshold,
+                cosmic_rays=cosmic_rays,
+                bad_columns=bad_columns,
             )
             if galaxy_catalog.gal_type == 'wldeblend':
                 rescale_wldeblend_images(
@@ -476,6 +489,8 @@ def make_seobs(
     bright_objlist=None,
     bright_shifts=None,
     mask_threshold=None,
+    cosmic_rays=False,
+    bad_columns=False,
 ):
     """
     make a grid sim with trivial pixel scale, fixed sized
@@ -502,6 +517,10 @@ def make_seobs(
         If set to True, dither randomly by a pixel width
     rotate: bool
         If set to True, rotate the image randomly
+    cosmic_rays: bool
+        If True, put in cosmic rays
+    bad_columns: bool
+        If True, put in bad columns
     """
 
     dims = [dim]*2
@@ -554,11 +573,11 @@ def make_seobs(
     noise_image = image.copy()
     noise_image.array[:, :] = rng.normal(scale=noise, size=dims)
 
-    bmask = galsim.Image(
-        np.zeros(dims, dtype='i4'),
-        bounds=image.bounds,
-        wcs=image.wcs,
-        dtype=np.int32,
+    bmask = get_mask(
+        image=image,
+        rng=rng,
+        cosmic_rays=cosmic_rays,
+        bad_columns=bad_columns,
     )
 
     if bright_objlist is not None:
@@ -605,6 +624,43 @@ def make_seobs(
         wcs=se_wcs,
         psf_function=psf_obj,
         bmask=bmask,
+    )
+
+
+def get_mask(*, image, rng, cosmic_rays, bad_columns):
+
+    shape = image.array.shape
+
+    mask = generate_basic_mask(shape=shape, edge_width=5)
+
+    if cosmic_rays:
+
+        # bool mask
+        c_mask = generate_cosmic_rays(
+            shape=shape,
+            rng=rng,
+            mean_cosmic_rays=10,
+        )
+        mask[c_mask] |= COSMIC_RAY + SAT
+
+        # wait to do this later
+        # image.array[cmask] = BAND_SAT_VALS[band]
+
+    if bad_columns:
+        # bool mask
+        bc_msk = generate_bad_columns(
+            shape=shape,
+            rng=rng,
+            mean_bad_cols=10,
+        )
+        mask[bc_msk] |= BAD_COLUMN
+        image.array[bc_msk] = 0.0
+
+    return galsim.Image(
+        mask,
+        bounds=image.bounds,
+        wcs=image.wcs,
+        dtype=np.int32,
     )
 
 
@@ -782,6 +838,20 @@ def calculate_mask_radius(*, image, objrow, objcol, threshold):
 
 
 def get_trivial_sim_config(config=None):
+    """
+    Get a simulation configuration, with defaults that can
+    be over-ridden by the input.  The defaults are in
+    trivial_sim.DEFAULT_TRIVIAL_SIM_CONFIG
+
+    Parameters
+    ----------
+    config: dict, optional
+        Dict of options to over ride the defaults
+
+    Returns
+    -------
+    config dict
+    """
     out_config = copy.deepcopy(DEFAULT_TRIVIAL_SIM_CONFIG)
     sub_configs = ['gal_config']
 
