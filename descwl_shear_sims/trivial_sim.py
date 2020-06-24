@@ -14,6 +14,7 @@ from .gen_star_masks import add_bright_star_mask
 from .gen_masks import (
     generate_basic_mask, generate_cosmic_rays, generate_bad_columns,
 )
+from .star_bleeds import add_bleed, get_max_mag_with_bleed
 
 PSF_FWHM = 0.8
 MOFFAT_BETA = 2.5
@@ -40,6 +41,7 @@ DEFAULT_TRIVIAL_SIM_CONFIG = {
     "epochs_per_band": 1,
     "noise_factor": 1.0,
     "stars": False,
+    "star_bleeds": False,
     "cosmic_rays": False,
     "bad_columns": False,
 }
@@ -67,6 +69,7 @@ def make_trivial_sim(
     noise_factor=1.0,
     cosmic_rays=False,
     bad_columns=False,
+    star_bleeds=False,
 ):
     """
     Make simulation data
@@ -113,7 +116,7 @@ def make_trivial_sim(
         survey = get_survey(gal_type=galaxy_catalog.gal_type, band=band)
         noise_per_epoch = survey.noise*np.sqrt(epochs_per_band)*noise_factor
 
-        # got down to coadd depth in this band (not dividing by sqrt(nbands)
+        # go down to coadd depth in this band, not dividing by sqrt(nbands)
         # but we could if we want to be more conservative
         mask_threshold = survey.noise*noise_factor
 
@@ -122,7 +125,7 @@ def make_trivial_sim(
             g1=g1,
             g2=g2,
         )
-        objlist, shifts, bright_objlist, bright_shifts = get_objlist(
+        objlist, shifts, bright_objlist, bright_shifts, bright_mags = get_objlist(
             galaxy_catalog=galaxy_catalog,
             survey=survey,
             g1=g1,
@@ -135,6 +138,7 @@ def make_trivial_sim(
         for epoch in range(epochs_per_band):
             seobs = make_seobs(
                 rng=rng,
+                band=band,
                 noise=noise_per_epoch,
                 objlist=objlist,
                 shifts=shifts,
@@ -145,9 +149,11 @@ def make_trivial_sim(
                 rotate=rotate,
                 bright_objlist=bright_objlist,
                 bright_shifts=bright_shifts,
+                bright_mags=bright_mags,
                 mask_threshold=mask_threshold,
                 cosmic_rays=cosmic_rays,
                 bad_columns=bad_columns,
+                star_bleeds=star_bleeds,
             )
             if galaxy_catalog.gal_type == 'wldeblend':
                 rescale_wldeblend_images(
@@ -157,11 +163,14 @@ def make_trivial_sim(
                     weight=seobs.weight,
                 )
 
+            # mark high pixels SAT and also set sat value in image for
+            # any pixels already marked SAT
             saturate_image_and_mask(
                 seobs.image.array,
                 seobs.bmask.array,
                 BAND_SAT_VALS[band],
             )
+
             seobs_list.append(seobs)
 
         band_data[band] = seobs_list
@@ -221,17 +230,20 @@ def get_objlist(*, galaxy_catalog, survey, g1, g2, star_catalog=None, noise=None
 
     if star_catalog is not None:
         assert noise is not None
-        sobjlist, sshifts, bright_objlist, bright_shifts = star_catalog.get_objlist(
+        res = star_catalog.get_objlist(
             survey=survey, noise=noise,
         )
+        sobjlist, sshifts, bright_objlist, bright_shifts, bright_mags = res
+
         objlist = objlist + sobjlist
 
         shifts = np.hstack((shifts, sshifts))
     else:
         bright_objlist = None
         bright_shifts = None
+        bright_mags = None
 
-    return objlist, shifts, bright_objlist, bright_shifts
+    return objlist, shifts, bright_objlist, bright_shifts, bright_mags
 
 
 def make_galaxy_catalog(
@@ -478,6 +490,7 @@ class FixedPSF(object):
 def make_seobs(
     *,
     rng,
+    band,
     noise,
     objlist,
     shifts,
@@ -488,9 +501,11 @@ def make_seobs(
     rotate=False,
     bright_objlist=None,
     bright_shifts=None,
+    bright_mags=None,
     mask_threshold=None,
     cosmic_rays=False,
     bad_columns=False,
+    star_bleeds=False,
 ):
     """
     make a grid sim with trivial pixel scale, fixed sized
@@ -584,7 +599,9 @@ def make_seobs(
         timage = image.copy()
 
         assert bright_shifts is not None
+        assert bright_mags is not None
         assert mask_threshold is not None
+
         bright_convolved_objects, _ = get_convolved_objects(
             objlist=bright_objlist,
             psf=psf,
@@ -615,6 +632,17 @@ def make_seobs(
                 threshold=mask_threshold,
             )
 
+    if star_bleeds and bright_objlist is not None:
+        # add bleeds at bright star locations if they are saturated
+        add_bleeds(
+            image=image,
+            origin=se_origin,
+            bmask=bmask,
+            shifts=bright_shifts,
+            mags=bright_mags,
+            band=band,
+        )
+
     psf_obj = FixedPSF(psf=psf_gsobj, offset=offset, psf_dim=psf_dim, wcs=se_wcs)
 
     return SEObs(
@@ -625,6 +653,55 @@ def make_seobs(
         psf_function=psf_obj,
         bmask=bmask,
     )
+
+
+def add_bleeds(*, image, origin, bmask, shifts, mags, band):
+    """
+    Add a bleed for each saturated object
+
+    Parameters
+    ----------
+    image: galsim Image
+        Image will be modified to have saturated values in the
+        bleed
+    origin: galsim.PositionD
+        Origin of image in pixels
+    bmask: galsim Image
+        Mask will be modified to have saturated values in the
+        bleed
+    shifts: array
+        Fields dx and dy.
+    mags: list
+        List of mags
+    band: string
+        Filter band
+
+    Returns
+    --------
+    None
+    """
+
+    wcs = image.wcs
+
+    jac_wcs = wcs.jacobian(world_pos=wcs.center)
+    max_mag = get_max_mag_with_bleed(band=band)
+
+    for i in range(shifts.size):
+        mag = mags[i]
+        if mag < max_mag:
+            shift_pos = galsim.PositionD(
+                x=shifts['dx'][i],
+                y=shifts['dy'][i],
+            )
+            pos = jac_wcs.toImage(shift_pos) + origin
+
+            add_bleed(
+                image=image.array,
+                bmask=bmask.array,
+                pos=pos,
+                mag=mag,
+                band=band,
+            )
 
 
 def get_mask(*, image, rng, cosmic_rays, bad_columns):
@@ -1091,15 +1168,19 @@ class StarCatalog(object):
     """
     Star catalog with variable density
     """
-    def __init__(self, *, rng, coadd_dim, buff):
+    def __init__(self, *, rng, coadd_dim, buff, density=None):
         self.rng = rng
 
         self._star_cat = load_sample_stars()
-        density_mean = sample_star_density(
-            rng=self.rng,
-            min_density=2,
-            max_density=100,
-        )
+
+        if density is None:
+            density_mean = sample_star_density(
+                rng=self.rng,
+                min_density=2,
+                max_density=100,
+            )
+        else:
+            density_mean = density
 
         # one square degree catalog, convert to arcmin
         area = ((coadd_dim - 2*buff)*SCALE/60)**2
@@ -1139,11 +1220,13 @@ class StarCatalog(object):
         shift_ind = []
         bright_objlist = []
         bright_shift_ind = []
+        bright_mags = []
         for i in range(num):
-            star, isbright = self._get_star(survey, band, i, noise)
+            star, mag, isbright = self._get_star(survey, band, i, noise)
             if isbright:
                 bright_objlist.append(star)
                 bright_shift_ind.append(i)
+                bright_mags.append(mag)
             else:
                 objlist.append(star)
                 shift_ind.append(i)
@@ -1155,7 +1238,7 @@ class StarCatalog(object):
 
         shifts = self.shifts[shift_ind].copy()
         bright_shifts = self.shifts[bright_shift_ind].copy()
-        return objlist, shifts, bright_objlist, bright_shifts
+        return objlist, shifts, bright_objlist, bright_shifts, bright_mags
 
     def _get_star(self, survey, band, i, noise):
 
@@ -1176,7 +1259,7 @@ class StarCatalog(object):
             dy=dy,
         )
 
-        return star, isbright
+        return star, mag, isbright
 
 
 def get_star_gsparams(mag, flux, noise):

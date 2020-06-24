@@ -11,6 +11,39 @@ from ..trivial_sim import (
 )
 
 
+def test_trivial_star_bleeds():
+    seed = 742
+    coadd_dim = 201
+    buff = 30
+    rng = np.random.RandomState(seed)
+
+    galaxy_catalog = make_galaxy_catalog(
+        rng=rng,
+        gal_type="exp",
+        coadd_dim=coadd_dim,
+        layout="grid",
+        buff=buff,
+    )
+    star_catalog = StarCatalog(
+        rng=rng,
+        coadd_dim=coadd_dim,
+        buff=buff,
+        density=100,
+    )
+
+    psf = make_psf(psf_type="gauss")
+    _ = make_trivial_sim(
+        rng=rng,
+        galaxy_catalog=galaxy_catalog,
+        star_catalog=star_catalog,
+        coadd_dim=coadd_dim,
+        g1=0.02,
+        g2=0.00,
+        psf=psf,
+        star_bleeds=True,
+    )
+
+
 @pytest.mark.parametrize('dither,rotate', [
     (False, False),
     (False, True),
@@ -258,6 +291,7 @@ def test_trivial_sim_stars():
         rng=rng,
         coadd_dim=coadd_dim,
         buff=buff,
+        density=100,
     )
 
     psf = make_psf(psf_type="moffat")
