@@ -1,6 +1,7 @@
 import os
 import pytest
 import numpy as np
+from ..se_obs import SEObs
 from ..trivial_sim import (
     make_trivial_sim,
     make_galaxy_catalog,
@@ -8,6 +9,8 @@ from ..trivial_sim import (
     make_psf,
     make_ps_psf,
     get_se_dim,
+    ZERO_POINT,
+    DEFAULT_FIXED_GAL_CONFIG,
 )
 
 
@@ -32,7 +35,7 @@ def test_trivial_sim_smoke(dither, rotate):
     )
 
     psf = make_psf(psf_type="gauss")
-    _ = make_trivial_sim(
+    data = make_trivial_sim(
         rng=rng,
         galaxy_catalog=galaxy_catalog,
         coadd_dim=351,
@@ -42,6 +45,10 @@ def test_trivial_sim_smoke(dither, rotate):
         dither=dither,
         rotate=rotate,
     )
+
+    for band, bdata in data['band_data'].items():
+        assert len(bdata) == 1
+        assert isinstance(bdata[0], SEObs)
 
 
 def test_trivial_sim():
@@ -78,8 +85,42 @@ def test_trivial_sim():
     assert sim_data['psf_dims'] == [psf_dim]*2
 
     band_data = sim_data['band_data']
+    assert len(band_data) == len(bands)
     for band in bands:
         assert band in band_data
+
+
+def test_trivial_sim_exp_mag():
+
+    bands = ["i"]
+    seed = 8123
+    coadd_dim = 301
+    rng = np.random.RandomState(seed)
+
+    galaxy_catalog = make_galaxy_catalog(
+        rng=rng,
+        gal_type="exp",
+        coadd_dim=coadd_dim,
+        buff=30,
+        layout="grid",
+    )
+
+    psf = make_psf(psf_type="gauss")
+    sim_data = make_trivial_sim(
+        rng=rng,
+        galaxy_catalog=galaxy_catalog,
+        coadd_dim=coadd_dim,
+        g1=0.02,
+        g2=0.00,
+        psf=psf,
+        bands=bands,
+    )
+
+    image = sim_data["band_data"]["i"][0].image.array
+    subim = image[105:130, 100:125]
+    mag = ZERO_POINT - 2.5*np.log10(subim.sum())
+
+    assert abs(mag - DEFAULT_FIXED_GAL_CONFIG['mag']) < 0.005
 
 
 @pytest.mark.parametrize("psf_type", ["gauss", "moffat", "ps"])
