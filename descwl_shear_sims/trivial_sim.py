@@ -166,9 +166,9 @@ def make_trivial_sim(
             # mark high pixels SAT and also set sat value in image for
             # any pixels already marked SAT
             saturate_image_and_mask(
-                seobs.image.array,
-                seobs.bmask.array,
-                BAND_SAT_VALS[band],
+                image=seobs.image.array,
+                bmask=seobs.bmask.array,
+                sat_val=BAND_SAT_VALS[band],
             )
 
             seobs_list.append(seobs)

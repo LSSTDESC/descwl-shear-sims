@@ -950,7 +950,7 @@ class Sim(object):
         if self.saturate:
             saturate_image_and_mask(
                 image=se_image.array,
-                mask=bmask,
+                bmask=bmask,
                 sat_val=sat_val,
             )
 

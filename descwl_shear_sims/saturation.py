@@ -13,17 +13,17 @@ BAND_SAT_VALS = {
 
 
 @njit
-def saturate_image_and_mask(*, image, mask, sat_val):
+def saturate_image_and_mask(*, image, bmask, sat_val):
     """
     clip image values at saturation and set the SAT mask bit.  Note
-    if the mask already has SAT set, then the value will also be set
+    if the bmask already has SAT set, then the value will also be set
 
     Parameters
     ----------
     image: ndarray
         The image to clip
-    mask: ndarray
-        The mask image
+    bmask: ndarray
+        The bitmask image
     sat_val: float
         The saturation value to use
     """
@@ -31,6 +31,6 @@ def saturate_image_and_mask(*, image, mask, sat_val):
 
     for row in range(ny):
         for col in range(nx):
-            if (mask[row, col] & SAT) != 0 or image[row, col] > sat_val:
+            if (bmask[row, col] & SAT) != 0 or image[row, col] > sat_val:
                 image[row, col] = sat_val
-                mask[row, col] |= SAT
+                bmask[row, col] |= SAT
