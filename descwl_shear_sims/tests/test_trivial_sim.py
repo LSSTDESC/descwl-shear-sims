@@ -90,7 +90,12 @@ def test_trivial_sim():
         assert band in band_data
 
 
-def test_trivial_sim_exp_mag():
+@pytest.mark.parametrize("rotate", [False, True])
+def test_trivial_sim_exp_mag(rotate):
+    """
+    test we get the right mag.  Also test we get small flux when we rotate and
+    there is nothing at the sub image location we choose
+    """
 
     bands = ["i"]
     seed = 8123
@@ -114,13 +119,19 @@ def test_trivial_sim_exp_mag():
         g2=0.00,
         psf=psf,
         bands=bands,
+        rotate=rotate,
     )
 
     image = sim_data["band_data"]["i"][0].image.array
-    subim = image[105:130, 100:125]
-    mag = ZERO_POINT - 2.5*np.log10(subim.sum())
+    subim_sum = image[105:130, 100:125].sum()
 
-    assert abs(mag - DEFAULT_FIXED_GAL_CONFIG['mag']) < 0.005
+    if rotate:
+        # we expect nothing there
+        assert abs(subim_sum) < 30
+    else:
+        # we expect something there with about the right magnitude
+        mag = ZERO_POINT - 2.5*np.log10(subim_sum)
+        assert abs(mag - DEFAULT_FIXED_GAL_CONFIG['mag']) < 0.005
 
 
 @pytest.mark.parametrize("psf_type", ["gauss", "moffat", "ps"])
