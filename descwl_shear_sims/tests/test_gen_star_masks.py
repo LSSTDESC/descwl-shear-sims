@@ -33,7 +33,7 @@ def test_star_bleed(band):
         band=band,
     )
     add_bright_star_mask(
-        mask=bmask,
+        bmask=bmask,
         x=pos.x,
         y=pos.y,
         radius=10,

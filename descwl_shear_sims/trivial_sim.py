@@ -625,7 +625,7 @@ def make_seobs(
 
             calculate_and_add_bright_star_mask(
                 image=timage.array,
-                mask=bmask.array,
+                bmask=bmask.array,
                 shift=bright_shifts[i],
                 wcs=se_wcs,
                 origin=se_origin,
@@ -821,7 +821,7 @@ def get_convolved_objlist_variable_psf(
 def calculate_and_add_bright_star_mask(
     *,
     image,
-    mask,
+    bmask,
     shift,
     wcs,
     origin,  # pixel origin
@@ -832,17 +832,19 @@ def calculate_and_add_bright_star_mask(
 
     Parameters
     ----------
-    objlist: list
-        List of GSObject
-    shifts: array
-        Array with fields dx and dy, which are du, dv offsets
-        in sky coords.
-    psf: PowerSpectrumPSF
-        See ps_psf
+    image: array
+        numpy array representing the image
+    bmask: array
+        numpy array representing the bitmask
+    shift: array
+        scalar array with fields dx and dy, which are du, dv offsets in sky
+        coords.
     wcs: galsim wcs
         For the SE image
     origin: galsim.PositionD
         Origin of SE image (with offset included)
+    threshold: float
+        The mask will extend to where the profile reaches this value
     """
 
     jac_wcs = wcs.jacobian(world_pos=wcs.center)
@@ -853,14 +855,14 @@ def calculate_and_add_bright_star_mask(
     )
     pos = jac_wcs.toImage(shift_pos) + origin
 
-    radius = calculate_mask_radius(
+    radius = calculate_bright_star_mask_radius(
         image=image,
         objrow=pos.y,
         objcol=pos.x,
         threshold=threshold,
     )
     add_bright_star_mask(
-        mask=mask,
+        bmask=bmask,
         x=pos.x,
         y=pos.y,
         radius=radius,
@@ -869,22 +871,20 @@ def calculate_and_add_bright_star_mask(
 
 
 @njit
-def calculate_mask_radius(*, image, objrow, objcol, threshold):
+def calculate_bright_star_mask_radius(*, image, objrow, objcol, threshold):
     """
-    get the radius at which the profile drops to frac*noise.
+    get the radius at which the profile drops to the specified threshold
 
     Parameters
     ----------
-    obj_data: dict
-        Object data.
     image: 2d array
         The image
-    offset: tuple
-        Offset in image (row_offset, col_offset)
+    objrow: float
+        The row position of the object center
+    objcol: float
+        The column position of the object center
     threshold: float
-        Radius goes out to this level
-    mag_thresh: float
-        Magnitude threshold for doing the calculation.  Default 18
+        The mask will extend to where the profile reaches this value
 
     Returns
     -------
