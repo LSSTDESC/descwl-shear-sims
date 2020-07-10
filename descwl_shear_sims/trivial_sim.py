@@ -186,6 +186,21 @@ def make_trivial_sim(
 
 
 def get_survey(*, gal_type, band):
+    """
+    Get a survey object
+
+    Parameters
+    ----------
+    gal_type: string
+        'wldeblend' or 'exp'
+    band: string
+        e.g. 'r'
+
+    Returns
+    -------
+    For gal_type 'wldeblend' returns a WLDeblendSurvey object,
+    for gal_type 'exp' returns TrivialSurvey.
+    """
     if gal_type == 'wldeblend':
         survey = WLDeblendSurvey(band=band)
     elif gal_type in ['exp']:
@@ -296,6 +311,24 @@ def make_galaxy_catalog(
 
 
 def make_wcs(*, scale, image_origin, world_origin, theta=None):
+    """
+    make and return a wcs object
+
+    Parameters
+    ----------
+    scale: float
+        Pixel scale
+    image_origin: galsim.PositionD
+        Image origin position
+    world_origin: galsim.CelestialCoord
+        Origin on the sky
+    theta: float, optional
+        Rotation angle
+
+    Returns
+    -------
+    A galsim wcs object, currently a TanWCS
+    """
     mat = np.array(
         [[scale, 0.0],
          [0.0, scale]],
@@ -321,6 +354,18 @@ def make_wcs(*, scale, image_origin, world_origin, theta=None):
 
 
 def make_coadd_wcs(coadd_dim):
+    """
+    make a coadd wcs, using the default world origin
+
+    Parameters
+    ----------
+    coadd_dim: int
+        dimensions of the coadd
+
+    Returns
+    --------
+    A galsim wcs, see make_wcs for return type
+    """
     coadd_dims = [coadd_dim]*2
     coadd_cen = (np.array(coadd_dims)-1)/2
     coadd_origin = galsim.PositionD(x=coadd_cen[1], y=coadd_cen[0])
@@ -456,6 +501,20 @@ def get_random_shifts(*, rng, dim, buff, size):
 
 
 class FixedPSF(object):
+    """
+    A simple fixed PSF object
+
+    Parameters
+    ----------
+    psf: galsim.GSObject
+        The psf object
+    offset: galsim.PositionD
+        Should match the offset of the image thei psf corresponds to
+    psf_dim: int
+        The dimension of the PSF image that will be created
+    wcs: galsim WCS
+        E.g. a wcs returned by make_wcs
+    """
     def __init__(self, *, psf, offset, psf_dim, wcs):
         self._psf = psf
         self._offset = offset
@@ -464,7 +523,22 @@ class FixedPSF(object):
 
     def __call__(self, *, x, y, center_psf, get_offset=False):
         """
-        center_psf is ignored
+        center_psf is ignored ,just there for compatibility
+
+        Parameters
+        ----------
+        x: float
+            x image position
+        y: float
+            y image position
+        cener_psf: bool
+            Center the psf, this is ignored
+        get_offset: bool, optional
+            If True, return the offset
+
+        Returns
+        -------
+        A galsim Image, and optionally the offset as a PositonD
         """
         image_pos = galsim.PositionD(x=x, y=y)
 
@@ -588,7 +662,7 @@ def make_seobs(
     noise_image = image.copy()
     noise_image.array[:, :] = rng.normal(scale=noise, size=dims)
 
-    bmask = get_mask(
+    bmask = get_bmask(
         image=image,
         rng=rng,
         cosmic_rays=cosmic_rays,
@@ -704,8 +778,26 @@ def add_bleeds(*, image, origin, bmask, shifts, mags, band):
             )
 
 
-def get_mask(*, image, rng, cosmic_rays, bad_columns):
+def get_bmask(*, image, rng, cosmic_rays, bad_columns):
+    """
+    get a bitmask for the image, including EDGE and
+    optional cosmic rays and bad columns
 
+    Parameters
+    ----------
+    image: galsim.Image type
+        The image
+    rng: np.random.RandomState
+        The random state object
+    cosmic_rays: bool
+        Whether to add cosmic rays
+    bad_columns: bool
+        Whether to add bad columns
+
+    Returns
+    -------
+    galsim.Image of type int32
+    """
     shape = image.array.shape
 
     mask = generate_basic_mask(shape=shape, edge_width=5)
@@ -742,6 +834,26 @@ def get_mask(*, image, rng, cosmic_rays, bad_columns):
 
 
 def get_convolved_objects(*, objlist, psf, shifts, offset, se_wcs, se_origin):
+    """
+    get a list of convolved objects
+
+    Parameters
+    ----------
+    objlist: list of GSObject
+        The list of objects to convolve
+    psf: GSObject or PowerSpectrumPSF
+        The PSF for convolution
+    shifts: list of shifts for each object
+        Only used for the spatially variable power spectrum psf
+    se_wcs: galsim WCS
+        Only used for the spatially variable power specrum psf
+    se_origin: galsim.PositionD
+        Origin, shifts are relative to this origin
+
+    Returns
+    -------
+    list of convolved GSObject
+    """
     if isinstance(psf, galsim.GSObject):
         convolved_objects = [galsim.Convolve(obj, psf) for obj in objlist]
         psf_gsobj = psf
@@ -759,6 +871,24 @@ def get_convolved_objects(*, objlist, psf, shifts, offset, se_wcs, se_origin):
 
 
 def rescale_wldeblend_images(*, survey, image, noise, weight):
+    """
+    Rescale wldeblend images noise and weight to our zero point
+
+    Parameters
+    ----------
+    survey: WLDeblendSurvey
+        The survey object
+    image: galsim.Image or ndarray
+        The image to be scaled
+    noise: galsim.Image or ndarray
+        The noise image to be scaled
+    weight: galsim.Image or ndarray
+        The weightimage to be scaled
+
+    Returns
+    -------
+    None
+    """
     fac = get_wldeblend_rescale_fac(survey)
     wfac = 1.0/fac**2
 
@@ -768,6 +898,18 @@ def rescale_wldeblend_images(*, survey, image, noise, weight):
 
 
 def get_wldeblend_rescale_fac(survey):
+    """
+    Get the factor to rescale wldeblend images to our zero point
+
+    Parameters
+    ----------
+    survey: WLDeblendSurvey
+        The survey object
+
+    Returns
+    -------
+    number by which to rescale images
+    """
     s_zp = survey.zero_point
     s_et = survey.exposure_time
     return 10.0**(0.4*(ZERO_POINT - 24.0))/s_zp/s_et
@@ -941,6 +1083,18 @@ def get_trivial_sim_config(config=None):
 
 
 def get_fixed_gal_config(config=None):
+    """
+    get the configuration for fixed galaxies, with defaults in place
+
+    Parameters
+    ----------
+    config: dict, optional
+        The input config. Over-rides defaults
+
+    Returns
+    -------
+    the config dict
+    """
     out_config = copy.deepcopy(DEFAULT_FIXED_GAL_CONFIG)
 
     if config is not None:
@@ -952,6 +1106,14 @@ def get_fixed_gal_config(config=None):
 
 
 class WLDeblendSurvey(object):
+    """
+    wrapper for wldeblend surveys
+
+    Parameters
+    ----------
+    band: string
+        The band, e.g. 'r'
+    """
     def __init__(self, *, band):
 
         pars = descwl.survey.Survey.get_defaults(
@@ -982,6 +1144,13 @@ class WLDeblendSurvey(object):
 
     @property
     def filter_band(self):
+        """
+        get the filter band for this survey
+
+        Returns
+        -------
+        string filter band, e.g. 'r'
+        """
         return self.descwl_survey.filter_band
 
     def get_flux(self, mag):
@@ -992,12 +1161,23 @@ class WLDeblendSurvey(object):
 
 
 class TrivialSurvey(object):
+    """
+    represent a simple survey with common interface
+
+    Parameters
+    ----------
+    band: string
+        e.g. 'r'
+    """
     def __init__(self, *, band):
         self.band = band
         self.noise = 1.0
         self.filter_band = band
 
     def get_flux(self, mag):
+        """
+        get the flux for the input mag using the standard zero point
+        """
         return 10**(0.4 * (ZERO_POINT - mag))
 
 
@@ -1006,6 +1186,21 @@ class FixedGalaxyCatalog(object):
     Galaxies of fixed galsim type, flux, and size
 
     Same for all bands
+
+    Parameters
+    ----------
+    rng: np.random.RandomState
+        The random number generator
+    coadd_dim: int
+        dimensions of the coadd
+    buff: int
+        Buffer region with no objects, on all sides of image
+    layout: string
+        The layout of objects, either 'grid' or 'random'
+    mag: float
+        Magnitude of all objects
+    hlr: float
+        Half light radius of all objects
     """
     def __init__(self, *, rng, coadd_dim, buff, layout, mag, hlr):
         self.gal_type = 'exp'
@@ -1047,6 +1242,20 @@ class FixedGalaxyCatalog(object):
         return objlist, shifts
 
     def _get_galaxy(self, i, flux):
+        """
+        get a galaxy object
+
+        Parameters
+        ----------
+        i: int
+            Index of object
+        flux: float
+            Flux of object
+
+        Returns
+        --------
+        galsim.GSObject
+        """
         return galsim.Exponential(
             half_light_radius=self.hlr,
             flux=flux,
@@ -1058,7 +1267,16 @@ class FixedGalaxyCatalog(object):
 
 class WLDeblendGalaxyCatalog(object):
     """
-    Galaxies from wldeblend
+    Catalog of galaxies from wldeblend
+
+    Parameters
+    ----------
+    rng: np.random.RandomState
+        The random number generator
+    coadd_dim: int
+        Dimensions of the coadd
+    buff: int
+        Buffer region with no objects, on all sides of image
     """
     def __init__(self, *, rng, coadd_dim, buff):
         self.gal_type = 'wldeblend'
@@ -1093,6 +1311,15 @@ class WLDeblendGalaxyCatalog(object):
         """
         get a list of galsim objects
 
+        Parameters
+        ----------
+        survey: WLDeblendSurvey
+            The survey object
+        g1: float
+            The g1 shear to apply to these objects
+        g2: float
+            The g2 shear to apply to these objects
+
         Returns
         -------
         [galsim objects]
@@ -1121,7 +1348,22 @@ class WLDeblendGalaxyCatalog(object):
         return objlist, shifts
 
     def _get_galaxy(self, builder, band, i):
+        """
+        Get a galaxy
 
+        Parameters
+        ----------
+        builder: descwl.model.GalaxyBuilder
+            Builder for this object
+        band: string
+            Band string, e.g. 'r'
+        i: int
+            Index of object
+
+        Returns
+        -------
+        galsim.GSObject
+        """
         index = self.indices[i]
         dx = self.shifts['dx'][i]
         dy = self.shifts['dy'][i]
@@ -1145,14 +1387,23 @@ class WLDeblendGalaxyCatalog(object):
 
 def read_wldeblend_cat(rng):
     """
-    we get it from the cache, but update the position angles
-    each time
+    Read the catalog from the cache, but update the position angles each time
+
+    Parameters
+    ----------
+    rng: np.random.RandomState
+        The random number generator
+
+    Returns
+    -------
+    array with fields
     """
     fname = os.path.join(
         os.environ.get('CATSIM_DIR', '.'),
         'OneDegSq.fits',
     )
 
+    # not thread safe
     cat = cached_catalog_read(fname)
 
     cat['pa_disk'] = rng.uniform(
@@ -1167,6 +1418,18 @@ def read_wldeblend_cat(rng):
 class StarCatalog(object):
     """
     Star catalog with variable density
+
+    Parameters
+    ----------
+    rng: np.random.RandomState
+        The random number generator
+    coadd_dim: int
+        Dimensions of the coadd
+    buff: int
+        Buffer region with no objects, on all sides of image
+    density: float, optional
+        Optional density for catalog, if not sent the density is variable and
+        drawn from the expected galactic density
     """
     def __init__(self, *, rng, coadd_dim, buff, density=None):
         self.rng = rng
@@ -1208,6 +1471,13 @@ class StarCatalog(object):
         """
         get a list of galsim objects
 
+        Parameters
+        ----------
+        survey: WLDeblendSurvey or TrivialSurvey
+            The survey object
+        noise: float
+            The noise level, needed for setting gsparams
+
         Returns
         -------
         [galsim objects]
@@ -1241,6 +1511,22 @@ class StarCatalog(object):
         return objlist, shifts, bright_objlist, bright_shifts, bright_mags
 
     def _get_star(self, survey, band, i, noise):
+        """
+        Parameters
+        ----------
+        survey: WLDeblendSurvey or TrivialSurvey
+            The survey object
+        band: string
+            Band string, e.g. 'r'
+        i: int
+            Index of object
+        noise: float
+            The noise level, needed for setting gsparams
+
+        Returns
+        -------
+        galsim.GSObject
+        """
 
         index = self.indices[i]
         dx = self.shifts['dx'][i]
@@ -1263,7 +1549,22 @@ class StarCatalog(object):
 
 
 def get_star_gsparams(mag, flux, noise):
+    """
+    Get appropriate gsparams given flux and noise
 
+    Parameters
+    ----------
+    mag: float
+        mag of star
+    flux: float
+        flux of star
+    noise: float
+        noise of image
+
+    Returns
+    --------
+    GSParams, isbright where isbright is true for stars with mag less than 18
+    """
     do_thresh = do_acc = False
     if mag < 18:
         do_thresh = True
@@ -1294,6 +1595,18 @@ def get_star_gsparams(mag, flux, noise):
 
 
 def make_psf(*, psf_type):
+    """
+    Make a fixed PSF
+
+    Parameters
+    ----------
+    psf_type: string
+        'gauss' or 'moffat'
+
+    Returns
+    -------
+    Gaussian or Moffat
+    """
     if psf_type == "gauss":
         psf = galsim.Gaussian(fwhm=PSF_FWHM)
     elif psf_type == "moffat":
@@ -1305,6 +1618,20 @@ def make_psf(*, psf_type):
 
 
 def make_ps_psf(*, rng, dim):
+    """
+    get a power spectrum psf
+
+    Parameters
+    ----------
+    rng: np.random.RandomState
+        The random number generator
+    dim: int
+        Dimensions of image
+
+    Returns
+    -------
+    PowerSpectrumPSF
+    """
     return PowerSpectrumPSF(
         rng=rng,
         im_width=dim,
@@ -1316,6 +1643,16 @@ def make_ps_psf(*, rng, dim):
 
 def get_se_dim(*, coadd_dim):
     """
-    get se dim given coadd dim
+    get se dim given coadd dim.  The se dim is padded out as
+        int(np.ceil(coadd_dim * np.sqrt(2))) + 20
+
+    Parameters
+    ----------
+    coadd_dim: int
+        dimensions of coadd
+
+    Returns
+    -------
+    integer dimensions of SE image
     """
     return int(np.ceil(coadd_dim * np.sqrt(2))) + 20
