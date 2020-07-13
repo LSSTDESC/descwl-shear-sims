@@ -1,10 +1,47 @@
 import os
 import numpy as np
+import galsim
 import pytest
 
 from ..lsst_bits import SAT, BRIGHT
 from ..saturation import BAND_SAT_VALS
 from ..simple_sim import Sim
+from ..gen_star_masks import add_bright_star_mask
+from ..star_bleeds import add_bleed
+
+
+@pytest.mark.skipif(
+    "CATSIM_DIR" not in os.environ,
+    reason='simulation input data is not present')
+@pytest.mark.parametrize('band', ('r', 'i', 'z'))
+def test_star_bleed(band):
+    dims = (100, 100)
+
+    cen = [50, 50]
+
+    image = np.zeros(dims)
+    bmask = np.zeros(dims, dtype='i4')
+    pos = galsim.PositionD(x=cen[1], y=cen[0])
+    mag = 12
+    band = 'i'
+
+    add_bleed(
+        image=image,
+        bmask=bmask,
+        pos=pos,
+        mag=mag,
+        band=band,
+    )
+    add_bright_star_mask(
+        bmask=bmask,
+        x=pos.x,
+        y=pos.y,
+        radius=10,
+        val=BRIGHT,
+    )
+
+    assert bmask[cen[0], cen[1]] == SAT | BRIGHT
+    assert image[cen[0], cen[1]] == BAND_SAT_VALS[band]
 
 
 @pytest.mark.skipif(

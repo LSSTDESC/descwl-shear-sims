@@ -110,6 +110,15 @@ def get_bleed_stamp(*, mag, band):
     return stamp
 
 
+def get_max_mag_with_bleed(*, band):
+    """
+    get the largest mag that has a bleed
+    """
+    # they are sorted by mag
+    bleeds = get_cached_bleeds()[band]
+    return bleeds['mag'][-1]
+
+
 @functools.lru_cache(maxsize=1)
 def get_cached_bleeds():
     """
@@ -136,6 +145,8 @@ def get_cached_bleeds():
         for f in flist:
             with fitsio.FITS(f, vstorage='object') as fits:
                 d = fits[1].read()
+
+            d = remove_off_center(d)
             dlist.append(d)
 
         data = eu.numpy_util.combine_arrlist(dlist)
@@ -144,3 +155,22 @@ def get_cached_bleeds():
         bdict[band] = data
 
     return bdict
+
+
+def remove_off_center(data):
+    """
+    remove examples where they are too far off center
+    """
+
+    keep = []
+    for i in range(data.size):
+
+        d = data[i]
+
+        lower_len = d['row'] + 1
+        upper_len = d['stamp_nrow'] - d['row']
+
+        if abs(upper_len - lower_len) < 5:
+            keep.append(i)
+
+    return data[keep]

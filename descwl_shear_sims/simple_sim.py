@@ -950,7 +950,7 @@ class Sim(object):
         if self.saturate:
             saturate_image_and_mask(
                 image=se_image.array,
-                mask=bmask,
+                bmask=bmask,
                 sat_val=sat_val,
             )
 
@@ -1399,7 +1399,7 @@ def add_bright_star_masks(obj_data, band_data):
                             pos = odata[band]['pos'][epoch]
                             bmask = band_data[band][epoch].bmask.array
                             add_bright_star_mask(
-                                mask=bmask, x=pos.x, y=pos.y,
+                                bmask=bmask, x=pos.x, y=pos.y,
                                 radius=radius,
                                 val=BRIGHT,
                             )
