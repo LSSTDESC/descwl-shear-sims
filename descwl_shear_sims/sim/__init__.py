@@ -3,10 +3,10 @@
 from .sim import (
     make_sim,
     get_sim_config,
-    make_galaxy_catalog,
     make_psf,
     make_ps_psf,
     get_se_dim,
-    StarCatalog,
-    ZERO_POINT,
 )
+
+from .galaxy_catalogs import make_galaxy_catalog
+from .star_catalogs import StarCatalog

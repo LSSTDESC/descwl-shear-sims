@@ -9,10 +9,10 @@ from ..sim import (
     make_psf,
     make_ps_psf,
     get_se_dim,
-    ZERO_POINT,
 )
+from ..sim.constants import ZERO_POINT
 
-from ..sim.sim import DEFAULT_FIXED_GAL_CONFIG
+from ..sim.galaxy_catalogs import DEFAULT_FIXED_GAL_CONFIG
 
 
 @pytest.mark.parametrize('dither,rotate', [
