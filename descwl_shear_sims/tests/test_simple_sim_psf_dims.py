@@ -1,9 +1,9 @@
-from ..simple_sim import Sim
+from ..simple_sim import SimpleSim
 
 
 def test_simple_sim_psf_dims():
     psf_dim = 101
-    sim = Sim(
+    sim = SimpleSim(
         rng=10,
         psf_dim=psf_dim,
         gals_kws={'density': 10},

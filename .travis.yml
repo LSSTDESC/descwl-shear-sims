@@ -40,4 +40,4 @@ install:
 
 script:
   - flake8 descwl_shear_sims
-  - pytest -vv descwl_shear_sims
+  - pytest -vv --ignore descwl_shear_sims/tests/test_correlated_noise.py descwl_shear_sims

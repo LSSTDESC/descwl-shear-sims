@@ -1,11 +1,11 @@
 import pytest
 import numpy as np
 
-from ..simple_sim import Sim
+from ..simple_sim import SimpleSim
 
 
 def test_simple_sim_psf_smoke():
-    sim = Sim(rng=10, gals_kws={'density': 10})
+    sim = SimpleSim(rng=10, gals_kws={'density': 10})
     data = sim.gen_sim()
     assert len(data) == sim.n_bands
     for band in sim.bands:
@@ -17,7 +17,7 @@ def test_simple_sim_psf_smoke():
 
 @pytest.mark.parametrize('psf_type', ['gauss', 'moffat'])
 def test_simple_sim_psf_type(psf_type):
-    sim = Sim(
+    sim = SimpleSim(
         rng=10,
         psf_type=psf_type,
         gals_kws={'density': 10},
@@ -39,7 +39,7 @@ def test_simple_sim_psf_type(psf_type):
 
 
 def test_simple_sim_psf_center():
-    sim = Sim(rng=10, gals_kws={'density': 10})
+    sim = SimpleSim(rng=10, gals_kws={'density': 10})
     data = sim.gen_sim()
     se_obs = data[sim.bands[0]][0]
 
@@ -82,7 +82,7 @@ def test_simple_sim_psf_shape():
     import galsim
 
     shear = galsim.Shear(g1=0.2, g2=-0.2)
-    sim = Sim(
+    sim = SimpleSim(
         rng=10,
         psf_kws={'g1': shear.g1, 'g2': shear.g2},
         gals_kws={'density': 10},
@@ -115,7 +115,7 @@ def test_simple_sim_psf_shape():
 
 
 def test_simple_sim_se_ps_psf():
-    sim = Sim(
+    sim = SimpleSim(
         rng=10,
         psf_type='ps',
         psf_kws={'noise_level': 0},

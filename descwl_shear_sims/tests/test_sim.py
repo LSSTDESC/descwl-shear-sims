@@ -2,16 +2,17 @@ import os
 import pytest
 import numpy as np
 from ..se_obs import SEObs
-from ..trivial_sim import (
-    make_trivial_sim,
+from ..sim import (
+    make_sim,
     make_galaxy_catalog,
     StarCatalog,
     make_psf,
     make_ps_psf,
     get_se_dim,
-    ZERO_POINT,
-    DEFAULT_FIXED_GAL_CONFIG,
 )
+from ..sim.constants import ZERO_POINT
+
+from ..sim.galaxy_catalogs import DEFAULT_FIXED_GAL_CONFIG
 
 
 @pytest.mark.parametrize('dither,rotate', [
@@ -20,7 +21,7 @@ from ..trivial_sim import (
     (True, False),
     (True, True),
 ])
-def test_trivial_sim_smoke(dither, rotate):
+def test_sim_smoke(dither, rotate):
 
     seed = 74321
     rng = np.random.RandomState(seed)
@@ -35,7 +36,7 @@ def test_trivial_sim_smoke(dither, rotate):
     )
 
     psf = make_psf(psf_type="gauss")
-    data = make_trivial_sim(
+    data = make_sim(
         rng=rng,
         galaxy_catalog=galaxy_catalog,
         coadd_dim=351,
@@ -51,7 +52,7 @@ def test_trivial_sim_smoke(dither, rotate):
         assert isinstance(bdata[0], SEObs)
 
 
-def test_trivial_sim():
+def test_sim():
 
     bands = ["i"]
     seed = 7421
@@ -68,7 +69,7 @@ def test_trivial_sim():
     )
 
     psf = make_psf(psf_type="moffat")
-    sim_data = make_trivial_sim(
+    sim_data = make_sim(
         rng=rng,
         galaxy_catalog=galaxy_catalog,
         coadd_dim=coadd_dim,
@@ -91,7 +92,7 @@ def test_trivial_sim():
 
 
 @pytest.mark.parametrize("rotate", [False, True])
-def test_trivial_sim_exp_mag(rotate):
+def test_sim_exp_mag(rotate):
     """
     test we get the right mag.  Also test we get small flux when we rotate and
     there is nothing at the sub image location we choose
@@ -111,7 +112,7 @@ def test_trivial_sim_exp_mag(rotate):
     )
 
     psf = make_psf(psf_type="gauss")
-    sim_data = make_trivial_sim(
+    sim_data = make_sim(
         rng=rng,
         galaxy_catalog=galaxy_catalog,
         coadd_dim=coadd_dim,
@@ -135,7 +136,7 @@ def test_trivial_sim_exp_mag(rotate):
 
 
 @pytest.mark.parametrize("psf_type", ["gauss", "moffat", "ps"])
-def test_trivial_sim_psf_type(psf_type):
+def test_sim_psf_type(psf_type):
 
     seed = 431
     rng = np.random.RandomState(seed)
@@ -155,7 +156,7 @@ def test_trivial_sim_psf_type(psf_type):
     else:
         psf = make_psf(psf_type=psf_type)
 
-    _ = make_trivial_sim(
+    _ = make_sim(
         rng=rng,
         galaxy_catalog=galaxy_catalog,
         coadd_dim=coadd_dim,
@@ -168,7 +169,7 @@ def test_trivial_sim_psf_type(psf_type):
 
 
 @pytest.mark.parametrize('epochs_per_band', [1, 2, 3])
-def test_trivial_sim_epochs(epochs_per_band):
+def test_sim_epochs(epochs_per_band):
 
     seed = 7421
     bands = ["r", "i", "z"]
@@ -186,7 +187,7 @@ def test_trivial_sim_epochs(epochs_per_band):
     )
 
     psf = make_psf(psf_type="gauss")
-    sim_data = make_trivial_sim(
+    sim_data = make_sim(
         rng=rng,
         galaxy_catalog=galaxy_catalog,
         coadd_dim=coadd_dim,
@@ -205,7 +206,7 @@ def test_trivial_sim_epochs(epochs_per_band):
 
 
 @pytest.mark.parametrize("layout", ("grid", "random"))
-def test_trivial_sim_layout(layout):
+def test_sim_layout(layout):
     seed = 7421
     coadd_dim = 201
     rng = np.random.RandomState(seed)
@@ -219,7 +220,7 @@ def test_trivial_sim_layout(layout):
     )
 
     psf = make_psf(psf_type="gauss")
-    _ = make_trivial_sim(
+    _ = make_sim(
         rng=rng,
         galaxy_catalog=galaxy_catalog,
         coadd_dim=coadd_dim,
@@ -236,7 +237,7 @@ def test_trivial_sim_layout(layout):
      (False, True),
      (True, True)],
 )
-def test_trivial_sim_defects(cosmic_rays, bad_columns):
+def test_sim_defects(cosmic_rays, bad_columns):
     seed = 7421
     coadd_dim = 201
     rng = np.random.RandomState(seed)
@@ -250,7 +251,7 @@ def test_trivial_sim_defects(cosmic_rays, bad_columns):
     )
 
     psf = make_psf(psf_type="gauss")
-    _ = make_trivial_sim(
+    _ = make_sim(
         rng=rng,
         galaxy_catalog=galaxy_catalog,
         coadd_dim=coadd_dim,
@@ -266,7 +267,7 @@ def test_trivial_sim_defects(cosmic_rays, bad_columns):
     "CATSIM_DIR" not in os.environ,
     reason='simulation input data is not present',
 )
-def test_trivial_sim_wldeblend():
+def test_sim_wldeblend():
     seed = 7421
     coadd_dim = 201
     rng = np.random.RandomState(seed)
@@ -279,7 +280,7 @@ def test_trivial_sim_wldeblend():
     )
 
     psf = make_psf(psf_type="moffat")
-    _ = make_trivial_sim(
+    _ = make_sim(
         rng=rng,
         galaxy_catalog=galaxy_catalog,
         coadd_dim=coadd_dim,
@@ -293,7 +294,7 @@ def test_trivial_sim_wldeblend():
     "CATSIM_DIR" not in os.environ,
     reason='simulation input data is not present',
 )
-def test_trivial_sim_stars():
+def test_sim_stars():
     seed = 7421
     coadd_dim = 201
     buff = 30
@@ -314,7 +315,7 @@ def test_trivial_sim_stars():
     )
 
     psf = make_psf(psf_type="moffat")
-    _ = make_trivial_sim(
+    _ = make_sim(
         rng=rng,
         galaxy_catalog=galaxy_catalog,
         star_catalog=star_catalog,
@@ -329,7 +330,7 @@ def test_trivial_sim_stars():
     "CATSIM_DIR" not in os.environ,
     reason='simulation input data is not present',
 )
-def test_trivial_sim_star_bleeds():
+def test_sim_star_bleeds():
     seed = 7421
     coadd_dim = 201
     buff = 30
@@ -350,7 +351,7 @@ def test_trivial_sim_star_bleeds():
     )
 
     psf = make_psf(psf_type="moffat")
-    _ = make_trivial_sim(
+    _ = make_sim(
         rng=rng,
         galaxy_catalog=galaxy_catalog,
         star_catalog=star_catalog,

@@ -1,10 +1,10 @@
 import pytest
 import numpy as np
-from descwl_shear_sims.trivial_sim import (
-    make_trivial_sim,
-    FixedGalaxyCatalog,
+from descwl_shear_sims.sim import (
+    make_sim,
     make_psf,
 )
+from ..sim.galaxy_catalogs import FixedGalaxyCatalog
 from numba import njit
 
 
@@ -52,7 +52,7 @@ def test_correlated_noise():
         )
 
         psf = make_psf(psf_type="gauss")
-        sim_data = make_trivial_sim(
+        sim_data = make_sim(
             rng=rng,
             galaxy_catalog=galaxy_catalog,
             coadd_dim=coadd_dim,
