@@ -4,7 +4,7 @@ from descwl_shear_sims.sim import (
     make_sim,
     make_psf,
 )
-from ..sim.sim import FixedGalaxyCatalog
+from ..sim.galaxy_catalogs import FixedGalaxyCatalog
 from numba import njit
 
 

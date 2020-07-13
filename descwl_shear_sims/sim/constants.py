@@ -1,3 +1,5 @@
+import galsim
+
 ZERO_POINT = 30.0
 SCALE = 0.2  # arcseconds/pixel
 RANDOM_DENSITY = 80  # per square arcmin
@@ -8,3 +10,8 @@ FIXED_PSF_FWHM = 0.8
 
 # for fixed moffat psfs
 FIXED_MOFFAT_BETA = 2.5
+
+WORLD_ORIGIN = galsim.CelestialCoord(
+    ra=200 * galsim.degrees,
+    dec=0 * galsim.degrees,
+)
