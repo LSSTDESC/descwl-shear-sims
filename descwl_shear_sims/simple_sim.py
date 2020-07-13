@@ -60,7 +60,7 @@ PSF_KWS_DEFAULTS = {
 }
 
 
-class Sim(object):
+class SimpleSim(object):
     """A multi-epoch, multi-band simulation for testing weak lensing shear
     measurements.
 

@@ -3,12 +3,12 @@ import pytest
 import numpy as np
 
 from ..se_obs import SEObs
-from ..simple_sim import Sim
+from ..simple_sim import SimpleSim
 from ..sim_constants import ZERO_POINT
 
 
 def test_simple_sim_smoke():
-    sim = Sim(rng=10, gals_kws={'density': 10})
+    sim = SimpleSim(rng=10, gals_kws={'density': 10})
     data = sim.gen_sim()
     assert len(data) == sim.n_bands
     assert sim.star_density == 0.0
@@ -33,7 +33,7 @@ def test_simple_sim_wldeblend(make_round):
     gals_kws = {
         'make_round': make_round,
     }
-    sim = Sim(
+    sim = SimpleSim(
         rng=101,
         gals_kws=gals_kws,
         gals_type='wldeblend',
@@ -46,7 +46,7 @@ def test_simple_sim_wldeblend(make_round):
 
 
 def test_simple_sim_cap_radius_smoke():
-    sim = Sim(rng=10, cap_radius=1, gals_kws={'density': 10})
+    sim = SimpleSim(rng=10, cap_radius=1, gals_kws={'density': 10})
     assert sim.buff == 0.0
 
     data = sim.gen_sim()
@@ -60,7 +60,7 @@ def test_simple_sim_cap_radius_smoke():
 
 
 def test_simple_sim_noise():
-    sim = Sim(rng=10, gals_kws={'density': 10})
+    sim = SimpleSim(rng=10, gals_kws={'density': 10})
     data = sim.gen_sim()
     for band in sim.bands:
         for epoch in range(sim.epochs_per_band):
@@ -79,17 +79,17 @@ def test_bad_keys():
         'type': 'sample',
     }
     with pytest.raises(ValueError):
-        _ = Sim(rng=10, stars=True, stars_kws=stars_kws)
+        _ = SimpleSim(rng=10, stars=True, stars_kws=stars_kws)
 
     gals_kws = {
         'density': 10,
     }
     with pytest.raises(ValueError):
-        _ = Sim(rng=10, gals_type='wldeblend', gals_kws=gals_kws)
+        _ = SimpleSim(rng=10, gals_type='wldeblend', gals_kws=gals_kws)
 
 
 def test_simple_sim_double_call_raises():
-    sim = Sim(rng=10, gals_kws={'density': 10})
+    sim = SimpleSim(rng=10, gals_kws={'density': 10})
     sim.gen_sim()
     with pytest.raises(RuntimeError):
         sim.gen_sim()
@@ -101,7 +101,7 @@ def test_simple_sim_se_shape():
     """
 
     se_dim = 1024
-    sim = Sim(rng=10, se_dim=se_dim, gals_kws={'density': 10})
+    sim = SimpleSim(rng=10, se_dim=se_dim, gals_kws={'density': 10})
     data = sim.gen_sim()
 
     for band, bdata in data.items():
@@ -114,7 +114,7 @@ def test_simple_sim_band_wcs():
     """
     make sure the cacheing code is consistent
     """
-    sim = Sim(
+    sim = SimpleSim(
         rng=10,
         epochs_per_band=1,
         gals_kws={'density': 10},
@@ -126,7 +126,7 @@ def test_simple_sim_band_wcs():
 
 
 def test_simple_sim_grid_smoke():
-    sim = Sim(
+    sim = SimpleSim(
         rng=10,
         layout_type='grid',
         layout_kws={'dim': 10}
@@ -143,7 +143,7 @@ def test_simple_sim_grid_smoke():
 
 
 def test_simple_sim_grid_only_stars_smoke():
-    sim = Sim(
+    sim = SimpleSim(
         rng=10,
         layout_type='grid',
         layout_kws={'dim': 10},
@@ -167,7 +167,7 @@ def test_simple_sim_grid_stars_and_gals_smoke():
     # fraction of each type
     star_density = 10
     gal_density = 10
-    sim = Sim(
+    sim = SimpleSim(
         rng=10,
         layout_type='grid',
         layout_kws={'dim': 10},
@@ -204,7 +204,7 @@ def test_simple_sim_mag_zp(gals_type):
     """
 
     star_mag = 16
-    sim = Sim(
+    sim = SimpleSim(
         rng=10,
         epochs_per_band=1,
         bands=['r'],

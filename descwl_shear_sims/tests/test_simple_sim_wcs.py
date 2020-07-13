@@ -1,6 +1,6 @@
 import pytest
 
-from ..simple_sim import Sim
+from ..simple_sim import SimpleSim
 from ..gen_sip_wcs import gen_sip_wcs
 from ..gen_tanwcs import gen_tanwcs
 
@@ -12,7 +12,7 @@ EXPECTED_FUNCS = {
 
 @pytest.mark.parametrize('wcs_type', ['tan', 'tan-sip'])
 def test_simple_sim_smoke(wcs_type):
-    sim = Sim(
+    sim = SimpleSim(
         rng=10,
         gals_kws={'density': 10},
         wcs_kws={'type': wcs_type},

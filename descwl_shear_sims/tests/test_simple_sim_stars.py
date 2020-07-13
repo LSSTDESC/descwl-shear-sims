@@ -2,13 +2,13 @@ import os
 import pytest
 import numpy as np
 
-from ..simple_sim import Sim
+from ..simple_sim import SimpleSim
 from ..lsst_bits import SAT, BRIGHT
 from ..saturation import BAND_SAT_VALS
 
 
 def test_simple_sim_fixed_stars():
-    sim = Sim(
+    sim = SimpleSim(
         rng=120,
         gals_kws={'density': 10},
         stars=True,
@@ -20,7 +20,7 @@ def test_simple_sim_fixed_stars():
     "CATSIM_DIR" not in os.environ,
     reason='simulation input data is not present')
 def test_simple_sim_sample_stars():
-    sim = Sim(
+    sim = SimpleSim(
         gals_type='wldeblend',
         rng=335,
         stars=True,
@@ -35,7 +35,7 @@ def test_simple_sim_sample_stars():
 def test_simple_sim_sample_star_density():
     min_density = 2
     max_density = 20
-    sim = Sim(
+    sim = SimpleSim(
         rng=335,
         gals_type='wldeblend',
         stars=True,
@@ -56,7 +56,7 @@ def test_simple_sim_sample_star_density():
     "CATSIM_DIR" not in os.environ,
     reason='simulation input data is not present')
 def test_simple_sim_sample_star_minmag_smoke():
-    sim = Sim(
+    sim = SimpleSim(
         rng=335,
         gals_type='wldeblend',
         stars=True,
@@ -74,7 +74,7 @@ def test_simple_sim_bright_stars(subtract_bright):
     make sure we get saturation and bright marked for
     bright stars
     """
-    sim = Sim(
+    sim = SimpleSim(
         rng=10,
         coadd_dim=51,
         buff=0,

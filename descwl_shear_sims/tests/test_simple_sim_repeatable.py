@@ -1,6 +1,6 @@
 import numpy as np
 import pytest
-from ..simple_sim import Sim
+from ..simple_sim import SimpleSim
 
 
 @pytest.mark.parametrize('gals_type', ['exp', 'wldeblend'])
@@ -16,13 +16,13 @@ def test_simple_sim_noise_repeat(gals_type):
 
     seed = 100
 
-    sim_plus = Sim(
+    sim_plus = SimpleSim(
         rng=np.random.RandomState(seed),
         gals=False,
         gals_type=gals_type,
         g1=0.02,
     )
-    sim_minus = Sim(
+    sim_minus = SimpleSim(
         rng=np.random.RandomState(seed),
         gals=False,
         gals_type=gals_type,

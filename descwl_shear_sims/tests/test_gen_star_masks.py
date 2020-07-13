@@ -5,7 +5,7 @@ import pytest
 
 from ..lsst_bits import SAT, BRIGHT
 from ..saturation import BAND_SAT_VALS
-from ..simple_sim import Sim
+from ..simple_sim import SimpleSim
 from ..gen_star_masks import add_bright_star_mask
 from ..star_bleeds import add_bleed
 
@@ -52,7 +52,7 @@ def test_star_mask_keywords():
     test star masking using the keyword to the sim
     """
     rng = np.random.RandomState(234)
-    sim = Sim(
+    sim = SimpleSim(
         rng=rng,
         bands=['r'],
         epochs_per_band=1,
@@ -88,7 +88,7 @@ def test_star_mask_repeatable():
 
     for trial in (1, 2):
         rng = np.random.RandomState(234)
-        sim = Sim(
+        sim = SimpleSim(
             rng=rng,
             bands=['r'],
             epochs_per_band=1,
