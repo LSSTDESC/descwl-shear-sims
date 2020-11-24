@@ -6,6 +6,8 @@ from .sim import (
     get_se_dim,
 )
 
-from .galaxy_catalogs import make_galaxy_catalog
+from .galaxy_catalogs import (
+    make_galaxy_catalog, WLDeblendGalaxyCatalog, FixedGalaxyCatalog,
+)
 from .star_catalogs import StarCatalog
 from .psfs import make_psf, make_ps_psf
