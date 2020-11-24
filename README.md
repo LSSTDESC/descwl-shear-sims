@@ -65,6 +65,15 @@ for trial in range(ntrial):
         g2=0.00,
         psf=psf,
     )
+
+    # the sim_data has keys
+    #    band_data: a dict keyed by band with a list of single-epoch observations
+    #      objects, one for each epoch.  The class is SEObs, defined in
+    #      descwl_shear_sims.se_obs.py and has attributes for the image, weight
+    #      map, wcs, noise image, bmask and a psf generating function get_psf()
+    #    coadd_wcs:  the wcs for the coadd
+    #    psf_dims:  dimensions of the psf
+    #    coadd_dims: dimensions of the coadd
 ```
 
 ### A sim with lots of features turned on
