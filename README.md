@@ -34,3 +34,13 @@ for band_ind, band in enumerate(data):
 ## Documentation
 
 The doc strings for the main public APIs are complete. See them for more details.
+
+## Getting the Simulation Input Data
+
+To use galaxy models from WeakLensingDeblending, and to use realistic star masks, get this
+tar ball, untar it and set the $CATSIM_DIR environment variable to that location
+```shell
+wget https://www.cosmo.bnl.gov/www/esheldon/data/catsim.tar.gz
+tar xvfz catsim.tar.gz
+export CATSIM_DIR=/path/to/catsim
+```
