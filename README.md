@@ -14,6 +14,13 @@ pip install .
 If you are installing into a `conda` environment, you should add `--no-deps` to the 
 command above and make sure to install the dependencies with `conda`.
 
+## Installing with all the dependencies
+
+Matt Becker has put up examples to install the full dependencies, including
+the DM STack:
+
+[Full Installation with Dependencies](https://github.com/beckermr/mdet-lsst-sim-runs)
+
 ## Example Usage
 
 ### A simple sim
