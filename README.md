@@ -14,21 +14,135 @@ pip install .
 If you are installing into a `conda` environment, you should add `--no-deps` to the 
 command above and make sure to install the dependencies with `conda`.
 
+## Installing with all the dependencies
+
+Matt Becker has put up examples to install the full dependencies, including
+the DM STack:
+
+[Full Installation with Dependencies](https://github.com/beckermr/mdet-lsst-sim-runs)
+
 ## Example Usage
 
+### A simple sim
 ```python
-from descwl_shear_sims.simple_sim import Sim
+import numpy as np
+from descwl_shear_sims.sim import (
+    FixedGalaxyCatalog,  # one of the galaxy catalog classes
+    make_sim,  # for making a simulation realization
+    make_psf,  # for making a simple PSF
+    get_se_dim,  # convert coadd dims to SE dims
+)
 
-data = Sim(rng=10, epochs_per_band=3).gen_sim()
+seed = 8312
+rng = np.random.RandomState(seed)
 
-for band_ind, band in enumerate(data):
-    for epoch_ind, obs in enumerate(data[band]):
-        # do something with obs here.
-        # obs.image is the image
-        # obs.weight is the weight map
-        # obs.get_psf(x, y) will produce an image of the PSF
-        # obs.wcs is the galsim WCS object associated with the image
-        pass
+ntrial = 2
+coadd_dim = 351
+buff = 50
+
+# this is the single epoch image sized used by the sim, we need
+# it for the power spectrum psf
+se_dim = get_se_dim(coadd_dim=coadd_dim)
+
+for trial in range(ntrial):
+    print('trial: %d/%d' % (trial+1, ntrial))
+
+    # galaxy catalog; you can make your own
+    galaxy_catalog = FixedGalaxyCatalog(
+        rng=rng,
+        coadd_dim=coadd_dim,
+        buff=buff,
+        layout='random',
+        mag=25,
+        hlr=1.0,
+    )
+    # make a power-spectrum PSF, again you can make your own PSF
+    psf = make_psf(psf_type='gauss')
+
+    # generate some simulation data, with a particular shear
+
+    sim_data = make_sim(
+        rng=rng,
+        galaxy_catalog=galaxy_catalog,
+        coadd_dim=coadd_dim,
+        g1=0.02,
+        g2=0.00,
+        psf=psf,
+    )
+
+    # the sim_data has keys
+    #    band_data: a dict keyed by band with a list of single-epoch
+    #      observations objects, one for each epoch.  The class is
+    #      SEObs, defined in descwl_shear_sims.se_obs.py and has attributes
+    #      for the image, weight map, wcs, noise image, bmask and a psf
+    #      image generating method get_psf(x, y)
+    #    coadd_wcs:  the wcs for the coadd
+    #    psf_dims:  dimensions of the psf
+    #    coadd_dims: dimensions of the coadd
+```
+
+### A sim with lots of features turned on
+
+```python
+import numpy as np
+from descwl_shear_sims.sim import (
+    WLDeblendGalaxyCatalog,  # one of the galaxy catalog classes
+    StarCatalog,  # star catalog class
+    make_sim,  # for making a simulation realization
+    make_ps_psf,  # for making a power spectrum PSF
+    get_se_dim,  # convert coadd dims to SE dims
+)
+
+seed = 8312
+rng = np.random.RandomState(seed)
+
+ntrial = 2
+coadd_dim = 351
+buff = 50
+
+# this is the single epoch image sized used by the sim, we need
+# it for the power spectrum psf
+se_dim = get_se_dim(coadd_dim=coadd_dim)
+
+for trial in range(ntrial):
+    print('trial: %d/%d' % (trial+1, ntrial))
+
+    # galaxy catalog; you can make your own
+    galaxy_catalog = WLDeblendGalaxyCatalog(
+        rng=rng,
+        coadd_dim=coadd_dim,
+        buff=buff,
+    )
+    # star catalog; you can make one of these too
+    star_catalog = StarCatalog(
+        rng=rng,
+        coadd_dim=coadd_dim,
+        buff=buff,
+    )
+    # make a power-spectrum PSF, again you can make your own PSF
+    psf = make_ps_psf(rng=rng, dim=se_dim)
+
+    # generate some simulation data, with a particular shear,
+    # and dithering, rotation, cosmic rays, bad columns, star bleeds
+    # turned on.  By sending the star catalog we generate stars and
+    # some can be saturated and bleed
+
+    sim_data = make_sim(
+        rng=rng,
+        galaxy_catalog=galaxy_catalog,
+        star_catalog=star_catalog,
+        coadd_dim=coadd_dim,
+        g1=0.02,
+        g2=0.00,
+        psf=psf,
+        dither=True,
+        rotate=True,
+        bands=['r', 'i', 'z'],
+        noise_factor=0.58,
+        cosmic_rays=True,
+        bad_columns=True,
+        star_bleeds=True,
+    )
 ```
 
 ## Documentation
