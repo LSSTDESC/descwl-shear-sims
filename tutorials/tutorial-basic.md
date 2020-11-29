@@ -468,4 +468,4 @@ for trial in range(ntrial):
 
 # More options for the sim
 
-We will look over the docs [here]:(https://github.com/LSSTDESC/descwl-shear-sims/blob/master/descwl_shear_sims/sim/sim.py#L37)
+We will look over the docs [here](https://github.com/LSSTDESC/descwl-shear-sims/blob/master/descwl_shear_sims/sim/sim.py#L37)
