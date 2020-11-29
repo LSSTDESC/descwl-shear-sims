@@ -71,6 +71,8 @@ nersc you may need to follow the instructions
 [here](https://github.com/beckermr/mdet-lsst-sim-runs/) to get the environment
 to work.
 
+## Simple Simulation
+
 Let's start with a simple simulation.  Copy and past this into a file or notebook:
 ```python
 import numpy as np
@@ -96,7 +98,7 @@ for trial in range(ntrial):
         coadd_dim=coadd_dim,
         buff=buff,
         layout='random',
-        mag=25,
+        mag=24,
         hlr=1.0,
     )
     # make a constant gaussian psf
@@ -146,6 +148,8 @@ psf shape: [51, 51]
 coadd shape: [351, 351]
 ```
 
+## Complex Simulation
+
 Now if you installed the data you can run a complex example.
 This example has complex galaxies with realistic flux, colors, and
 size, as well as stars, star bleed trails and masking, cosmic rays,
@@ -162,7 +166,7 @@ from descwl_shear_sims.sim import (
     get_se_dim,  # convert coadd dims to SE dims
 )
 
-seed = 8312
+seed = 9137
 rng = np.random.RandomState(seed)
 
 ntrial = 2
@@ -237,3 +241,49 @@ image shape: (517, 517)
 psf shape: [51, 51]
 coadd shape: [351, 351]
 ```
+
+## Visualization with matplotlib
+
+A quick way to visualize the image is using matplotlib.
+
+Add this function to your code:
+```python
+def show_obs_mpl(obs):
+    from matplotlib import pyplot as plt
+    plt.imshow(obs.image.array, cmap='gray', interpolation='nearest')
+    plt.show()
+```
+Then put the line `show_obs_mpl(sim_data['band_data']['i'][0])` in the loop body to
+view an i band image.
+
+## Visualization with the Stack (optional)
+
+The best way to visualize these data is using the DM Stack visualization tools.
+The stack understands the mask and can thus show the image with masking
+overlaid.  This requires installing the `ds9` image viewer.  On ubuntu you can
+install the `saods9` package.
+
+Add this function to your code:
+```python
+def show_obs(obs):
+    import lsst.afw.image as afw_image
+    import lsst.afw.display as afw_display
+
+    sy, sx = obs.image.array.shape
+
+    weight = obs.weight.array
+    noise_var = 1.0/weight
+
+    masked_image = afw_image.MaskedImageF(sx, sy)
+    masked_image.image.array[:, :] = obs.image.array
+    masked_image.variance.array[:, :] = noise_var
+    masked_image.mask.array[:, :] = obs.bmask.array
+
+    exp = afw_image.ExposureF(masked_image)
+    display = afw_display.getDisplay(backend='ds9')
+    display.mtv(exp)
+
+    input('hit enter to continue')
+```
+Then put the line `show_obs(sim_data['band_data']['i'][0])` in the loop body to
+view an i band image.
