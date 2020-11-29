@@ -30,7 +30,6 @@ from descwl_shear_sims.sim import (
     FixedGalaxyCatalog,  # one of the galaxy catalog classes
     make_sim,  # for making a simulation realization
     make_psf,  # for making a simple PSF
-    get_se_dim,  # convert coadd dims to SE dims
 )
 
 seed = 8312
@@ -39,10 +38,6 @@ rng = np.random.RandomState(seed)
 ntrial = 2
 coadd_dim = 351
 buff = 50
-
-# this is the single epoch image sized used by the sim, we need
-# it for the power spectrum psf
-se_dim = get_se_dim(coadd_dim=coadd_dim)
 
 for trial in range(ntrial):
     print('trial: %d/%d' % (trial+1, ntrial))
@@ -56,7 +51,8 @@ for trial in range(ntrial):
         mag=25,
         hlr=1.0,
     )
-    # make a power-spectrum PSF, again you can make your own PSF
+
+    # make a constant gaussian psf
     psf = make_psf(psf_type='gauss')
 
     # generate some simulation data, with a particular shear
