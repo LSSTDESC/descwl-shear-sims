@@ -4,7 +4,7 @@ In this tutorial we will
 
 1. Install the code
 1. Install some simulation data (optional)
-1. Run basic examples
+1. Run some examples
 1. Generate your own galaxy catalog class for use in the sim
 
 Note this tutorial is designed to work with v0.2.0 of the descwl-shear-sims backage, and
@@ -18,9 +18,10 @@ you longer to get it working.
 
 First make sure you have anaconda installed.  If you don't yet have it
 installed, I recommend installing
-[miniconda]:https://docs.conda.io/en/latest/miniconda.html
+[miniconda](https://docs.conda.io/en/latest/miniconda.html)
 
-Matt becker has put together a [conda environment file]:https://raw.githubusercontent.com/beckermr/mdet-lsst-sim-runs/main/environment.yml  Get this file and run
+Matt becker has put together a [conda environment file](https://raw.githubusercontent.com/beckermr/mdet-lsst-sim-runs/main/environment.yml)
+Get this file and run
 ```bash
 conda env create -f environment.yml
 ```
@@ -61,12 +62,12 @@ setenv CATSIM_DIR /path/to/catsim
 
 I recommend putting that environment variable into your shell so you don't have to type that every time.  E.g. in your ~/.bashrc or ~/.csrhc etc.
 
-# Run some basic examples
+# Run some examples
 
 I will be creating a python script and running it, but if you want to use a
 notebook feel free to do so.  Also note if you must work with a notebook at
 nersc you may need to follow the instructions
-[here]:https://github.com/beckermr/mdet-lsst-sim-runs/ to get the environment
+[here](https://github.com/beckermr/mdet-lsst-sim-runs/) to get the environment
 to work.
 
 Let's start with a simple simulation.  Copy and past this into a file or notebook:
