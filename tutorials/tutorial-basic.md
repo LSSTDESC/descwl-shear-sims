@@ -466,7 +466,7 @@ for trial in range(ntrial):
     print('coadd shape:', sim_data['coadd_dims'])
 ```
 
-# More options for the sim
+# Docs for the sim maker
 
 We will look over the docs [here](https://github.com/LSSTDESC/descwl-shear-sims/blob/master/descwl_shear_sims/sim/sim.py#L37)
 
