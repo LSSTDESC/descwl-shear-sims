@@ -469,3 +469,23 @@ for trial in range(ntrial):
 # More options for the sim
 
 We will look over the docs [here](https://github.com/LSSTDESC/descwl-shear-sims/blob/master/descwl_shear_sims/sim/sim.py#L37)
+
+# Contributing to the code
+
+We welcome contributions.  Feel free to fork the code on github, make changes,
+and create a Pull Request.
+
+Some ideas for additions to the code
+
+* Add a background level to the images.  This can be a constant for fixed
+    galaxy catalogs, or for the WeakLensingDeblending catalogs it can use
+    the background defined in that code.
+* Alternative psf models.  Any user can make their own, as shown
+    above, but we may decide some generally useful and should
+    be included in this code.  For example, some kind of optical model
+    might be useful, or a model with large "wings".
+* New galaxy catalog types.  One idea would be a catalog that generates
+    the whole sky with a cosmological shear pattern.
+* Generate image locations over the sky rather than at a fixed location.
+    Useful if star or galaxy catalogs understand location (see previous
+    bullet)
