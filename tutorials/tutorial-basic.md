@@ -101,7 +101,8 @@ for trial in range(ntrial):
         mag=24,
         hlr=1.0,
     )
-    # make a constant gaussian psf
+
+    # make a constant gaussian psf.  Any galsim object will do
     psf = make_psf(psf_type='gauss')
 
     # generate some simulation data, with a particular shear
@@ -392,3 +393,79 @@ for trial in range(ntrial):
     print('psf shape:', sim_data['psf_dims'])
     print('coadd shape:', sim_data['coadd_dims'])
 ```
+
+
+# Make your own PSF
+
+You can use any galsim object for the PSF.  You can also define a class that
+has the `getPSF(pos)` method, which returns a galsim object at the specified
+location.
+
+```python
+import numpy as np
+from descwl_shear_sims.sim import (
+    FixedGalaxyCatalog,  # one of the galaxy catalog classes
+    make_sim,  # for making a simulation realization
+)
+import galsim
+
+
+class MyPSF(object):
+    def getPSF(self, pos):
+        """
+        PSF size is a linear function of x
+
+        Parameters
+        ----------
+        pos: position object
+            Must have the .x attribute
+        """
+        fwhm = 0.75 + (pos.x - 175)*0.0001
+        return galsim.Moffat(fwhm=fwhm, beta=2.5)
+
+
+seed = 8312
+rng = np.random.RandomState(seed)
+
+ntrial = 2
+coadd_dim = 351
+buff = 50
+
+for trial in range(ntrial):
+    print('trial: %d/%d' % (trial+1, ntrial))
+
+    # galaxy catalog; you can make your own
+    galaxy_catalog = FixedGalaxyCatalog(
+        rng=rng,
+        coadd_dim=coadd_dim,
+        buff=buff,
+        layout='random',
+        mag=24,
+        hlr=1.0,
+    )
+
+    psf = MyPSF()
+
+    # generate some simulation data, with a particular shear,
+    # and dithering, rotation, cosmic rays, bad columns, star bleeds
+    # turned on.  By sending the star catalog we generate stars and
+    # some can be saturated and bleed
+
+    sim_data = make_sim(
+        rng=rng,
+        galaxy_catalog=galaxy_catalog,
+        coadd_dim=coadd_dim,
+        g1=0.02,
+        g2=0.00,
+        psf=psf,
+    )
+    print('bands:', sim_data['band_data'].keys())
+    print('nepocs i:', len(sim_data['band_data']['i']))
+    print('image shape:', sim_data['band_data']['i'][0].image.array.shape)
+    print('psf shape:', sim_data['psf_dims'])
+    print('coadd shape:', sim_data['coadd_dims'])
+```
+
+# More options for the sim
+
+We will look over the docs [here]:(https://github.com/LSSTDESC/descwl-shear-sims/blob/master/descwl_shear_sims/sim/sim.py#L37)
