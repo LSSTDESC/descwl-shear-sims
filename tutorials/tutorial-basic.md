@@ -24,11 +24,14 @@ Matt becker has put together a [conda environment file]:https://raw.githubuserco
 ```bash
 conda env create -f environment.yml
 ```
-This will create a new environment called `mdet-lsst-sims` (short for metadetect lsst sims).
+This will create a new environment called `mdet-lsst-sims` (short for
+metadetect lsst sims).  Note this installation uses quite a lot of memory. You
+may want to close high memory programs such as your browser before doing the
+install.
 
 Now activate the environment.  You can do this two ways
 ```bash
-# probably most users will do
+# probably most people will do this
 conda activate mdet-lsst-sims
 # some will prefer to do this
 source activate mdet-lsst-sims
@@ -40,12 +43,11 @@ the library
 import descwl_shear_sims
 ```
 
-
 # Install simulation data (optional)
 
-This is data used by the the WeakLensingDeblending to generate galaxies, as well
-as for generating stars and star masks and bleeds.  You can skip this if you only
-plan to work with simpler simulations
+We will get a tar file with data used by the the WeakLensingDeblending to
+generate galaxies, as well as some data for generating stars and star masks and
+bleeds.  You can skip this if you only plan to work with simpler simulations
 
 ```bash
 wget https://www.cosmo.bnl.gov/www/esheldon/data/catsim.tar.gz
@@ -95,7 +97,7 @@ for trial in range(ntrial):
         mag=25,
         hlr=1.0,
     )
-    # make a power-spectrum PSF, again you can make your own PSF
+    # make a constant gaussian psf
     psf = make_psf(psf_type='gauss')
 
     # generate some simulation data, with a particular shear
@@ -114,14 +116,122 @@ for trial in range(ntrial):
     #      observations objects, one for each epoch.  The class is
     #      SEObs, defined in descwl_shear_sims.se_obs.py and has attributes
     #      for the image, weight map, wcs, noise image, bmask and a psf
-    #      image generating method get_psf(x, y)
+    #      image generating method get_psf(x, y).  The images are galsim
+    #      Image objects.
     #    coadd_wcs:  the wcs for the coadd
     #    psf_dims:  dimensions of the psf
     #    coadd_dims: dimensions of the coadd
+    print('bands:', sim_data['band_data'].keys())
+    print('nepocs i:', len(sim_data['band_data']['i']))
+    print('image shape:', sim_data['band_data']['i'][0].image.array.shape)
+    print('psf shape:', sim_data['psf_dims'])
+    print('coadd shape:', sim_data['coadd_dims'])
 ```
-Now run it, and if all goes well you will see two lines of output
+Now run it, and if all goes well you will see this output:
 ```bash
 python test-simple-sim.py
 trial: 1/2
+bands: dict_keys(['i'])
+nepocs i: 1
+image shape: (517, 517)
+psf shape: [51, 51]
+coadd shape: [351, 351]
 trial: 2/2
+bands: dict_keys(['i'])
+nepocs i: 1
+image shape: (517, 517)
+psf shape: [51, 51]
+coadd shape: [351, 351]
+```
+
+Now if you installed the data you can run a complex example.
+This example has complex galaxies with realistic flux, colors, and
+size, as well as stars, star bleed trails and masking, cosmic rays,
+bad columns, image dithers and rotations.  If you didn't install the
+data but want to try this, you can just use the same galaxy catalog
+as above and turn off stars.
+```python
+import numpy as np
+from descwl_shear_sims.sim import (
+    WLDeblendGalaxyCatalog,  # one of the galaxy catalog classes
+    StarCatalog,  # star catalog class
+    make_sim,  # for making a simulation realization
+    make_ps_psf,  # for making a power spectrum PSF
+    get_se_dim,  # convert coadd dims to SE dims
+)
+
+seed = 8312
+rng = np.random.RandomState(seed)
+
+ntrial = 2
+coadd_dim = 351
+buff = 50
+
+# this is the single epoch image sized used by the sim, we need
+# it for the power spectrum psf
+se_dim = get_se_dim(coadd_dim=coadd_dim)
+
+for trial in range(ntrial):
+    print('trial: %d/%d' % (trial+1, ntrial))
+
+    # galaxy catalog; you can make your own
+    galaxy_catalog = WLDeblendGalaxyCatalog(
+        rng=rng,
+        coadd_dim=coadd_dim,
+        buff=buff,
+    )
+    # star catalog; you can make one of these too
+    star_catalog = StarCatalog(
+        rng=rng,
+        coadd_dim=coadd_dim,
+        buff=buff,
+    )
+    # make a power-spectrum PSF, again you can make your own PSF
+    psf = make_ps_psf(rng=rng, dim=se_dim)
+
+    # generate some simulation data, with a particular shear,
+    # and dithering, rotation, cosmic rays, bad columns, star bleeds
+    # turned on.  By sending the star catalog we generate stars and
+    # some can be saturated and bleed
+
+    sim_data = make_sim(
+        rng=rng,
+        galaxy_catalog=galaxy_catalog,
+        star_catalog=star_catalog,
+        coadd_dim=coadd_dim,
+        g1=0.02,
+        g2=0.00,
+        psf=psf,
+        psf_dim=51,
+        dither=True,
+        rotate=True,
+        bands=['r', 'i', 'z'],
+        epochs_per_band=1,
+        noise_factor=0.58,
+        cosmic_rays=True,
+        bad_columns=True,
+        star_bleeds=True,
+    )
+    print('bands:', sim_data['band_data'].keys())
+    print('nepocs i:', len(sim_data['band_data']['i']))
+    print('image shape:', sim_data['band_data']['i'][0].image.array.shape)
+    print('psf shape:', sim_data['psf_dims'])
+    print('coadd shape:', sim_data['coadd_dims'])
+```
+
+Now run it, and if all goes well you will see this output:
+```bash
+python test-full-sim.py
+trial: 1/2
+bands: dict_keys(['r', 'i', 'z'])
+nepocs i: 1
+image shape: (517, 517)
+psf shape: [51, 51]
+coadd shape: [351, 351]
+trial: 2/2
+bands: dict_keys(['r', 'i', 'z'])
+nepocs i: 1
+image shape: (517, 517)
+psf shape: [51, 51]
+coadd shape: [351, 351]
 ```
