@@ -266,6 +266,10 @@ install the `saods9` package.
 Add this function to your code:
 ```python
 def show_obs(obs):
+    """
+    pack the data into a stack exposure and send to
+    ds9
+    """
     import lsst.afw.image as afw_image
     import lsst.afw.display as afw_display
 
@@ -287,3 +291,104 @@ def show_obs(obs):
 ```
 Then put the line `show_obs(sim_data['band_data']['i'][0])` in the loop body to
 view an i band image.
+
+# Make your own catalog of galaxies
+
+Above we used one of the galaxy catalog objects that comes with
+descwl_shear_sims.  Here we will make our own by modifying the
+FixedGalaxyCatalog class to return bulge plus disk galsim
+objects.
+
+
+```python
+import numpy as np
+import galsim
+from descwl_shear_sims.sim import (
+    FixedGalaxyCatalog,  # one of the galaxy catalog classes
+    make_sim,  # for making a simulation realization
+    make_psf,  # for making a simple PSF
+)
+
+
+class BulgeDiskGalaxyCatalog(FixedGalaxyCatalog):
+    def _get_galaxy(self, i, flux):
+        """
+        get a galaxy object.  Use bulge+disk instead
+        of Exponential used in the FixedGalaxyCatalog
+
+        Parameters
+        ----------
+        i: int
+            Index of object
+        flux: float
+            Flux of object
+
+        Returns
+        --------
+        galsim.GSObject
+        """
+
+        fracdev = self.rng.uniform(low=0, high=1)
+        bulge_flux = fracdev * flux
+        disk_flux = (1 - fracdev) * flux
+
+        bulge = galsim.DeVaucouleurs(
+            half_light_radius=self.hlr,
+            flux=bulge_flux,
+        ).shift(
+            dx=self.shifts['dx'][i],
+            dy=self.shifts['dy'][i]
+        )
+
+        disk = galsim.Exponential(
+            half_light_radius=self.hlr,
+            flux=disk_flux,
+        ).shift(
+            dx=self.shifts['dx'][i],
+            dy=self.shifts['dy'][i]
+        )
+
+        return galsim.Add(bulge, disk)
+
+
+seed = 137
+rng = np.random.RandomState(seed)
+
+ntrial = 2
+coadd_dim = 351
+buff = 50
+
+for trial in range(ntrial):
+    print('trial: %d/%d' % (trial+1, ntrial))
+
+    # galaxy catalog; you can make your own
+    galaxy_catalog = BulgeDiskGalaxyCatalog(
+        rng=rng,
+        coadd_dim=coadd_dim,
+        buff=buff,
+        layout='random',
+        mag=24,
+        hlr=1.0,
+    )
+    # make a power-spectrum PSF, again you can make your own PSF
+    psf = make_psf(psf_type='gauss')
+
+    # generate some simulation data, with a particular shear,
+    # and dithering, rotation, cosmic rays, bad columns, star bleeds
+    # turned on.  By sending the star catalog we generate stars and
+    # some can be saturated and bleed
+
+    sim_data = make_sim(
+        rng=rng,
+        galaxy_catalog=galaxy_catalog,
+        coadd_dim=coadd_dim,
+        g1=0.02,
+        g2=0.00,
+        psf=psf,
+    )
+    print('bands:', sim_data['band_data'].keys())
+    print('nepocs i:', len(sim_data['band_data']['i']))
+    print('image shape:', sim_data['band_data']['i'][0].image.array.shape)
+    print('psf shape:', sim_data['psf_dims'])
+    print('coadd shape:', sim_data['coadd_dims'])
+```
