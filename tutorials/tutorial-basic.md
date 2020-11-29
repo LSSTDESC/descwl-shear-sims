@@ -7,8 +7,8 @@ In this tutorial we will
 1. Run some examples
 1. Generate your own galaxy catalog class for use in the sim
 
-Note this tutorial is designed to work with v0.2.0 of the descwl-shear-sims package, and
-may not work with newer versions.
+Note this tutorial is designed to work with v0.2.0 of the descwl-shear-sims
+package, and may not work with newer versions.
 
 ## Installing the Code
 
@@ -154,7 +154,7 @@ coadd shape: [351, 351]
 ## Complex Simulation
 
 Now if you installed the data you can run a complex example.  This example has
-complex galaxies with realistic flux, colors, and size, as well as stars, star
+galaxies drawn with realistic flux, colors, and size, as well as stars, star
 bleed trails and masking, cosmic rays, bad columns, image dithers and
 rotations.  It also uses a spatially variable PSF with an atmosphere-like power
 spectrum.  If you didn't install the data but want to try this, you can just
