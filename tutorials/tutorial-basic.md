@@ -23,6 +23,7 @@ installed, I recommend installing
 Matt becker has put together a [conda environment file](https://raw.githubusercontent.com/beckermr/mdet-lsst-sim-runs/main/environment.yml)
 Get this file and run
 ```bash
+wget https://raw.githubusercontent.com/beckermr/mdet-lsst-sim-runs/main/environment.yml
 conda env create -f environment.yml
 ```
 This will create a new environment called `mdet-lsst-sims` (short for
