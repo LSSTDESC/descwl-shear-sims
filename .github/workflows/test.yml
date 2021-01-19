@@ -29,10 +29,12 @@ jobs:
         shell: bash -l {0}
         run: |
           conda config --set always_yes yes
+          conda update -q conda
+          conda install -q mamba
 
-          conda install -q -c stackvana stackvana
+          mamba install -q -c stackvana stackvana
 
-          conda install -q \
+          mamba install -q \
             flake8 \
             pytest \
             numpy \
