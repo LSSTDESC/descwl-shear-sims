@@ -310,11 +310,4 @@ def read_wldeblend_cat(rng):
 
     # not thread safe
     cat = cached_catalog_read(fname)
-
-    cat['pa_disk'] = rng.uniform(
-        low=0.0,
-        high=360.0,
-        size=cat.size,
-    )
-    cat['pa_bulge'] = cat['pa_disk']
     return cat
