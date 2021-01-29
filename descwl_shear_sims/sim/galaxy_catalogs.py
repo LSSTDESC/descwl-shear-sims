@@ -7,7 +7,6 @@ from .shifts import get_shifts
 from .constants import SCALE
 from ..cache_tools import cached_catalog_read
 
-
 DEFAULT_FIXED_GAL_CONFIG = {
     "mag": 17.0,
     "hlr": 0.5,
@@ -244,14 +243,21 @@ class WLDeblendGalaxyCatalog(object):
 
         # object is already shifted, so this results in the scene
         # being sheared
-        objlist = [
-            self._get_galaxy(builder, band, i).shear(g1=g1, g2=g2)
-            for i in range(num)
-        ]
+        objlist = []
+        for i in range(num):
+            gal = self._get_galaxy(builder, band, i)
+            z = self._get_redshift(i)
+            objlist.append(
+                self._shear(gal, g1, g2, z)
+            )
 
         shifts = self.shifts.copy()
         return objlist, shifts
 
+    def _get_redshift(self, i):
+        index = self.indices[i]
+        return self._wldeblend_cat[index]['redshift']
+    
     def _get_galaxy(self, builder, band, i):
         """
         Get a galaxy
@@ -288,6 +294,17 @@ class WLDeblendGalaxyCatalog(object):
         )
 
         return galaxy
+
+    def _shear(self, gal, g1, g2, redshift):
+        if isinstance(g1,float):
+            g1_use = g1
+        else:
+            g1_use = g1(redshift)
+        if isinstance(g2,float):
+            g2_use = g2
+        else:
+            g2_use = g2(redshift)
+        return gal.shear(g1=g1_use, g2=g2_use)
 
 
 def read_wldeblend_cat(rng):
