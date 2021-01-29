@@ -22,7 +22,9 @@ from ..sim.galaxy_catalogs import DEFAULT_FIXED_GAL_CONFIG
     (True, True),
 ])
 def test_sim_smoke(dither, rotate):
-
+    """
+    test sim can run
+    """
     seed = 74321
     rng = np.random.RandomState(seed)
 
