@@ -33,5 +33,5 @@ class ZSliceShear(object):
         Return the shear for
         redshift z
         """
-        return np.where((z>self.zmin) * (z<=self.zmax),
+        return np.where((z > self.zmin) * (z <= self.zmax),
                         self.g, self.gother)
