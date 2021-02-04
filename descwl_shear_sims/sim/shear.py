@@ -1,15 +1,16 @@
 import numpy as np
 
+
 class ZSliceShear(object):
     """
     Class for storing a "z-slice"
     shear. This has one shear value
     for zmin<z<=zmax, and another 
     otherwise
-    
+  
     Parameters
     ----------
-    g: float 
+    g: float
         shear value for objects with
     redshift zmin<z<=zmax
     gother: float
@@ -29,9 +30,8 @@ class ZSliceShear(object):
 
     def __call__(self, z):
         """
-        Return the shear for 
+        Return the shear for
         redshift z
         """
         return np.where((z>self.zmin)*(z<=self.zmax),
                         self.g, self.gother)
-    

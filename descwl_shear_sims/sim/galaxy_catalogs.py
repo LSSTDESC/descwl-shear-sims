@@ -257,7 +257,7 @@ class WLDeblendGalaxyCatalog(object):
     def _get_redshift(self, i):
         index = self.indices[i]
         return self._wldeblend_cat[index]['redshift']
-    
+
     def _get_galaxy(self, builder, band, i):
         """
         Get a galaxy
@@ -296,11 +296,11 @@ class WLDeblendGalaxyCatalog(object):
         return galaxy
 
     def _shear(self, gal, g1, g2, redshift):
-        if isinstance(g1,float):
+        if isinstance(g1, float):
             g1_use = g1
         else:
             g1_use = g1(redshift)
-        if isinstance(g2,float):
+        if isinstance(g2, float):
             g2_use = g2
         else:
             g2_use = g2(redshift)
