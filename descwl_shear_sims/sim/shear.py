@@ -5,9 +5,9 @@ class ZSliceShear(object):
     """
     Class for storing a "z-slice"
     shear. This has one shear value
-    for zmin<z<=zmax, and another 
+    for zmin<z<=zmax, and another
     otherwise
-  
+
     Parameters
     ----------
     g: float
@@ -33,5 +33,5 @@ class ZSliceShear(object):
         Return the shear for
         redshift z
         """
-        return np.where((z>self.zmin)*(z<=self.zmax),
+        return np.where((z>self.zmin) * (z<=self.zmax),
                         self.g, self.gother)
