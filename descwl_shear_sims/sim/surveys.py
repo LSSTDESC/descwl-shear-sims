@@ -59,6 +59,35 @@ def rescale_wldeblend_images(*, survey, image, noise, weight):
     weight *= wfac
 
 
+def rescale_wldeblend_exp(*, survey, exp, noise_exp):
+    """
+    Rescale wldeblend images noise and weight to our zero point
+
+    Parameters
+    ----------
+    survey: WLDeblendSurvey
+        The survey object
+    image: galsim.Image or ndarray
+        The image to be scaled
+    noise: galsim.Image or ndarray
+        The noise image to be scaled
+    weight: galsim.Image or ndarray
+        The weightimage to be scaled
+
+    Returns
+    -------
+    None
+    """
+    fac = get_wldeblend_rescale_fac(survey)
+    vfac = fac**2
+
+    exp.image *= fac
+    noise_exp.image *= fac
+
+    exp.variance *= vfac
+    noise_exp.variance *= vfac
+
+
 def get_wldeblend_rescale_fac(survey):
     """
     Get the factor to rescale wldeblend images to our zero point
