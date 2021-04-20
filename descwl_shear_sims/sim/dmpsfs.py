@@ -71,13 +71,8 @@ class FixedDMPSF(ImagePsf):
         x = image_pos.getX()
         y = image_pos.getY()
 
-        offset_x = x - int(x)
-        offset_y = y - int(y)
-
-        if offset_x > 0.5:
-            offset_x = 1 - offset_x
-        if offset_y > 0.5:
-            offset_y = 1 - offset_y
+        offset_x = x - int(x + 0.5)
+        offset_y = y - int(y + 0.5)
 
         offset = (offset_x, offset_y)
 
