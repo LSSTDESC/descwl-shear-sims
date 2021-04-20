@@ -2,7 +2,7 @@ import numpy as np
 import galsim
 import lsst.afw.image as afw_image
 import lsst.geom as geom
-from ..sim import FixedDMPSF, PowerSpectrumDMPSF, make_ps_psf
+from ..sim import PowerSpectrumDMPSF, make_ps_psf, make_dm_psf
 from ._wcs import make_sim_wcs
 
 
@@ -15,7 +15,7 @@ def test_fixed_dmpsf_smoke():
     psf_dim = 15
     wcs = make_sim_wcs(dim)
 
-    fpsf = FixedDMPSF(gspsf=gspsf, psf_dim=psf_dim, wcs=wcs)
+    fpsf = make_dm_psf(psf=gspsf, psf_dim=psf_dim, wcs=wcs)
     exp.setPsf(fpsf)
 
     psf = exp.getPsf()
@@ -46,7 +46,7 @@ def test_fixed_dmpsf_offset_smoke():
     psf_dim = 15
     wcs = make_sim_wcs(dim)
 
-    fpsf = FixedDMPSF(gspsf=gspsf, psf_dim=psf_dim, wcs=wcs)
+    fpsf = make_dm_psf(psf=gspsf, psf_dim=psf_dim, wcs=wcs)
     exp.setPsf(fpsf)
 
     psf = exp.getPsf()
@@ -89,7 +89,7 @@ def test_ps_dmpsf_smoke():
     wcs = make_sim_wcs(dim)
 
     pspsf = make_ps_psf(rng=rng, dim=dim)
-    fpsf = PowerSpectrumDMPSF(pspsf=pspsf, psf_dim=psf_dim, wcs=wcs)
+    fpsf = make_dm_psf(psf=pspsf, psf_dim=psf_dim, wcs=wcs)
     exp.setPsf(fpsf)
 
     psf = exp.getPsf()
@@ -123,7 +123,7 @@ def test_ps_dmpsf_offset_smoke():
     wcs = make_sim_wcs(dim)
 
     pspsf = make_ps_psf(rng=rng, dim=dim)
-    fpsf = PowerSpectrumDMPSF(pspsf=pspsf, psf_dim=psf_dim, wcs=wcs)
+    fpsf = make_dm_psf(psf=pspsf, psf_dim=psf_dim, wcs=wcs)
     exp.setPsf(fpsf)
 
     psf = exp.getPsf()
