@@ -69,15 +69,38 @@ class FixedDMPSF(ImagePsf):
 
         return self._make_image(image_pos)
 
-    def _make_image(self, image_pos, offset=None):
+    def _get_gspsf(self, image_pos):
+        """
+        Get the GSObject representing the PSF
 
+        Parameters
+        ----------
+        pos: galsim Position
+            The position at which to evaluate the psf.  This is a fixed
+            psf so the position is ignored
+        """
+        return self._gspsf
+
+    def _make_image(self, image_pos, offset=None):
+        """
+        make the image, including a possible offset
+
+        Parameters
+        ----------
+        image_pos: geom.Point2D
+            A point in the original image at which evaluate the kernel
+        offset: tuple, optional
+            The (x, y) offset, default None
+        """
         dim = self._psf_dim
 
         x = image_pos.getX()
         y = image_pos.getY()
 
         gs_pos = galsim.PositionD(x=x, y=y)
-        gsimage = self._gspsf.drawImage(
+        gspsf = self._get_gspsf(gs_pos)
+
+        gsimage = gspsf.drawImage(
             nx=dim,
             ny=dim,
             offset=offset,
@@ -92,3 +115,44 @@ class FixedDMPSF(ImagePsf):
         aimage = afw_image.ImageD(bbox)
         aimage.array[:, :] = image
         return aimage
+
+
+class PowerSpectrumDMPSF(FixedDMPSF):
+    """
+    A class representing a power spectrum psf
+
+    When offsetting no image interpolation is done.  Real psfs have an
+    interpolation to offset (different from interpolating coefficients)
+    """
+    def __init__(self, pspsf, psf_dim, wcs):
+        """
+        Parameters
+        ----------
+        pspsf: PowerSpectrumPS
+            The power spectrum psf
+        psf_dim: int
+            Dimension of the psfs to draw, must be odd
+        wcs: galsim WCS
+            WCS for drawing
+        """
+        ImagePsf.__init__(self)
+
+        if psf_dim // 2 == 0:
+            raise ValueError('psf dims must be odd, got %s' % psf_dim)
+
+        self._psf_dim = psf_dim
+        self._wcs = wcs
+        self._pspsf = pspsf
+
+    def _get_gspsf(self, pos):
+        """
+        Get the GSObject representing the PSF at the specified
+        location
+
+        Parameters
+        ----------
+        pos: galsim Position
+            The position at which to evaluate the psf.
+        """
+
+        return self._pspsf.getPSF(pos)

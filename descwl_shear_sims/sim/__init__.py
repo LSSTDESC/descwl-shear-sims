@@ -11,4 +11,4 @@ from .galaxy_catalogs import (
 )
 from .star_catalogs import StarCatalog
 from .psfs import make_psf, make_ps_psf
-from .dmpsfs import FixedDMPSF
+from .dmpsfs import FixedDMPSF, PowerSpectrumDMPSF
