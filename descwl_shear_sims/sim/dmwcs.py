@@ -4,7 +4,7 @@ from lsst.afw.geom import makeSkyWcs
 from lsst.daf.base import PropertyList
 
 
-def make_stack_wcs(galsim_wcs):
+def make_dm_wcs(galsim_wcs):
     """
     convert galsim wcs to stack wcs
 
