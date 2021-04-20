@@ -2,6 +2,7 @@
 
 from .sim import (
     make_sim,
+    make_dmsim,
     get_sim_config,
     get_se_dim,
 )
@@ -11,5 +12,5 @@ from .galaxy_catalogs import (
 )
 from .star_catalogs import StarCatalog
 from .psfs import make_psf, make_ps_psf
-from .dmpsfs import FixedDMPSF, PowerSpectrumDMPSF
-from .dmwcs import make_stack_wcs
+from .dmpsfs import FixedDMPSF, PowerSpectrumDMPSF, make_dm_psf
+from .dmwcs import make_dm_wcs
