@@ -2,6 +2,32 @@ import galsim
 import lsst.afw.image as afw_image
 import lsst.geom as geom
 from lsst.meas.algorithms import ImagePsf
+from .psfs import PowerSpectrumPSF
+
+
+def make_dm_psf(psf, psf_dim, wcs):
+    """
+    convert a sim PSF to a DM Stack PSF
+
+    Parameters
+    ----------
+    psf: GSObject or PowerSpectrumPSF
+        The sim psf
+    psf_dim: int
+        Dimension of the psfs to draw, must be odd
+    wcs: galsim WCS
+        WCS for drawing
+
+    Returns
+    -------
+    Either a FixedDMPSF or a PowerSpectrumDMPSF
+    """
+    if isinstance(psf, galsim.GSObject):
+        return FixedDMPSF(psf, psf_dim, wcs)
+    elif isinstance(psf, PowerSpectrumPSF):
+        return PowerSpectrumDMPSF(psf, psf_dim, wcs)
+    else:
+        raise ValueError('bad psf: %s' % type(psf))
 
 
 class FixedDMPSF(ImagePsf):
@@ -128,7 +154,7 @@ class PowerSpectrumDMPSF(FixedDMPSF):
         """
         Parameters
         ----------
-        pspsf: PowerSpectrumPS
+        pspsf: PowerSpectrumPSF
             The power spectrum psf
         psf_dim: int
             Dimension of the psfs to draw, must be odd
