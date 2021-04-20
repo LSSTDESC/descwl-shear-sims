@@ -1,9 +1,12 @@
 import os
 import pytest
 import numpy as np
+# import galsim
 import lsst.afw.image as afw_image
-import lsst.afw.geom as geom
+import lsst.afw.geom as afw_geom
+# import lsst.geom as geom
 from ..sim import (
+    make_sim,
     make_dmsim,
     make_galaxy_catalog,
     StarCatalog,
@@ -14,6 +17,85 @@ from ..sim import (
 from ..sim.constants import ZERO_POINT
 
 from ..sim.galaxy_catalogs import DEFAULT_FIXED_GAL_CONFIG
+
+
+@pytest.mark.parametrize('dither,rotate', [
+    (False, False),
+    (False, True),
+    (True, False),
+    (True, True),
+])
+def test_compare_sim(dither, rotate):
+    """
+    test sim can run
+    """
+    seed = 74321
+    rng = np.random.RandomState(seed)
+
+    coadd_dim = 351
+    psf_dim = 51
+    bands = ["i"]
+    galaxy_catalog = make_galaxy_catalog(
+        rng=rng,
+        gal_type="exp",
+        coadd_dim=coadd_dim,
+        buff=30,
+        layout="grid",
+    )
+
+    psf = make_psf(psf_type="gauss")
+    dmdata = make_dmsim(
+        rng=rng,
+        galaxy_catalog=galaxy_catalog,
+        coadd_dim=351,
+        psf_dim=psf_dim,
+        bands=bands,
+        g1=0.02,
+        g2=0.00,
+        psf=psf,
+        dither=dither,
+        rotate=rotate,
+    )
+
+    rng = np.random.RandomState(seed)
+
+    galaxy_catalog = make_galaxy_catalog(
+        rng=rng,
+        gal_type="exp",
+        coadd_dim=coadd_dim,
+        buff=30,
+        layout="grid",
+    )
+
+    data = make_sim(
+        rng=rng,
+        galaxy_catalog=galaxy_catalog,
+        coadd_dim=351,
+        g1=0.02,
+        g2=0.00,
+        psf=psf,
+        dither=dither,
+        rotate=rotate,
+    )
+
+    seobs = data['band_data']['i'][0]
+    exp = dmdata['band_data']['i'][0]['exp']
+    assert np.all(seobs.image.array == exp.image.array)
+    assert np.all(seobs.bmask.array == exp.mask.array)
+    assert np.all(seobs.weight.array == 1/exp.variance.array)
+
+    # this doesn't work yet due to bug in the old sim psf
+    # x = 8.5
+    # y = 10.1
+    # pos = geom.Point2D(x=x, y=y)
+    # gs_pos = galsim.PositionD(x=x, y=y)
+    #
+    # dmpsf = exp.getPsf()
+    # dmpsfim = dmpsf.computeImage(pos)
+    #
+    # gspsf = seobs.get_psf(x, y)
+    #
+    # assert np.all(dmpsfim.array == gspsf.array)
 
 
 @pytest.mark.parametrize('dither,rotate', [
@@ -57,7 +139,7 @@ def test_sim_smoke(dither, rotate):
     for key in ['band_data', 'coadd_wcs', 'psf_dims', 'coadd_dims']:
         assert key in data
 
-    assert isinstance(data['coadd_wcs'], geom.SkyWcs)
+    assert isinstance(data['coadd_wcs'], afw_geom.SkyWcs)
     assert data['psf_dims'] == [psf_dim]*2
     assert data['coadd_dims'] == [coadd_dim]*2
 
