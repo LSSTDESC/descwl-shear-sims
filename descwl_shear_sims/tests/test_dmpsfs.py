@@ -2,7 +2,7 @@ import numpy as np
 import galsim
 import lsst.afw.image as afw_image
 import lsst.geom as geom
-from ..sim import PowerSpectrumDMPSF, make_ps_psf, make_dm_psf
+from ..sim import make_ps_psf, make_dm_psf
 from ._wcs import make_sim_wcs
 
 
