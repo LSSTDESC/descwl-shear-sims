@@ -2,7 +2,7 @@ import numpy as np
 import galsim
 import lsst.afw.image as afw_image
 import lsst.geom as geom
-from ..sim.dmwcs import make_stack_wcs
+from ..sim.dmwcs import make_dm_wcs
 from ._wcs import make_sim_wcs
 
 
@@ -13,21 +13,21 @@ def test_dmwcs():
     exp = afw_image.ExposureF(masked_image)
 
     galsim_wcs = make_sim_wcs(dim)
-    tstack_wcs = make_stack_wcs(galsim_wcs)
+    tdm_wcs = make_dm_wcs(galsim_wcs)
 
-    exp.setWcs(tstack_wcs)
+    exp.setWcs(tdm_wcs)
 
-    stack_wcs = exp.getWcs()
+    dm_wcs = exp.getWcs()
 
-    stack_cd = stack_wcs.getCdMatrix()
-    assert np.all(stack_cd == galsim_wcs.cd)
+    dm_cd = dm_wcs.getCdMatrix()
+    assert np.all(dm_cd == galsim_wcs.cd)
 
     x = 8.5
     y = 10.1
     pos = geom.Point2D(x=x, y=y)
     gs_pos = galsim.PositionD(x=x, y=y)
 
-    skypos = stack_wcs.pixelToSky(pos)
+    skypos = dm_wcs.pixelToSky(pos)
     print(type(skypos))
     print(skypos)
     print(skypos.getRa(), skypos.getDec())
@@ -48,6 +48,6 @@ def test_dmwcs():
         skypos.getDec().asRadians(), gs_skypos.dec / galsim.radians,
     )
 
-    impos = stack_wcs.skyToPixel(skypos)
+    impos = dm_wcs.skyToPixel(skypos)
     assert np.allclose(impos.x, x)
     assert np.allclose(impos.y, y)
