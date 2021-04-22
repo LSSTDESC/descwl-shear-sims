@@ -168,8 +168,8 @@ def make_sim(
     return {
         'band_data': band_data,
         'coadd_wcs': coadd_wcs,
-        'psf_dims': [psf_dim]*2,
-        'coadd_dims': [coadd_dim]*2,
+        'psf_dims': (psf_dim, )*2,
+        'coadd_dims': (coadd_dim, )*2,
     }
 
 
@@ -472,8 +472,8 @@ def make_dmsim(
     return {
         'band_data': band_data,
         'coadd_wcs': coadd_wcs,
-        'psf_dims': [psf_dim]*2,
-        'coadd_dims': [coadd_dim]*2,
+        'psf_dims': (psf_dim, )*2,
+        'coadd_dims': (coadd_dim, )*2,
     }
 
 
@@ -504,6 +504,8 @@ def make_exp(
     ----------
     rng: numpy.random.RandomState
         The random number generator
+    band: str
+        Band as a string, e.g. 'i'
     noise: float
         Gaussian noise level
     objlist: list
@@ -646,6 +648,10 @@ def make_exp(
 
     exp = afw_image.ExposureF(masked_image)
     noise_exp = afw_image.ExposureF(noise_masked_image)
+
+    filter_label = afw_image.FilterLabel(band=band, physical=band)
+    exp.setFilterLabel(filter_label)
+    noise_exp.setFilterLabel(filter_label)
 
     exp.setPsf(dm_psf)
     noise_exp.setPsf(dm_psf)
