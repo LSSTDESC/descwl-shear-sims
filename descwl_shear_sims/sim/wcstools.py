@@ -16,7 +16,7 @@ def make_wcs(*, scale, image_origin, world_origin, theta=None):
     world_origin: galsim.CelestialCoord
         Origin on the sky
     theta: float, optional
-        Rotation angle
+        Rotation angle in radians
 
     Returns
     -------
