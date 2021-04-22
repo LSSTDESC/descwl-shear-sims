@@ -14,3 +14,4 @@ from .star_catalogs import StarCatalog
 from .psfs import make_psf, make_ps_psf
 from .dmpsfs import FixedDMPSF, PowerSpectrumDMPSF, make_dm_psf
 from .dmwcs import make_dm_wcs
+from .wcstools import make_wcs, make_coadd_wcs
