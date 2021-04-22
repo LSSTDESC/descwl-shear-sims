@@ -83,9 +83,9 @@ def test_sim():
     )
 
     assert 'coadd_dims' in sim_data
-    assert sim_data['coadd_dims'] == [coadd_dim]*2
+    assert sim_data['coadd_dims'] == (coadd_dim,)*2
     assert 'psf_dims' in sim_data
-    assert sim_data['psf_dims'] == [psf_dim]*2
+    assert sim_data['psf_dims'] == (psf_dim, )*2
 
     band_data = sim_data['band_data']
     assert len(band_data) == len(bands)
