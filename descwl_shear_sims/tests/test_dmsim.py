@@ -140,8 +140,8 @@ def test_sim_smoke(dither, rotate):
         assert key in data
 
     assert isinstance(data['coadd_wcs'], afw_geom.SkyWcs)
-    assert data['psf_dims'] == [psf_dim]*2
-    assert data['coadd_dims'] == [coadd_dim]*2
+    assert data['psf_dims'] == (psf_dim, )*2
+    assert data['coadd_dims'] == (coadd_dim, )*2
 
     for band in bands:
         assert band in data['band_data']
