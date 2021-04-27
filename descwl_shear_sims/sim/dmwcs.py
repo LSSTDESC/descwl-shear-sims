@@ -1,7 +1,10 @@
+import galsim
 import coord
 import lsst.geom as geom
 from lsst.afw.geom import makeSkyWcs
 from lsst.daf.base import PropertyList
+from .wcstools import make_wcs
+from .constants import SCALE, WORLD_ORIGIN
 
 
 def make_dm_wcs(galsim_wcs):
@@ -54,3 +57,29 @@ def make_dm_wcs(galsim_wcs):
         stack_wcs = makeSkyWcs(metadata)
 
     return stack_wcs
+
+
+def make_coadd_dm_wcs(coadd_origin):
+    """
+    make a coadd wcs, using the default world origin
+
+    Parameters
+    ----------
+    coadd_dim: int
+        dimensions of the coadd
+
+    Returns
+    --------
+    A galsim wcs, see make_wcs for return type
+    """
+    gs_coadd_origin = galsim.PositionD(
+        x=coadd_origin.x,
+        y=coadd_origin.y,
+    )
+    return make_dm_wcs(
+        make_wcs(
+            scale=SCALE,
+            image_origin=gs_coadd_origin,
+            world_origin=WORLD_ORIGIN,
+        )
+    )

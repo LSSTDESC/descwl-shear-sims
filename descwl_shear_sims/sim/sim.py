@@ -19,7 +19,7 @@ from .masking import (
 from .wcstools import make_wcs, make_coadd_wcs
 from .objlists import get_objlist, get_convolved_objects
 from .dmpsfs import make_dm_psf
-from .dmwcs import make_dm_wcs
+from .dmwcs import make_dm_wcs, make_coadd_dm_wcs
 
 
 DEFAULT_SIM_CONFIG = {
@@ -468,16 +468,17 @@ def make_dmsim(
 
         band_data[band] = bdata_list
 
-    coadd_wcs = make_dm_wcs(make_coadd_wcs(coadd_dim))
+    xoff = 3000
+    coadd_bbox = geom.Box2I(
+        geom.IntervalI(min=xoff + 0, max=xoff + coadd_dim-1),
+        geom.IntervalI(min=0, max=coadd_dim-1),
+    )
+
+    coadd_wcs = make_coadd_dm_wcs(coadd_bbox.getCenter())
 
     # trivial bbox for now
     # TODO make this coadd be a subset (patch) of larger coadd, so the
     # start might  not be at zero
-    coadd_bbox = geom.Box2I(
-        geom.IntervalI(min=0, max=coadd_dim-1),
-        geom.IntervalI(min=0, max=coadd_dim-1),
-    )
-
     return {
         'band_data': band_data,
         'coadd_wcs': coadd_wcs,
