@@ -3,6 +3,7 @@ import galsim
 import numpy as np
 
 import lsst.afw.image as afw_image
+import lsst.geom as geom
 from lsst.afw.cameraGeom.testUtils import DetectorWrapper
 
 from ..se_obs import SEObs
@@ -469,11 +470,20 @@ def make_dmsim(
 
     coadd_wcs = make_dm_wcs(make_coadd_wcs(coadd_dim))
 
+    # trivial bbox for now
+    # TODO make this coadd be a subset (patch) of larger coadd, so the
+    # start might  not be at zero
+    coadd_bbox = geom.Box2I(
+        geom.IntervalI(min=0, max=coadd_dim-1),
+        geom.IntervalI(min=0, max=coadd_dim-1),
+    )
+
     return {
         'band_data': band_data,
         'coadd_wcs': coadd_wcs,
         'psf_dims': (psf_dim, )*2,
         'coadd_dims': (coadd_dim, )*2,
+        'coadd_bbox': coadd_bbox,
     }
 
 

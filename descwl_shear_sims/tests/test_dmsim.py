@@ -136,12 +136,14 @@ def test_sim_smoke(dither, rotate):
         rotate=rotate,
     )
 
-    for key in ['band_data', 'coadd_wcs', 'psf_dims', 'coadd_dims']:
+    for key in ['band_data', 'coadd_wcs', 'psf_dims', 'coadd_bbox']:
         assert key in data
 
     assert isinstance(data['coadd_wcs'], afw_geom.SkyWcs)
     assert data['psf_dims'] == (psf_dim, )*2
-    assert data['coadd_dims'] == (coadd_dim, )*2
+    extent = data['coadd_bbox'].getDimensions()
+    edims = (extent.getX(), extent.getY())
+    assert edims == (coadd_dim, )*2
 
     for band in bands:
         assert band in data['band_data']
