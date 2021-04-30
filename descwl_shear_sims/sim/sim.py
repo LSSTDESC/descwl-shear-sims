@@ -616,6 +616,13 @@ def make_exp(
         )
         for i, obj in enumerate(bright_convolved_objects):
 
+            # profiles can have detectably sharp edges if the
+            # profile is very high s/n and we have not set the
+            # thresholds right in the gs params.
+            #
+            # photon shooting reduces these sharp edges, reducing
+            # sensitivity to such an error
+
             obj.drawImage(
                 image=timage,
                 offset=offset,
