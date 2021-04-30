@@ -65,8 +65,9 @@ def make_coadd_dm_wcs(coadd_origin):
 
     Parameters
     ----------
-    coadd_dim: int
-        dimensions of the coadd
+    coadd_origin: int
+        Origin in pixels of the coadd, can be within a larger
+        pixel grid e.g. tract surrounding the patch
 
     Returns
     --------
