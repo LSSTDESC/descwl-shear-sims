@@ -4,6 +4,7 @@ import lsst.afw.image as afw_image
 import lsst.geom as geom
 from ..sim import make_ps_psf, make_dm_psf
 from ._wcs import make_sim_wcs
+import pytest
 
 
 def test_fixed_dmpsf_smoke():
@@ -149,3 +150,19 @@ def test_ps_dmpsf_offset_smoke():
     )
 
     assert np.allclose(msim.array, gsim.array)
+
+
+def test_dmpsf_errors():
+    rng = np.random.RandomState(2)
+    dim = 20
+
+    gspsf = galsim.Gaussian(fwhm=0.9)
+    psf_dim = 20
+    wcs = make_sim_wcs(dim)
+
+    with pytest.raises(ValueError):
+        make_dm_psf(psf=gspsf, psf_dim=psf_dim, wcs=wcs)
+
+    pspsf = make_ps_psf(rng=rng, dim=dim)
+    with pytest.raises(ValueError):
+        make_dm_psf(psf=pspsf, psf_dim=psf_dim, wcs=wcs)
