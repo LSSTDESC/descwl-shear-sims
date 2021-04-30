@@ -21,7 +21,7 @@ from ..sim.galaxy_catalogs import DEFAULT_FIXED_GAL_CONFIG
     (False, False),
     (False, True),
     (True, False),
-    (True, True),
+    (False, False),
 ])
 def test_compare_sim(dither, rotate):
     """
