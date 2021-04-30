@@ -1,10 +1,8 @@
 import os
 import pytest
 import numpy as np
-# import galsim
 import lsst.afw.image as afw_image
 import lsst.afw.geom as afw_geom
-# import lsst.geom as geom
 from ..sim import (
     make_sim,
     make_dmsim,
@@ -27,7 +25,8 @@ from ..sim.galaxy_catalogs import DEFAULT_FIXED_GAL_CONFIG
 ])
 def test_compare_sim(dither, rotate):
     """
-    test sim can run
+    test comparing new and old sims; can remove this when we are
+    confident with the new sims and remove the old sims
     """
     seed = 74321
     rng = np.random.RandomState(seed)
