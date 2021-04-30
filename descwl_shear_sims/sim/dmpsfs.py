@@ -158,7 +158,7 @@ class PowerSpectrumDMPSF(FixedDMPSF):
         """
         ImagePsf.__init__(self)
 
-        if psf_dim // 2 == 0:
+        if psf_dim % 2 == 0:
             raise ValueError('psf dims must be odd, got %s' % psf_dim)
 
         self._psf_dim = psf_dim
