@@ -3,7 +3,7 @@ import numpy as np
 import galsim
 import pytest
 
-from ..lsst_bits import SAT, BRIGHT
+from ..lsst_bits import get_flagval
 from ..saturation import BAND_SAT_VALS
 from ..simple_sim import SimpleSim
 from ..gen_star_masks import add_bright_star_mask
@@ -37,10 +37,10 @@ def test_star_bleed(band):
         x=pos.x,
         y=pos.y,
         radius=10,
-        val=BRIGHT,
+        val=get_flagval('BRIGHT'),
     )
 
-    assert bmask[cen[0], cen[1]] == SAT | BRIGHT
+    assert bmask[cen[0], cen[1]] == get_flagval('SAT') | get_flagval('BRIGHT')
     assert image[cen[0], cen[1]] == BAND_SAT_VALS[band]
 
 
@@ -70,11 +70,11 @@ def test_star_mask_keywords():
     mask = se_obs.bmask.array
     image = se_obs.image.array
 
-    w = np.where((mask & SAT) != 0)
+    w = np.where((mask & get_flagval('SAT')) != 0)
     assert w[0].size > 0
     assert np.all(image[w] == BAND_SAT_VALS['r'])
 
-    w = np.where(mask & BRIGHT != 0)
+    w = np.where(mask & get_flagval('BRIGHT') != 0)
     assert w[0].size > 0
 
 
@@ -105,7 +105,7 @@ def test_star_mask_repeatable():
         se_obs = data['r'][0]
         mask = se_obs.bmask.array
 
-        w = np.where((mask & SAT) != 0)
+        w = np.where((mask & get_flagval('SAT')) != 0)
 
         if trial == 1:
             nmarked = w[0].size

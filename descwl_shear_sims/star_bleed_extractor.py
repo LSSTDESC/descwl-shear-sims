@@ -1,7 +1,7 @@
 import os
 import numpy as np
 from numba import njit
-from .lsst_bits import SAT
+from .lsst_bits import get_flagval
 import esutil as eu
 import fitsio
 
@@ -38,11 +38,12 @@ def extract_bleeds(*, image_file, cat_file, out_file):
     print('extracting stamps')
     keep = np.ones(cat.size, dtype='bool')
 
+    satflag = get_flagval('SAT')
     for i in range(cat.size):
         row = int(cat['row_orig'][i])
         col = int(cat['col_orig'][i])
 
-        if mask[row, col] & SAT == 0:
+        if mask[row, col] & satflag == 0:
             keep[i] = False
             continue
 
@@ -50,6 +51,7 @@ def extract_bleeds(*, image_file, cat_file, out_file):
             mask=mask,
             row=row,
             col=col,
+            flagval=satflag,
         )
 
         stamp_full = mask[
@@ -57,8 +59,8 @@ def extract_bleeds(*, image_file, cat_file, out_file):
             col_start:col_end+1,
         ]
         stamp = stamp_full*0
-        w = np.where(stamp_full & SAT != 0)
-        stamp[w] = SAT
+        w = np.where(stamp_full & satflag != 0)
+        stamp[w] = satflag
 
         cat['row'][i] = row - row_start
         cat['col'][i] = col - col_start
@@ -147,25 +149,25 @@ def _get_fdict_list(calexps):
 
 
 @njit
-def _get_bleed_bbox(*, mask, row, col):
+def _get_bleed_bbox(*, mask, row, col, flagval):
     """
     get range of rows and cols that include the bleed
     """
 
     row_start = row
-    while mask[row_start, col] & SAT != 0:
+    while mask[row_start, col] & flagval != 0:
         row_start -= 1
 
     row_end = row
-    while mask[row_end, col] & SAT != 0:
+    while mask[row_end, col] & flagval != 0:
         row_end += 1
 
     col_start = col
-    while mask[row, col_start] & SAT != 0:
+    while mask[row, col_start] & flagval != 0:
         col_start -= 1
 
     col_end = col
-    while mask[row, col_end] & SAT != 0:
+    while mask[row, col_end] & flagval != 0:
         col_end += 1
 
     return row_start, row_end, col_start, col_end

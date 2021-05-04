@@ -6,6 +6,7 @@ import lsst.afw.image as afw_image
 import lsst.geom as geom
 from lsst.afw.cameraGeom.testUtils import DetectorWrapper
 
+from ..lsst_bits import get_flagval
 from ..se_obs import SEObs
 from ..saturation import saturate_image_and_mask, BAND_SAT_VALS
 from .surveys import get_survey, rescale_wldeblend_images, rescale_wldeblend_exp
@@ -153,6 +154,7 @@ def make_sim(
                 image=seobs.image.array,
                 bmask=seobs.bmask.array,
                 sat_val=BAND_SAT_VALS[band],
+                flagval=get_flagval('SAT'),
             )
 
             seobs_list.append(seobs)
@@ -452,11 +454,13 @@ def make_dmsim(
                 image=exp.image.array,
                 bmask=exp.mask.array,
                 sat_val=BAND_SAT_VALS[band],
+                flagval=get_flagval('SAT'),
             )
             saturate_image_and_mask(
                 image=noise_exp.image.array,
                 bmask=noise_exp.mask.array,
                 sat_val=BAND_SAT_VALS[band],
+                flagval=get_flagval('SAT'),
             )
 
             bdata_list.append({'exp': exp, 'noise_exp': noise_exp})

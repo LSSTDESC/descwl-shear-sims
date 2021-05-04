@@ -3,7 +3,7 @@ import pytest
 import numpy as np
 
 from ..simple_sim import SimpleSim
-from ..lsst_bits import SAT, BRIGHT
+from ..lsst_bits import get_flagval
 from ..saturation import BAND_SAT_VALS
 
 
@@ -97,10 +97,10 @@ def test_simple_sim_bright_stars(subtract_bright):
             mask = data[band][epoch].bmask.array
             image = data[band][epoch].image.array
 
-            w = np.where((mask & SAT) != 0)
+            w = np.where((mask & get_flagval('SAT')) != 0)
             assert w[0].size > 0
             if not subtract_bright:
                 assert np.all(image[w] == BAND_SAT_VALS[band])
 
-            w = np.where(mask & BRIGHT != 0)
+            w = np.where(mask & get_flagval('BRIGHT') != 0)
             assert w[0].size > 0
