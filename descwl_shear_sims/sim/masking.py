@@ -6,7 +6,8 @@ from ..gen_masks import (
     generate_basic_mask, generate_cosmic_rays, generate_bad_columns,
 )
 from ..gen_star_masks import add_bright_star_mask
-from ..lsst_bits import BAD_COLUMN, COSMIC_RAY, SAT, BRIGHT
+from ..lsst_bits import get_flagval
+import lsst.afw.image as afw_image
 
 
 def add_bleeds(*, image, origin, bmask, shifts, mags, band):
@@ -90,7 +91,7 @@ def get_bmask(*, image, rng, cosmic_rays, bad_columns):
             rng=rng,
             mean_cosmic_rays=1,
         )
-        mask[c_mask] |= COSMIC_RAY + SAT
+        mask[c_mask] |= get_flagval('CR') + get_flagval('SAT')
 
         # wait to do this later
         # image.array[cmask] = BAND_SAT_VALS[band]
@@ -102,7 +103,7 @@ def get_bmask(*, image, rng, cosmic_rays, bad_columns):
             rng=rng,
             mean_bad_cols=1,
         )
-        mask[bc_msk] |= BAD_COLUMN
+        mask[bc_msk] |= afw_image.Mask.getPlaneBitMask('BAD')
         image.array[bc_msk] = 0.0
 
     return galsim.Image(
@@ -161,7 +162,7 @@ def calculate_and_add_bright_star_mask(
         x=pos.x,
         y=pos.y,
         radius=radius,
-        val=BRIGHT,
+        val=get_flagval('BRIGHT'),
     )
 
 

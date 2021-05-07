@@ -9,7 +9,7 @@ from .cache_tools import cached_catalog_read
 from .ps_psf import PowerSpectrumPSF
 from .stars import load_sample_stars, sample_star_density, get_star_mag
 from .saturation import saturate_image_and_mask, BAND_SAT_VALS
-from .lsst_bits import BAD_COLUMN, COSMIC_RAY, SAT, BRIGHT
+from .lsst_bits import get_flagval
 from .gen_star_masks import add_bright_star_mask
 from .gen_masks import (
     generate_basic_mask, generate_cosmic_rays, generate_bad_columns,
@@ -169,6 +169,7 @@ def make_trivial_sim(
                 image=seobs.image.array,
                 bmask=seobs.bmask.array,
                 sat_val=BAND_SAT_VALS[band],
+                flagval=get_flagval('SAT'),
             )
 
             seobs_list.append(seobs)
@@ -810,7 +811,8 @@ def get_bmask(*, image, rng, cosmic_rays, bad_columns):
             rng=rng,
             mean_cosmic_rays=1,
         )
-        mask[c_mask] |= COSMIC_RAY + SAT
+        # CR is cosmic ray
+        mask[c_mask] |= get_flagval('CR') + get_flagval('SAT')
 
         # wait to do this later
         # image.array[cmask] = BAND_SAT_VALS[band]
@@ -822,7 +824,7 @@ def get_bmask(*, image, rng, cosmic_rays, bad_columns):
             rng=rng,
             mean_bad_cols=1,
         )
-        mask[bc_msk] |= BAD_COLUMN
+        mask[bc_msk] |= get_flagval('BAD')
         image.array[bc_msk] = 0.0
 
     return galsim.Image(
@@ -1008,7 +1010,7 @@ def calculate_and_add_bright_star_mask(
         x=pos.x,
         y=pos.y,
         radius=radius,
-        val=BRIGHT,
+        val=get_flagval('BRIGHT'),
     )
 
 

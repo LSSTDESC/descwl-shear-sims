@@ -4,7 +4,7 @@ https://github.com/beckermr/metadetect-coadding-sims/blob/master/coadd_mdetsims/
 """
 import numpy as np
 
-from .lsst_bits import EDGE
+from .lsst_bits import get_flagval
 
 
 def generate_basic_mask(*, shape, edge_width):
@@ -22,11 +22,13 @@ def generate_basic_mask(*, shape, edge_width):
     ny, nx = shape
     bmask = np.zeros(shape, dtype=np.int64)
 
+    edgeflag = get_flagval('EDGE')
+
     ew = edge_width
-    bmask[0:ew, :] = EDGE
-    bmask[ny-ew:, :] = EDGE
-    bmask[:, 0:ew] = EDGE
-    bmask[:, nx-ew:] = EDGE
+    bmask[0:ew, :] = edgeflag
+    bmask[ny-ew:, :] = edgeflag
+    bmask[:, 0:ew] = edgeflag
+    bmask[:, nx-ew:] = edgeflag
 
     return bmask
 

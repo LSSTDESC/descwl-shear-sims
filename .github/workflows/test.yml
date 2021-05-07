@@ -11,7 +11,7 @@ jobs:
     name: tests
     strategy:
       matrix:
-        pyver: [3.7]
+        pyver: [3.8]
 
     runs-on: "ubuntu-latest"
 
@@ -31,7 +31,7 @@ jobs:
           conda config --set always_yes yes
           conda install -q mamba
 
-          mamba install -q -c stackvana stackvana
+          mamba install -q stackvana=0
 
           mamba install -q \
             flake8 \
@@ -40,7 +40,7 @@ jobs:
             galsim \
             numba \
             ngmix \
-            lsstdesc.weaklensingdeblending \
+            lsstdesc-weaklensingdeblending \
             fitsio
 
           pip install --no-deps -e .

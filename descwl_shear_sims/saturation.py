@@ -1,5 +1,4 @@
 from numba import njit
-from .lsst_bits import SAT
 from .sim_constants import ZERO_POINT
 
 # saturation value for visit images, rescaled to
@@ -13,7 +12,7 @@ BAND_SAT_VALS = {
 
 
 @njit
-def saturate_image_and_mask(*, image, bmask, sat_val):
+def saturate_image_and_mask(*, image, bmask, sat_val, flagval):
     """
     clip image values at saturation and set the SAT mask bit.  Note
     if the bmask already has SAT set, then the value will also be set
@@ -31,6 +30,6 @@ def saturate_image_and_mask(*, image, bmask, sat_val):
 
     for row in range(ny):
         for col in range(nx):
-            if (bmask[row, col] & SAT) != 0 or image[row, col] > sat_val:
+            if (bmask[row, col] & flagval) != 0 or image[row, col] > sat_val:
                 image[row, col] = sat_val
-                bmask[row, col] |= SAT
+                bmask[row, col] |= flagval

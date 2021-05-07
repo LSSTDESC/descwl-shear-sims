@@ -9,7 +9,7 @@ from ..gen_masks import (
     generate_bad_columns,
     generate_cosmic_rays,
 )
-from ..lsst_bits import EDGE
+from ..lsst_bits import get_flagval
 
 
 def test_generate_basic_mask():
@@ -18,7 +18,7 @@ def test_generate_basic_mask():
     bmask = generate_basic_mask(shape=(n, n), edge_width=edge_width)
 
     expected_count = edge_width*n*4 - edge_width**2*4
-    w = np.where(bmask == EDGE)
+    w = np.where(bmask == get_flagval('EDGE'))
     assert w[0].size == expected_count
 
 

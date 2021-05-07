@@ -35,7 +35,7 @@ from .stars import (
 from .ps_psf import PowerSpectrumPSF
 
 # default mask bits from the stack
-from .lsst_bits import BAD_COLUMN, COSMIC_RAY, SAT, BRIGHT
+from .lsst_bits import get_flagval
 from .saturation import BAND_SAT_VALS, saturate_image_and_mask
 from .cache_tools import cached_catalog_read
 from .sim_constants import ZERO_POINT
@@ -952,6 +952,7 @@ class SimpleSim(object):
                 image=se_image.array,
                 bmask=bmask,
                 sat_val=sat_val,
+                flagval=get_flagval('SAT'),
             )
 
         area_factor = (
@@ -972,7 +973,7 @@ class SimpleSim(object):
                 rng=self._rng,
                 **defaults,
             )
-            bmask[msk] |= COSMIC_RAY
+            bmask[msk] |= get_flagval('CR')
             se_image.array[msk] = sat_val
 
         if self.bad_columns:
@@ -989,7 +990,7 @@ class SimpleSim(object):
                 rng=self._rng,
                 **defaults,
             )
-            bmask[msk] |= BAD_COLUMN
+            bmask[msk] |= get_flagval('BAD')
             se_image.array[msk] = 0.0
 
         if self.stars:
@@ -999,7 +1000,7 @@ class SimpleSim(object):
 
                     pos = odata['pos'][epoch]
                     row, col = int(pos.y), int(pos.x)
-                    if (bmask[row, col] & SAT) != 0:
+                    if (bmask[row, col] & get_flagval('SAT')) != 0:
                         odata['is_bright'] = True
 
         if self.stars and self.star_bleeds:
@@ -1401,7 +1402,7 @@ def add_bright_star_masks(obj_data, band_data):
                             add_bright_star_mask(
                                 bmask=bmask, x=pos.x, y=pos.y,
                                 radius=radius,
-                                val=BRIGHT,
+                                val=get_flagval('BRIGHT'),
                             )
 
 

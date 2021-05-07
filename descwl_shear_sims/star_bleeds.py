@@ -6,7 +6,7 @@ from glob import glob
 import esutil as eu
 from numba import njit
 from .saturation import BAND_SAT_VALS
-from .lsst_bits import SAT
+from .lsst_bits import get_flagval
 
 
 def add_bleed(*, image, bmask, pos, mag, band):
@@ -50,11 +50,12 @@ def add_bleed(*, image, bmask, pos, mag, band):
         start_row=bmask_start_row,
         start_col=bmask_start_col,
         val=BAND_SAT_VALS[band],
+        flagval=get_flagval('SAT'),
     )
 
 
 @njit
-def _add_bleed(*, image, bmask, stamp, start_row, start_col, val):
+def _add_bleed(*, image, bmask, stamp, start_row, start_col, val, flagval):
     """
     or the stamp into the indicated bitmask image and set the
     saturation value
@@ -74,8 +75,8 @@ def _add_bleed(*, image, bmask, stamp, start_row, start_col, val):
                 continue
 
             mask_val = stamp[row, col]
-            if mask_val & SAT != 0:
-                bmask[bmask_row, bmask_col] |= SAT
+            if mask_val & flagval != 0:
+                bmask[bmask_row, bmask_col] |= flagval
                 image[bmask_row, bmask_col] = val
 
 

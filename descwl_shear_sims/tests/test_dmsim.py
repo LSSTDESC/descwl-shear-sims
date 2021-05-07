@@ -1,9 +1,11 @@
 import os
 import pytest
 import numpy as np
-from ..se_obs import SEObs
+import lsst.afw.image as afw_image
+import lsst.afw.geom as afw_geom
 from ..sim import (
     make_sim,
+    make_dmsim,
     make_galaxy_catalog,
     StarCatalog,
     make_psf,
@@ -19,16 +21,19 @@ from ..sim.galaxy_catalogs import DEFAULT_FIXED_GAL_CONFIG
     (False, False),
     (False, True),
     (True, False),
-    (True, True),
+    (False, False),
 ])
-def test_sim_smoke(dither, rotate):
+def test_compare_sim(dither, rotate):
     """
-    test sim can run
+    test comparing new and old sims; can remove this when we are
+    confident with the new sims and remove the old sims
     """
     seed = 74321
     rng = np.random.RandomState(seed)
 
-    coadd_dim = 341
+    coadd_dim = 351
+    psf_dim = 51
+    bands = ["i"]
     galaxy_catalog = make_galaxy_catalog(
         rng=rng,
         gal_type="exp",
@@ -38,6 +43,29 @@ def test_sim_smoke(dither, rotate):
     )
 
     psf = make_psf(psf_type="gauss")
+    dmdata = make_dmsim(
+        rng=rng,
+        galaxy_catalog=galaxy_catalog,
+        coadd_dim=351,
+        psf_dim=psf_dim,
+        bands=bands,
+        g1=0.02,
+        g2=0.00,
+        psf=psf,
+        dither=dither,
+        rotate=rotate,
+    )
+
+    rng = np.random.RandomState(seed)
+
+    galaxy_catalog = make_galaxy_catalog(
+        rng=rng,
+        gal_type="exp",
+        coadd_dim=coadd_dim,
+        buff=30,
+        layout="grid",
+    )
+
     data = make_sim(
         rng=rng,
         galaxy_catalog=galaxy_catalog,
@@ -49,19 +77,42 @@ def test_sim_smoke(dither, rotate):
         rotate=rotate,
     )
 
-    for band, bdata in data['band_data'].items():
-        assert len(bdata) == 1
-        assert isinstance(bdata[0], SEObs)
+    seobs = data['band_data']['i'][0]
+    exp = dmdata['band_data']['i'][0]['exp']
+    assert np.all(seobs.image.array == exp.image.array)
+    assert np.all(seobs.bmask.array == exp.mask.array)
+    assert np.all(seobs.weight.array == 1/exp.variance.array)
+
+    # this doesn't work yet due to bug in the old sim psf
+    # x = 8.5
+    # y = 10.1
+    # pos = geom.Point2D(x=x, y=y)
+    # gs_pos = galsim.PositionD(x=x, y=y)
+    #
+    # dmpsf = exp.getPsf()
+    # dmpsfim = dmpsf.computeImage(pos)
+    #
+    # gspsf = seobs.get_psf(x, y)
+    #
+    # assert np.all(dmpsfim.array == gspsf.array)
 
 
-def test_sim():
-
-    bands = ["i"]
-    seed = 7421
-    coadd_dim = 201
-    psf_dim = 47
+@pytest.mark.parametrize('dither,rotate', [
+    (False, False),
+    (False, True),
+    (True, False),
+    (True, True),
+])
+def test_sim_smoke(dither, rotate):
+    """
+    test sim can run
+    """
+    seed = 74321
     rng = np.random.RandomState(seed)
 
+    coadd_dim = 351
+    psf_dim = 51
+    bands = ["i"]
     galaxy_catalog = make_galaxy_catalog(
         rng=rng,
         gal_type="exp",
@@ -70,27 +121,35 @@ def test_sim():
         layout="grid",
     )
 
-    psf = make_psf(psf_type="moffat")
-    sim_data = make_sim(
+    psf = make_psf(psf_type="gauss")
+    data = make_dmsim(
         rng=rng,
         galaxy_catalog=galaxy_catalog,
-        coadd_dim=coadd_dim,
+        coadd_dim=351,
         psf_dim=psf_dim,
+        bands=bands,
         g1=0.02,
         g2=0.00,
         psf=psf,
-        bands=bands,
+        dither=dither,
+        rotate=rotate,
     )
 
-    assert 'coadd_dims' in sim_data
-    assert sim_data['coadd_dims'] == (coadd_dim,)*2
-    assert 'psf_dims' in sim_data
-    assert sim_data['psf_dims'] == (psf_dim, )*2
+    for key in ['band_data', 'coadd_wcs', 'psf_dims', 'coadd_bbox']:
+        assert key in data
 
-    band_data = sim_data['band_data']
-    assert len(band_data) == len(bands)
+    assert isinstance(data['coadd_wcs'], afw_geom.SkyWcs)
+    assert data['psf_dims'] == (psf_dim, )*2
+    extent = data['coadd_bbox'].getDimensions()
+    edims = (extent.getX(), extent.getY())
+    assert edims == (coadd_dim, )*2
+
     for band in bands:
-        assert band in band_data
+        assert band in data['band_data']
+
+    for band, bdata in data['band_data'].items():
+        assert len(bdata) == 1
+        assert isinstance(bdata[0]['exp'], afw_image.ExposureF)
 
 
 @pytest.mark.parametrize("rotate", [False, True])
@@ -114,7 +173,7 @@ def test_sim_exp_mag(rotate):
     )
 
     psf = make_psf(psf_type="gauss")
-    sim_data = make_sim(
+    sim_data = make_dmsim(
         rng=rng,
         galaxy_catalog=galaxy_catalog,
         coadd_dim=coadd_dim,
@@ -125,7 +184,7 @@ def test_sim_exp_mag(rotate):
         rotate=rotate,
     )
 
-    image = sim_data["band_data"]["i"][0].image.array
+    image = sim_data["band_data"]["i"][0]['exp'].image.array
     subim_sum = image[105:130, 100:125].sum()
 
     if rotate:
@@ -158,7 +217,7 @@ def test_sim_psf_type(psf_type):
     else:
         psf = make_psf(psf_type=psf_type)
 
-    _ = make_sim(
+    _ = make_dmsim(
         rng=rng,
         galaxy_catalog=galaxy_catalog,
         coadd_dim=coadd_dim,
@@ -189,7 +248,7 @@ def test_sim_epochs(epochs_per_band):
     )
 
     psf = make_psf(psf_type="gauss")
-    sim_data = make_sim(
+    sim_data = make_dmsim(
         rng=rng,
         galaxy_catalog=galaxy_catalog,
         coadd_dim=coadd_dim,
@@ -222,7 +281,7 @@ def test_sim_layout(layout):
     )
 
     psf = make_psf(psf_type="gauss")
-    _ = make_sim(
+    _ = make_dmsim(
         rng=rng,
         galaxy_catalog=galaxy_catalog,
         coadd_dim=coadd_dim,
@@ -253,7 +312,7 @@ def test_sim_defects(cosmic_rays, bad_columns):
     )
 
     psf = make_psf(psf_type="gauss")
-    _ = make_sim(
+    _ = make_dmsim(
         rng=rng,
         galaxy_catalog=galaxy_catalog,
         coadd_dim=coadd_dim,
@@ -282,7 +341,7 @@ def test_sim_wldeblend():
     )
 
     psf = make_psf(psf_type="moffat")
-    _ = make_sim(
+    _ = make_dmsim(
         rng=rng,
         galaxy_catalog=galaxy_catalog,
         coadd_dim=coadd_dim,
@@ -317,7 +376,7 @@ def test_sim_stars():
     )
 
     psf = make_psf(psf_type="moffat")
-    _ = make_sim(
+    _ = make_dmsim(
         rng=rng,
         galaxy_catalog=galaxy_catalog,
         star_catalog=star_catalog,
@@ -353,7 +412,7 @@ def test_sim_star_bleeds():
     )
 
     psf = make_psf(psf_type="moffat")
-    _ = make_sim(
+    _ = make_dmsim(
         rng=rng,
         galaxy_catalog=galaxy_catalog,
         star_catalog=star_catalog,

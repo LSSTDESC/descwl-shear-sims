@@ -1,29 +1,16 @@
-import pytest
-
-try:
-    import lsst.afw.image as afw_image
-    HAVE_STACK = True
-except ImportError:
-    HAVE_STACK = False
-
-from ..lsst_bits import (
-    COSMIC_RAY,
-    BAD_COLUMN,
-    EDGE,
-    SAT,
-)
+from ..lsst_bits import get_flagval
+import lsst.afw.image as afw_image
 
 
-@pytest.mark.skipif(not HAVE_STACK, reason='the DM stack is not installed')
 def test_lsst_mask_bits():
-    cr_val = 2**afw_image.Mask.getMaskPlane('CR')
-    assert cr_val == COSMIC_RAY
+    cr_val = afw_image.Mask.getPlaneBitMask('CR')
+    assert cr_val == get_flagval('CR')
 
-    bad_val = 2**afw_image.Mask.getMaskPlane('BAD')
-    assert bad_val == BAD_COLUMN
+    bad_val = afw_image.Mask.getPlaneBitMask('BAD')
+    assert bad_val == get_flagval('BAD')
 
-    edge_val = 2**afw_image.Mask.getMaskPlane('EDGE')
-    assert edge_val == EDGE
+    edge_val = afw_image.Mask.getPlaneBitMask('EDGE')
+    assert edge_val == get_flagval('EDGE')
 
-    sat_val = 2**afw_image.Mask.getMaskPlane('SAT')
-    assert sat_val == SAT
+    sat_val = afw_image.Mask.getPlaneBitMask('SAT')
+    assert sat_val == get_flagval('SAT')
