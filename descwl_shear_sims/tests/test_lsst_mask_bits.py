@@ -3,14 +3,12 @@ import lsst.afw.image as afw_image
 
 
 def test_lsst_mask_bits():
-    cr_val = afw_image.Mask.getPlaneBitMask('CR')
-    assert cr_val == get_flagval('CR')
 
-    bad_val = afw_image.Mask.getPlaneBitMask('BAD')
-    assert bad_val == get_flagval('BAD')
+    mim = afw_image.ExposureF(20, 20)
+    names = ['CR', 'BAD', 'EDGE', 'SAT', 'BRIGHT']
+    for name in names:
+        val = afw_image.Mask.getPlaneBitMask(name)
+        imval = mim.mask.getPlaneBitMask(name)
 
-    edge_val = afw_image.Mask.getPlaneBitMask('EDGE')
-    assert edge_val == get_flagval('EDGE')
-
-    sat_val = afw_image.Mask.getPlaneBitMask('SAT')
-    assert sat_val == get_flagval('SAT')
+        assert val == imval
+        assert val == get_flagval(name)
