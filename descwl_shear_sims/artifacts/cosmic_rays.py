@@ -1,3 +1,8 @@
+"""
+copy-paste from my (beckermr) personal code here
+https://github.com/beckermr/metadetect-coadding-sims/blob/master/coadd_mdetsims/masking.py
+"""
+
 import numpy as np
 
 
