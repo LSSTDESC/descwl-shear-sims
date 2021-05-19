@@ -2,7 +2,7 @@ import galsim
 import lsst.afw.image as afw_image
 import lsst.geom as geom
 from lsst.meas.algorithms import ImagePsf
-from .psfs import PowerSpectrumPSF
+from .ps_psf import PowerSpectrumPSF
 
 
 def make_dm_psf(psf, psf_dim, wcs):

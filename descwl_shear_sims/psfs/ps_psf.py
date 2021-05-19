@@ -1,12 +1,37 @@
 """
 Copied from https://github.com/beckermr/metadetect-sims under BSD
 """
+from ..constants import SCALE
 
 import numpy as np
 import galsim
 import galsim.lensing_ps
 import galsim.table
 import galsim.utilities
+
+
+def make_ps_psf(*, rng, dim):
+    """
+    get a power spectrum psf
+
+    Parameters
+    ----------
+    rng: np.random.RandomState
+        The random number generator
+    dim: int
+        Dimensions of image
+
+    Returns
+    -------
+    PowerSpectrumPSF
+    """
+    return PowerSpectrumPSF(
+        rng=rng,
+        im_width=dim,
+        buff=dim/2,
+        scale=SCALE,
+        variation_factor=1,
+    )
 
 
 class PowerSpectrumPSF(object):
