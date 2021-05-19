@@ -4,7 +4,7 @@ import lsst.geom as geom
 from lsst.afw.geom import makeSkyWcs
 from lsst.daf.base import PropertyList
 from .wcstools import make_wcs
-from .constants import SCALE, WORLD_ORIGIN
+from ..constants import SCALE, WORLD_ORIGIN
 
 
 def make_dm_wcs(galsim_wcs):
