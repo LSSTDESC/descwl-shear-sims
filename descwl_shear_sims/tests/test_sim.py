@@ -3,18 +3,12 @@ import pytest
 import numpy as np
 import lsst.afw.image as afw_image
 import lsst.afw.geom as afw_geom
-from ..sim import (
-    make_sim,
-    make_dmsim,
-    make_galaxy_catalog,
-    StarCatalog,
-    make_psf,
-    make_ps_psf,
-    get_se_dim,
-)
-from ..sim.constants import ZERO_POINT
+from ..galaxies import make_galaxy_catalog, DEFAULT_FIXED_GAL_CONFIG
+from ..stars import StarCatalog
+from ..psfs import make_fixed_psf, make_ps_psf
 
-from ..sim.galaxy_catalogs import DEFAULT_FIXED_GAL_CONFIG
+from ..sim import make_sim, get_se_dim
+from ..constants import ZERO_POINT
 
 
 @pytest.mark.parametrize('dither,rotate', [
@@ -41,8 +35,8 @@ def test_sim_smoke(dither, rotate):
         layout="grid",
     )
 
-    psf = make_psf(psf_type="gauss")
-    data = make_dmsim(
+    psf = make_fixed_psf(psf_type="gauss")
+    data = make_sim(
         rng=rng,
         galaxy_catalog=galaxy_catalog,
         coadd_dim=351,
@@ -92,8 +86,8 @@ def test_sim_exp_mag(rotate):
         layout="grid",
     )
 
-    psf = make_psf(psf_type="gauss")
-    sim_data = make_dmsim(
+    psf = make_fixed_psf(psf_type="gauss")
+    sim_data = make_sim(
         rng=rng,
         galaxy_catalog=galaxy_catalog,
         coadd_dim=coadd_dim,
@@ -135,9 +129,9 @@ def test_sim_psf_type(psf_type):
         se_dim = get_se_dim(coadd_dim=coadd_dim)
         psf = make_ps_psf(rng=rng, dim=se_dim)
     else:
-        psf = make_psf(psf_type=psf_type)
+        psf = make_fixed_psf(psf_type=psf_type)
 
-    _ = make_dmsim(
+    _ = make_sim(
         rng=rng,
         galaxy_catalog=galaxy_catalog,
         coadd_dim=coadd_dim,
@@ -167,8 +161,8 @@ def test_sim_epochs(epochs_per_band):
         layout="grid",
     )
 
-    psf = make_psf(psf_type="gauss")
-    sim_data = make_dmsim(
+    psf = make_fixed_psf(psf_type="gauss")
+    sim_data = make_sim(
         rng=rng,
         galaxy_catalog=galaxy_catalog,
         coadd_dim=coadd_dim,
@@ -200,8 +194,8 @@ def test_sim_layout(layout):
         layout=layout,
     )
 
-    psf = make_psf(psf_type="gauss")
-    _ = make_dmsim(
+    psf = make_fixed_psf(psf_type="gauss")
+    _ = make_sim(
         rng=rng,
         galaxy_catalog=galaxy_catalog,
         coadd_dim=coadd_dim,
@@ -231,8 +225,8 @@ def test_sim_defects(cosmic_rays, bad_columns):
         buff=30,
     )
 
-    psf = make_psf(psf_type="gauss")
-    _ = make_dmsim(
+    psf = make_fixed_psf(psf_type="gauss")
+    _ = make_sim(
         rng=rng,
         galaxy_catalog=galaxy_catalog,
         coadd_dim=coadd_dim,
@@ -260,8 +254,8 @@ def test_sim_wldeblend():
         buff=30,
     )
 
-    psf = make_psf(psf_type="moffat")
-    _ = make_dmsim(
+    psf = make_fixed_psf(psf_type="moffat")
+    _ = make_sim(
         rng=rng,
         galaxy_catalog=galaxy_catalog,
         coadd_dim=coadd_dim,
@@ -295,9 +289,9 @@ def test_sim_stars():
         density=100,
     )
 
-    psf = make_psf(psf_type="moffat")
+    psf = make_fixed_psf(psf_type="moffat")
     # TODO make sure we get some BRIGHT pixels
-    _ = make_dmsim(
+    _ = make_sim(
         rng=rng,
         galaxy_catalog=galaxy_catalog,
         star_catalog=star_catalog,
@@ -332,9 +326,9 @@ def test_sim_star_bleeds():
         density=100,
     )
 
-    psf = make_psf(psf_type="moffat")
+    psf = make_fixed_psf(psf_type="moffat")
     # TODO make sure we get some saturated pixels
-    _ = make_dmsim(
+    _ = make_sim(
         rng=rng,
         galaxy_catalog=galaxy_catalog,
         star_catalog=star_catalog,
