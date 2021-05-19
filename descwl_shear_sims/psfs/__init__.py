@@ -1,3 +1,4 @@
+# flake8: noqa
 from . import ps_psf
 from .ps_psf import PowerSpectrumPSF, make_ps_psf
 from .fixed_psf import FixedPSF, make_fixed_psf

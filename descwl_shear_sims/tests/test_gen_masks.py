@@ -4,8 +4,8 @@ https://github.com/beckermr/metadetect-coadding-sims
 """
 import numpy as np
 
-from ..gen_masks import (
-    generate_basic_mask,
+from ..artifacts import (
+    generate_edge_mask,
     generate_bad_columns,
     generate_cosmic_rays,
 )
@@ -15,7 +15,7 @@ from ..lsst_bits import get_flagval
 def test_generate_basic_mask():
     n = 100
     edge_width = 5
-    bmask = generate_basic_mask(shape=(n, n), edge_width=edge_width)
+    bmask = generate_edge_mask(shape=(n, n), edge_width=edge_width)
 
     expected_count = edge_width*n*4 - edge_width**2*4
     w = np.where(bmask == get_flagval('EDGE'))
