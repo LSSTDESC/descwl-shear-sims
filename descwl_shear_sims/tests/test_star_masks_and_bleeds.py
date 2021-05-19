@@ -13,7 +13,7 @@ from ..artifacts.star_bleeds import add_bleed
     "CATSIM_DIR" not in os.environ,
     reason='simulation input data is not present')
 @pytest.mark.parametrize('band', ('r', 'i', 'z'))
-def test_star_bleed(band):
+def test_star_mask_and_bleed(band):
     dims = (100, 100)
 
     cen = [50, 50]
