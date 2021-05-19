@@ -5,7 +5,7 @@ import descwl
 
 from .shifts import get_shifts
 from .constants import SCALE
-from ..cache_tools import cached_catalog_read
+from .cache_tools import cached_catalog_read
 
 
 DEFAULT_FIXED_GAL_CONFIG = {
