@@ -1,3 +1,4 @@
+# TODO adapt to new sims
 import pytest
 import numpy as np
 from descwl_shear_sims.sim import (
