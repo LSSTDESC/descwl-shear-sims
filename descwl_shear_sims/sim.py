@@ -173,9 +173,6 @@ def make_sim(
 
     coadd_wcs = make_coadd_dm_wcs(coadd_bbox.getCenter())
 
-    # trivial bbox for now
-    # TODO make this coadd be a subset (patch) of larger coadd, so the
-    # start might  not be at zero
     return {
         'band_data': band_data,
         'coadd_wcs': coadd_wcs,

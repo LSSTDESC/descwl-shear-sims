@@ -290,7 +290,8 @@ def test_sim_stars():
     )
 
     psf = make_fixed_psf(psf_type="moffat")
-    # TODO make sure we get some BRIGHT pixels
+    # tests that we actually get BRIGHT set are in
+    # test_star_masks_and_bleeds
     _ = make_sim(
         rng=rng,
         galaxy_catalog=galaxy_catalog,
@@ -327,7 +328,8 @@ def test_sim_star_bleeds():
     )
 
     psf = make_fixed_psf(psf_type="moffat")
-    # TODO make sure we get some saturated pixels
+    # tests that we actually get saturation are in
+    # test_star_masks_and_bleeds
     _ = make_sim(
         rng=rng,
         galaxy_catalog=galaxy_catalog,
