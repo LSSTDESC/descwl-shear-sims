@@ -7,6 +7,10 @@ from ..lsst_bits import get_flagval
 from ..saturation import BAND_SAT_VALS
 from ..masking import add_bright_star_mask
 from ..artifacts.star_bleeds import add_bleed
+from ..stars import StarCatalog
+from ..galaxies import make_galaxy_catalog
+from ..psfs import make_fixed_psf
+from ..sim import make_sim
 
 
 @pytest.mark.skipif(
@@ -43,73 +47,121 @@ def test_star_mask_and_bleed(band):
     assert image[cen[0], cen[1]] == BAND_SAT_VALS[band]
 
 
-# TODO adapt to new sims
-'''
 @pytest.mark.skipif(
     "CATSIM_DIR" not in os.environ,
     reason='simulation input data is not present')
-def test_star_mask_keywords():
+def test_star_mask_in_sim():
     """
     test star masking using the keyword to the sim
     """
     rng = np.random.RandomState(234)
-    sim = SimpleSim(
-        rng=rng,
-        bands=['r'],
-        epochs_per_band=1,
-        stars=True,
-        stars_kws={
-            'density': 3,
-            'mag': 15,
-        },
-        star_bleeds=True,
-    )
 
-    data = sim.gen_sim()
+    bands = ['r']
+    coadd_dim = 100
+    buff = 0
+    star_density = 100
+    psf = make_fixed_psf(psf_type='moffat')
 
-    se_obs = data['r'][0]
-    mask = se_obs.bmask.array
-    image = se_obs.image.array
+    for i in range(1000):
+        galaxy_catalog = make_galaxy_catalog(
+            rng=rng,
+            gal_type='exp',
+            coadd_dim=coadd_dim,
+            buff=buff,
+            layout='random',
+        )
+        star_catalog = StarCatalog(
+            rng=rng,
+            coadd_dim=coadd_dim,
+            buff=buff,
+            density=star_density,
+        )
+        sim_data = make_sim(
+            rng=rng,
+            galaxy_catalog=galaxy_catalog,
+            star_catalog=star_catalog,
+            coadd_dim=coadd_dim,
+            bands=bands,
+            psf=psf,
+            g1=0, g2=0,
+            star_bleeds=True,
+        )
 
-    w = np.where((mask & get_flagval('SAT')) != 0)
-    assert w[0].size > 0
-    assert np.all(image[w] == BAND_SAT_VALS['r'])
+        exp = sim_data['band_data'][bands[0]][0]['exp']
 
-    w = np.where(mask & get_flagval('BRIGHT') != 0)
-    assert w[0].size > 0
+        # import lsst.afw.display as afw_display
+        # display = afw_display.getDisplay(backend='ds9')
+        # display.mtv(exp)
+        # display.scale('log', 'minmax')
+
+        mask = exp.mask.array
+        image = exp.image.array
+
+        wsat = np.where((mask & get_flagval('SAT')) != 0)
+        wbright = np.where(mask & get_flagval('BRIGHT') != 0)
+        if (wsat[0].size > 0 and
+                np.all(image[wsat] == BAND_SAT_VALS['r']) and
+                wbright[0].size > 0):
+
+            some_were_saturated = True
+            break
+
+    assert some_were_saturated
 
 
 @pytest.mark.skipif(
     "CATSIM_DIR" not in os.environ,
     reason='simulation input data is not present')
-def test_star_mask_repeatable():
+def test_star_mask_in_sim_repeatable():
     """
     test star masking using the keyword to the sim
     """
 
-    for trial in (1, 2):
-        rng = np.random.RandomState(234)
-        sim = SimpleSim(
-            rng=rng,
-            bands=['r'],
-            epochs_per_band=1,
-            stars=True,
-            stars_kws={
-                'density': 3,
-                'mag': 15,
-            },
-            star_bleeds=True,
-        )
+    seed = 234
 
-        data = sim.gen_sim()
+    bands = ['r']
+    coadd_dim = 100
+    buff = 0
+    star_density = 100
+    psf = make_fixed_psf(psf_type='moffat')
 
-        se_obs = data['r'][0]
-        mask = se_obs.bmask.array
+    for step in (0, 1):
+        rng = np.random.RandomState(seed)
+        for i in range(1000):
+            galaxy_catalog = make_galaxy_catalog(
+                rng=rng,
+                gal_type='exp',
+                coadd_dim=coadd_dim,
+                buff=buff,
+                layout='random',
+            )
+            star_catalog = StarCatalog(
+                rng=rng,
+                coadd_dim=coadd_dim,
+                buff=buff,
+                density=star_density,
+            )
+            sim_data = make_sim(
+                rng=rng,
+                galaxy_catalog=galaxy_catalog,
+                star_catalog=star_catalog,
+                coadd_dim=coadd_dim,
+                bands=bands,
+                psf=psf,
+                g1=0, g2=0,
+                star_bleeds=True,
+            )
 
-        w = np.where((mask & get_flagval('SAT')) != 0)
+            exp = sim_data['band_data'][bands[0]][0]['exp']
 
-        if trial == 1:
-            nmarked = w[0].size
-        else:
-            assert w[0].size == nmarked
-'''
+            mask = exp.mask.array
+            wsat = np.where((mask & get_flagval('SAT')) != 0)
+
+            if wsat[0].size > 0:
+
+                if step == 0:
+                    nmarked = wsat[0].size
+                    break
+                else:
+                    assert wsat[0].size == nmarked
+                    break
