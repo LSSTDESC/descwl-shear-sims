@@ -1,5 +1,5 @@
 from numba import njit
-from .sim_constants import ZERO_POINT
+from .constants import ZERO_POINT
 
 # saturation value for visit images, rescaled to
 # our zero point

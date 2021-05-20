@@ -1,10 +1,8 @@
 import pytest
 import numpy as np
-from descwl_shear_sims.sim import (
-    make_sim,
-    make_psf,
-)
-from ..sim.galaxy_catalogs import FixedGalaxyCatalog
+from ..sim import make_sim
+from ..psfs import make_fixed_psf
+from ..galaxies import make_galaxy_catalog
 from numba import njit
 
 
@@ -37,21 +35,23 @@ def test_correlated_noise():
 
     rng0 = np.random.RandomState(97756)
     ntrial = 100
+    gal_config = {'mag': 37, 'hlr': 0.5}
+
     for i in range(ntrial):
         seed = rng0.randint(0, 2**30)
         rng = np.random.RandomState(seed)
 
         coadd_dim = 301
-        galaxy_catalog = FixedGalaxyCatalog(
+        galaxy_catalog = make_galaxy_catalog(
             rng=rng,
+            gal_type='exp',
             coadd_dim=coadd_dim,
             buff=0,
             layout="grid",
-            mag=37.0,
-            hlr=0.5,
+            gal_config=gal_config,
         )
 
-        psf = make_psf(psf_type="gauss")
+        psf = make_fixed_psf(psf_type="gauss")
         sim_data = make_sim(
             rng=rng,
             galaxy_catalog=galaxy_catalog,
@@ -63,11 +63,10 @@ def test_correlated_noise():
             rotate=True,
         )
 
-        mbc = coadd_mod.MultiBandCoadds(
-            rng=rng,
+        mbc = coadd_mod.MultiBandCoaddsDM(
             data=sim_data['band_data'],
             coadd_wcs=sim_data['coadd_wcs'],
-            coadd_dims=sim_data['coadd_dims'],
+            coadd_bbox=sim_data['coadd_bbox'],
             psf_dims=sim_data['psf_dims'],
             byband=False,
             loglevel="debug",

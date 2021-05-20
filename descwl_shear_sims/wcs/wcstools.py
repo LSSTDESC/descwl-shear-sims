@@ -1,6 +1,6 @@
 import galsim
 import numpy as np
-from .constants import SCALE, WORLD_ORIGIN
+from ..constants import SCALE, WORLD_ORIGIN
 
 
 def make_wcs(*, scale, image_origin, world_origin, theta=None):

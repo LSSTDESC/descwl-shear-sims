@@ -2,7 +2,7 @@ import numpy as np
 import galsim
 import lsst.afw.image as afw_image
 import lsst.geom as geom
-from ..sim.dmwcs import make_dm_wcs
+from ..wcs import make_dm_wcs
 from ._wcs import make_sim_wcs
 
 

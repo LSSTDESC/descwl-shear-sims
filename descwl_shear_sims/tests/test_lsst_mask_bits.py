@@ -1,5 +1,5 @@
-from ..lsst_bits import get_flagval
 import lsst.afw.image as afw_image
+from ..lsst_bits import get_flagval
 
 
 def test_lsst_mask_bits():

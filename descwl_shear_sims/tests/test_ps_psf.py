@@ -7,7 +7,7 @@ import galsim
 
 import pytest
 
-from ..ps_psf import PowerSpectrumPSF
+from ..psfs import PowerSpectrumPSF, make_ps_psf
 
 PIXEL_SCALE = 0.25
 
@@ -27,7 +27,14 @@ def test_ps_psf_smoke():
         im_width=120,
         buff=20,
         scale=PIXEL_SCALE,
-        trunc=10)
+        trunc=10,
+    )
+    psf = ps.getPSF(galsim.PositionD(x=10, y=10))
+    assert isinstance(psf, galsim.GSObject)
+    psf_im = psf.drawImage(scale=PIXEL_SCALE)
+    assert psf_im.calculateFWHM() > 0.5
+
+    ps = make_ps_psf(rng=rng, dim=120)
     psf = ps.getPSF(galsim.PositionD(x=10, y=10))
     assert isinstance(psf, galsim.GSObject)
     psf_im = psf.drawImage(scale=PIXEL_SCALE)

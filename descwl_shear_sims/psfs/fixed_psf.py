@@ -1,10 +1,9 @@
 import copy
 import galsim
-from ..ps_psf import PowerSpectrumPSF
-from .constants import FIXED_PSF_FWHM, FIXED_MOFFAT_BETA, SCALE
+from ..constants import FIXED_PSF_FWHM, FIXED_MOFFAT_BETA
 
 
-def make_psf(*, psf_type):
+def make_fixed_psf(*, psf_type):
     """
     Make a fixed PSF
 
@@ -25,30 +24,6 @@ def make_psf(*, psf_type):
         raise ValueError("bad psf_type '%s'" % psf_type)
 
     return psf
-
-
-def make_ps_psf(*, rng, dim):
-    """
-    get a power spectrum psf
-
-    Parameters
-    ----------
-    rng: np.random.RandomState
-        The random number generator
-    dim: int
-        Dimensions of image
-
-    Returns
-    -------
-    PowerSpectrumPSF
-    """
-    return PowerSpectrumPSF(
-        rng=rng,
-        im_width=dim,
-        buff=dim/2,
-        scale=SCALE,
-        variation_factor=1,
-    )
 
 
 class FixedPSF(object):
