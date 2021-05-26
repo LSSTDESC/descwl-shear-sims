@@ -55,7 +55,7 @@ jobs:
 
           pushd ..
           git clone https://github.com/esheldon/metadetect.git
-          pushd ngmix
+          pushd metadetect
           pip install --no-deps -e .
           popd
           popd
