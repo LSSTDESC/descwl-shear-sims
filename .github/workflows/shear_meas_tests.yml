@@ -47,7 +47,9 @@ jobs:
 
           pushd ..
           git clone https://github.com/LSSTDESC/descwl_coadd.git
+          pushd descwl_coadd
           pip install --no-deps -e .
+          popd
           popd
 
       - name: test

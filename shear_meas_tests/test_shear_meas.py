@@ -35,16 +35,13 @@ CONFIG = {
 
 def _make_lsst_sim(*, seed, g1, g2, layout):
     rng = np.random.RandomState(seed=seed)
-    coadd_dim = 351
-    buff = 50
 
-    galaxy_catalog = sim.galaxies.FixedGalaxyCatalog(
+    galaxy_catalog = sim.galaxies.make_galaxy_catalog(
         rng=rng,
-        coadd_dim=coadd_dim,
-        buff=buff,
+        coadd_dim=sim.sim.DEFAULT_SIM_CONFIG["coadd_dim"],
+        buff=sim.sim.DEFAULT_SIM_CONFIG["buff"],
         layout=layout,
-        mag=14,
-        hlr=0.5,
+        gal_type='exp',
     )
 
     psf = sim.psfs.make_fixed_psf(psf_type='gauss')
@@ -52,7 +49,7 @@ def _make_lsst_sim(*, seed, g1, g2, layout):
     sim_data = sim.make_sim(
         rng=rng,
         galaxy_catalog=galaxy_catalog,
-        coadd_dim=coadd_dim,
+        coadd_dim=sim.sim.DEFAULT_SIM_CONFIG["coadd_dim"],
         g1=g1,
         g2=g2,
         psf=psf,
@@ -138,13 +135,6 @@ def _run_sim_one(*, seed, mdet_seed, g1, g2, **kwargs):
     obslist.append(coadd_obs)
     coadd_mbobs.append(obslist)
 
-    if False:
-        import matplotlib.pyplot as plt
-        plt.figure()
-        plt.imshow(coadd_obs.psf.image)
-        import pdb
-        pdb.set_trace()
-
     md = lsst_metadetect.LSSTMetadetect(
         copy.deepcopy(CONFIG),
         coadd_mbobs,
@@ -168,10 +158,9 @@ def run_sim(seed, mdet_seed, **kwargs):
     return _meas_shear_data(_pres), _meas_shear_data(_mres)
 
 
-# @pytest.mark.parametrize(
-#     'layout,ntrial', [('grid', 50), ('random', 10000)]
-# )
-@pytest.mark.parametrize('layout,ntrial', [('grid', 50)])
+@pytest.mark.parametrize(
+    'layout,ntrial', [('grid', 50), ('random', 5000)]
+)
 def test_shear_meas(layout, ntrial):
     nsub = max(ntrial // 100, 10)
     nitr = ntrial // nsub
@@ -193,7 +182,7 @@ def test_shear_meas(layout, ntrial):
             )
             for i in range(nsub)
         ]
-        outputs = joblib.Parallel(n_jobs=-1, verbose=0, backend='loky')(jobs)
+        outputs = joblib.Parallel(n_jobs=2, verbose=0, backend='loky')(jobs)
 
         for out in outputs:
             if out is None:
