@@ -35,12 +35,13 @@ CONFIG = {
 
 def _make_lsst_sim(*, seed, g1, g2, layout):
     rng = np.random.RandomState(seed=seed)
-    coadd_dim = 251
+    coadd_dim = 351
+    buff = 50
 
     galaxy_catalog = sim.galaxies.FixedGalaxyCatalog(
         rng=rng,
         coadd_dim=coadd_dim,
-        buff=20,
+        buff=buff,
         layout=layout,
         mag=14,
         hlr=0.5,
@@ -137,6 +138,13 @@ def _run_sim_one(*, seed, mdet_seed, g1, g2, **kwargs):
     obslist.append(coadd_obs)
     coadd_mbobs.append(obslist)
 
+    if False:
+        import matplotlib.pyplot as plt
+        plt.figure()
+        plt.imshow(coadd_obs.psf.image)
+        import pdb
+        pdb.set_trace()
+
     md = lsst_metadetect.LSSTMetadetect(
         copy.deepcopy(CONFIG),
         coadd_mbobs,
@@ -160,9 +168,10 @@ def run_sim(seed, mdet_seed, **kwargs):
     return _meas_shear_data(_pres), _meas_shear_data(_mres)
 
 
-@pytest.mark.parametrize(
-    'layout,ntrial', [('grid', 50), ('random', 10000)]
-)
+# @pytest.mark.parametrize(
+#     'layout,ntrial', [('grid', 50), ('random', 10000)]
+# )
+@pytest.mark.parametrize('layout,ntrial', [('grid', 50)])
 def test_shear_meas(layout, ntrial):
     nsub = max(ntrial // 100, 10)
     nitr = ntrial // nsub
