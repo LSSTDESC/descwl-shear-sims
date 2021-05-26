@@ -69,7 +69,13 @@ jobs:
           popd
           popd
 
-      - name: test
+      - name: fast test
         shell: bash -l {0}
         run: |
-          pytest -vvsx shear_meas_tests/test_shear_meas.py
+          pytest -vvsx shear_meas_tests/test_shear_meas.py -k test_shear_meas[grid-50]
+
+      - name: slow test
+        if: success() && github.event_name == "push"
+        shell: bash -l {0}
+        run: |
+          pytest -vvsx shear_meas_tests/test_shear_meas.py -k test_shear_meas[random-5000]
