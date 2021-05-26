@@ -71,4 +71,4 @@ jobs:
       - name: test
         shell: bash -l {0}
         run: |
-          pytest -vvs pytest -vvs shear_meas_tests/test_shear_meas.py
+          pytest -vvs shear_meas_tests/test_shear_meas.py
