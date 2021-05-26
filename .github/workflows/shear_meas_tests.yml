@@ -45,9 +45,25 @@ jobs:
 
           pip install --no-deps -e .
 
+          # for now we always pull the latest of these packages
           pushd ..
           git clone https://github.com/LSSTDESC/descwl_coadd.git
           pushd descwl_coadd
+          pip install --no-deps -e .
+          popd
+          popd
+
+          pushd ..
+          git clone https://github.com/esheldon/metadetect.git
+          pushd ngmix
+          pip install --no-deps -e .
+          popd
+          popd
+
+          # remove this one once ngmix 2.0 is on conda-forge
+          pushd ..
+          git clone https://github.com/esheldon/ngmix.git
+          pushd ngmix
           pip install --no-deps -e .
           popd
           popd
