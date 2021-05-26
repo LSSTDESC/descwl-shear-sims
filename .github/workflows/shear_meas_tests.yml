@@ -41,7 +41,8 @@ jobs:
             numba \
             ngmix \
             lsstdesc-weaklensingdeblending \
-            fitsio
+            fitsio \
+            meds
 
           pip install --no-deps -e .
 
@@ -71,4 +72,4 @@ jobs:
       - name: test
         shell: bash -l {0}
         run: |
-          pytest -vvs shear_meas_tests/test_shear_meas.py
+          pytest -vvsx shear_meas_tests/test_shear_meas.py
