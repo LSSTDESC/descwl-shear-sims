@@ -120,7 +120,7 @@ def make_sim(
 
         bdata_list = []
         for epoch in range(epochs_per_band):
-            exp, noise_exp = make_exp(
+            exp = make_exp(
                 rng=rng,
                 band=band,
                 noise=noise_per_epoch,
@@ -143,7 +143,6 @@ def make_sim(
                 rescale_wldeblend_exp(
                     survey=survey.descwl_survey,
                     exp=exp,
-                    noise_exp=noise_exp,
                 )
 
             # mark high pixels SAT and also set sat value in image for
@@ -154,14 +153,8 @@ def make_sim(
                 sat_val=BAND_SAT_VALS[band],
                 flagval=get_flagval('SAT'),
             )
-            saturate_image_and_mask(
-                image=noise_exp.image.array,
-                bmask=noise_exp.mask.array,
-                sat_val=BAND_SAT_VALS[band],
-                flagval=get_flagval('SAT'),
-            )
 
-            bdata_list.append({'exp': exp, 'noise_exp': noise_exp})
+            bdata_list.append(exp)
 
         band_data[band] = bdata_list
 
@@ -364,29 +357,19 @@ def make_exp(
     masked_image.variance.array[:, :] = variance.array
     masked_image.mask.array[:, :] = bmask.array
 
-    noise_masked_image = afw_image.MaskedImageF(dim, dim)
-    noise_masked_image.image.array[:, :] = rng.normal(scale=noise, size=dims)
-    noise_masked_image.variance.array[:, :] = variance.array
-    noise_masked_image.mask.array[:, :] = bmask.array
-
     exp = afw_image.ExposureF(masked_image)
-    noise_exp = afw_image.ExposureF(noise_masked_image)
 
     filter_label = afw_image.FilterLabel(band=band, physical=band)
     exp.setFilterLabel(filter_label)
-    noise_exp.setFilterLabel(filter_label)
 
     exp.setPsf(dm_psf)
-    noise_exp.setPsf(dm_psf)
 
     exp.setWcs(dm_wcs)
-    noise_exp.setWcs(dm_wcs)
 
     detector = DetectorWrapper().detector
     exp.setDetector(detector)
-    noise_exp.setDetector(detector)
 
-    return exp, noise_exp
+    return exp
 
 
 def get_sim_config(config=None):
