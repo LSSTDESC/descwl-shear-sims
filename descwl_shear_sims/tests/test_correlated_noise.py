@@ -63,7 +63,7 @@ def test_correlated_noise():
             rotate=True,
         )
 
-        mbc = coadd_mod.MultiBandCoaddsDM(
+        mbc = coadd_mod.MultiBandCoadds(
             data=sim_data['band_data'],
             coadd_wcs=sim_data['coadd_wcs'],
             coadd_bbox=sim_data['coadd_bbox'],
