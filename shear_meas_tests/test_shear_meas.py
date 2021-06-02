@@ -9,7 +9,7 @@ import pytest
 
 import metadetect.lsst_metadetect as lsst_metadetect
 import descwl_shear_sims as sim
-import descwl_coadd.coadd as coadd
+from descwl_coadd.coadd import make_coadd_obs
 
 CONFIG = {
     "model": "wmom",
@@ -122,14 +122,15 @@ def _boostrap_m_c(pres, mres):
 
 def _run_sim_one(*, seed, mdet_seed, g1, g2, **kwargs):
     sim_data = _make_lsst_sim(seed=seed, g1=g1, g2=g2, **kwargs)
-    mbc = coadd.MultiBandCoaddsDM(
-        data=sim_data['band_data'],
+    coadd_obs = make_coadd_obs(
+        exps=sim_data['band_data']['i'],
         coadd_wcs=sim_data['coadd_wcs'],
         coadd_bbox=sim_data['coadd_bbox'],
         psf_dims=sim_data['psf_dims'],
-        byband=False,
+        rng=np.random.RandomState(seed),
+        remove_poisson=False,  # no object poisson noise in sims
     )
-    coadd_obs = mbc.coadds['all']
+
     coadd_mbobs = ngmix.MultiBandObsList()
     obslist = ngmix.ObsList()
     obslist.append(coadd_obs)
