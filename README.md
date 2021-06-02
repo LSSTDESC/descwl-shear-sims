@@ -1,5 +1,5 @@
 # descwl-shear-sims
-[![Build Status](https://travis-ci.com/LSSTDESC/descwl-shear-sims.svg?branch=master)](https://travis-ci.com/LSSTDESC/descwl-shear-sims)
+[![Build Status](https://travis-ci.com/LSSTDESC/descwl-shear-sims.svg?branch=master)](https://travis-ci.com/LSSTDESC/descwl-shear-sims) [![shear-meas-tests](https://github.com/LSSTDESC/descwl-shear-sims/actions/workflows/shear_meas_tests.yml/badge.svg)](https://github.com/LSSTDESC/descwl-shear-sims/actions/workflows/shear_meas_tests.yml)
 
 simple simulations for testing weak lensing shear measurement
 
@@ -11,7 +11,7 @@ It is best to use `pip` to install
 pip install .
 ```
 
-If you are installing into a `conda` environment, you should add `--no-deps` to the 
+If you are installing into a `conda` environment, you should add `--no-deps` to the
 command above and make sure to install the dependencies with `conda`.
 
 ## Installing with all the dependencies

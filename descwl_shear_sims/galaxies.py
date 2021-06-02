@@ -103,7 +103,12 @@ class FixedGalaxyCatalog(object):
     layout: string
         The layout of objects, either 'grid' or 'random'
     mag: float
-        Magnitude of all objects
+        Magnitude of all objects. Objects brighter than magntiude 17 (e.g., 14
+        since mags are opposite) tend to cause the Rubin Observatory science
+        pipeline detection algorithm to misdetect isolted objects in unphysical
+        ways. This effect causes the shear response to be non-linear and so
+        metadetect will fail. For this reason, you should use the default
+        magnitude of 17 or fainter for this kind of galaxy.
     hlr: float
         Half light radius of all objects
     """

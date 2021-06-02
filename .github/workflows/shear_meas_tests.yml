@@ -1,0 +1,81 @@
+name: shear-meas-tests
+
+on:
+  push:
+    branches:
+      - master
+  pull_request: null
+
+jobs:
+  shear-meas-tests:
+    name: shear-meas-tests
+    strategy:
+      matrix:
+        pyver: [3.8]
+
+    runs-on: "ubuntu-latest"
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          python-version: ${{ matrix.pyver }}
+          channels: conda-forge
+          channel-priority: strict
+          show-channel-urls: true
+
+      - name: configure conda and install code
+        shell: bash -l {0}
+        run: |
+          conda config --set always_yes yes
+          conda install -q mamba
+
+          mamba install -q stackvana=0
+
+          mamba install -q \
+            flake8 \
+            pytest \
+            numpy \
+            galsim \
+            numba \
+            ngmix \
+            lsstdesc-weaklensingdeblending \
+            fitsio \
+            meds
+
+          pip install --no-deps -e .
+
+          # for now we always pull the latest of these packages
+          pushd ..
+          git clone https://github.com/LSSTDESC/descwl_coadd.git
+          pushd descwl_coadd
+          pip install --no-deps -e .
+          popd
+          popd
+
+          pushd ..
+          git clone https://github.com/esheldon/metadetect.git
+          pushd metadetect
+          pip install --no-deps -e .
+          popd
+          popd
+
+          # remove this one once ngmix 2.0 is on conda-forge
+          pushd ..
+          git clone https://github.com/esheldon/ngmix.git
+          pushd ngmix
+          pip install --no-deps -e .
+          popd
+          popd
+
+      - name: fast test
+        shell: bash -l {0}
+        run: |
+          pytest -vvsx shear_meas_tests/test_shear_meas.py -k test_shear_meas[grid-50]
+
+      - name: slow test
+        if: ${{ success() && github.event_name == 'push' }}
+        shell: bash -l {0}
+        run: |
+          pytest -vvsx shear_meas_tests/test_shear_meas.py -k test_shear_meas[random-5000]
