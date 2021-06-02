@@ -78,4 +78,4 @@ jobs:
         if: ${{ success() && github.event_name == 'push' }}
         shell: bash -l {0}
         run: |
-          pytest -vvsx shear_meas_tests/test_shear_meas.py -k test_shear_meas[random-5000]
+          pytest -vvsx shear_meas_tests/test_shear_meas.py -k test_shear_meas[random-2500]
