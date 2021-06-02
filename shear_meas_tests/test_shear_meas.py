@@ -159,7 +159,7 @@ def run_sim(seed, mdet_seed, **kwargs):
 
 
 @pytest.mark.parametrize(
-    'layout,ntrial', [('grid', 50), ('random', 5000)]
+    'layout,ntrial', [('grid', 50), ('random', 2500)]
 )
 def test_shear_meas(layout, ntrial):
     nsub = max(ntrial // 100, 10)
