@@ -100,10 +100,6 @@ def make_sim(
         coadd_wcs=coadd_wcs, coadd_bbox=coadd_bbox,
     )
 
-    # print('coadd wcs:\n', coadd_wcs)
-    # print('bbox:\n', coadd_bbox)
-    # print('coadd wcs pix of origin:\n', coadd_wcs.skyToPixel(coadd_wcs.getSkyOrigin()))
-
     se_dim = get_se_dim(coadd_dim=coadd_dim)
 
     band_data = {}
@@ -451,11 +447,6 @@ def get_coadd_center_gs_pos(coadd_wcs, coadd_bbox):
     # print(bbox_cen_skypos)
     # print(type(bbox_cen_skypos))
     # print(bbox_cen_skypos.getRa(), bbox_cen_skypos.getDec())
-    coadd_bbox_cen_skypos = galsim.CelestialCoord(
-        ra=float(bbox_cen_skypos.getRa()) * galsim.radians,
-        dec=float(bbox_cen_skypos.getDec()) * galsim.radians,
-    )
-    # print(coadd_bbox_cen_skypos)
 
     return galsim.CelestialCoord(
         ra=float(bbox_cen_skypos.getRa()) * galsim.radians,
