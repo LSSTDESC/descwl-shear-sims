@@ -59,9 +59,11 @@ def make_dm_wcs(galsim_wcs):
     return stack_wcs
 
 
-def make_coadd_dm_wcs(coadd_origin):
+# def make_coadd_dm_wcs(coadd_origin):
+def make_coadd_dm_wcs(coadd_dim):
     """
-    make a coadd wcs, using the default world origin
+    make a coadd wcs, using the default world origin.  Create
+    a bbox within larger box
 
     Parameters
     ----------
@@ -73,14 +75,47 @@ def make_coadd_dm_wcs(coadd_origin):
     --------
     A galsim wcs, see make_wcs for return type
     """
+
+    # make a larger coadd region
+    big_coadd_dim = 3000 + coadd_dim
+    big_coadd_bbox = geom.Box2I(
+        geom.IntervalI(min=0, max=big_coadd_dim-1),
+        geom.IntervalI(min=0, max=big_coadd_dim-1),
+    )
+
+    # make this coadd a subset of larger coadd
+    xoff = 1000
+    yoff = 450
+    coadd_bbox = geom.Box2I(
+        geom.IntervalI(min=xoff + 0, max=xoff + coadd_dim-1),
+        geom.IntervalI(min=yoff + 0, max=yoff + coadd_dim-1),
+    )
+
+    # center the coadd wcs in the bigger coord system
+
+    coadd_origin = big_coadd_bbox.getCenter()
+    # coadd_wcs = make_coadd_dm_wcs(big_coadd_bbox.getCenter())
+
     gs_coadd_origin = galsim.PositionD(
         x=coadd_origin.x,
         y=coadd_origin.y,
     )
-    return make_dm_wcs(
+    coadd_wcs = make_dm_wcs(
         make_wcs(
             scale=SCALE,
             image_origin=gs_coadd_origin,
             world_origin=WORLD_ORIGIN,
         )
     )
+    return coadd_wcs, coadd_bbox
+    # gs_coadd_origin = galsim.PositionD(
+    #     x=coadd_origin.x,
+    #     y=coadd_origin.y,
+    # )
+    # return make_dm_wcs(
+    #     make_wcs(
+    #         scale=SCALE,
+    #         image_origin=gs_coadd_origin,
+    #         world_origin=WORLD_ORIGIN,
+    #     )
+    # )
