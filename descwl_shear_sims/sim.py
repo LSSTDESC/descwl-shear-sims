@@ -444,9 +444,6 @@ def get_coadd_center_gs_pos(coadd_wcs, coadd_bbox):
     bbox_cen_skypos = coadd_wcs.pixelToSky(
         coadd_bbox.getCenter()
     )
-    # print(bbox_cen_skypos)
-    # print(type(bbox_cen_skypos))
-    # print(bbox_cen_skypos.getRa(), bbox_cen_skypos.getDec())
 
     return galsim.CelestialCoord(
         ra=float(bbox_cen_skypos.getRa()) * galsim.radians,
