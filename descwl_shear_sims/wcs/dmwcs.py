@@ -59,7 +59,6 @@ def make_dm_wcs(galsim_wcs):
     return stack_wcs
 
 
-# def make_coadd_dm_wcs(coadd_origin):
 def make_coadd_dm_wcs(coadd_dim):
     """
     make a coadd wcs, using the default world origin.  Create
