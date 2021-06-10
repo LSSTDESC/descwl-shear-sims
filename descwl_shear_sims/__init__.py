@@ -1,5 +1,5 @@
 # flake8: noqa
-__version__ = '0.3.0'
+__version__ = '0.3.1'
 
 from . import sim
 from .sim import make_sim
