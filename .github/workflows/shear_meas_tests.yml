@@ -89,10 +89,12 @@ jobs:
       - name: fast test
         shell: bash -l {0}
         run: |
+          setup -j -r /tmp/pipe_tasks
           pytest -vvsx shear_meas_tests/test_shear_meas.py -k test_shear_meas[grid-50]
 
       - name: slow test
         if: ${{ success() && github.event_name == 'push' }}
         shell: bash -l {0}
         run: |
+          setup -j -r /tmp/pipe_tasks
           pytest -vvsx shear_meas_tests/test_shear_meas.py -k test_shear_meas[random-2500]
