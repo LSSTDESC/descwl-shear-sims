@@ -9,10 +9,7 @@ from lsst.afw.cameraGeom.testUtils import DetectorWrapper
 from .lsst_bits import get_flagval
 from .saturation import saturate_image_and_mask, BAND_SAT_VALS
 from .surveys import get_survey, rescale_wldeblend_exp
-from .constants import (
-    SCALE,
-    # WORLD_ORIGIN,
-)
+from .constants import SCALE
 from .artifacts import add_bleeds
 from .masking import get_bmask, calculate_and_add_bright_star_mask
 from .objlists import get_objlist, get_convolved_objects
