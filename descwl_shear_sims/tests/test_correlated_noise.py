@@ -63,16 +63,16 @@ def test_correlated_noise():
             rotate=True,
         )
 
-        mbc = coadd_mod.MultiBandCoaddsDM(
-            data=sim_data['band_data'],
+        coadd_obs = coadd_mod.make_coadd_obs(
+            exps=sim_data['band_data']['i'],
             coadd_wcs=sim_data['coadd_wcs'],
             coadd_bbox=sim_data['coadd_bbox'],
             psf_dims=sim_data['psf_dims'],
-            byband=False,
+            rng=rng,
+            remove_poisson=False,
             loglevel="debug",
         )
 
-        coadd_obs = mbc.coadds['all']
         image = coadd_obs.image
         noise = coadd_obs.noise
 

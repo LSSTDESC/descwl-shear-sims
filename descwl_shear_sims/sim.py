@@ -3,13 +3,12 @@ import galsim
 import numpy as np
 
 import lsst.afw.image as afw_image
-import lsst.geom as geom
 from lsst.afw.cameraGeom.testUtils import DetectorWrapper
 
 from .lsst_bits import get_flagval
 from .saturation import saturate_image_and_mask, BAND_SAT_VALS
 from .surveys import get_survey, rescale_wldeblend_exp
-from .constants import SCALE, WORLD_ORIGIN
+from .constants import SCALE
 from .artifacts import add_bleeds
 from .masking import get_bmask, calculate_and_add_bright_star_mask
 from .objlists import get_objlist, get_convolved_objects
@@ -92,6 +91,11 @@ def make_sim(
         If True, add bad columns
     """
 
+    coadd_wcs, coadd_bbox = make_coadd_dm_wcs(coadd_dim)
+    coadd_bbox_cen_gs_skypos = get_coadd_center_gs_pos(
+        coadd_wcs=coadd_wcs, coadd_bbox=coadd_bbox,
+    )
+
     se_dim = get_se_dim(coadd_dim=coadd_dim)
 
     band_data = {}
@@ -120,7 +124,7 @@ def make_sim(
 
         bdata_list = []
         for epoch in range(epochs_per_band):
-            exp, noise_exp = make_exp(
+            exp = make_exp(
                 rng=rng,
                 band=band,
                 noise=noise_per_epoch,
@@ -129,6 +133,7 @@ def make_sim(
                 dim=se_dim,
                 psf=psf,
                 psf_dim=psf_dim,
+                coadd_bbox_cen_gs_skypos=coadd_bbox_cen_gs_skypos,
                 dither=dither,
                 rotate=rotate,
                 bright_objlist=bright_objlist,
@@ -143,7 +148,6 @@ def make_sim(
                 rescale_wldeblend_exp(
                     survey=survey.descwl_survey,
                     exp=exp,
-                    noise_exp=noise_exp,
                 )
 
             # mark high pixels SAT and also set sat value in image for
@@ -154,24 +158,10 @@ def make_sim(
                 sat_val=BAND_SAT_VALS[band],
                 flagval=get_flagval('SAT'),
             )
-            saturate_image_and_mask(
-                image=noise_exp.image.array,
-                bmask=noise_exp.mask.array,
-                sat_val=BAND_SAT_VALS[band],
-                flagval=get_flagval('SAT'),
-            )
 
-            bdata_list.append({'exp': exp, 'noise_exp': noise_exp})
+            bdata_list.append(exp)
 
         band_data[band] = bdata_list
-
-    xoff = 3000
-    coadd_bbox = geom.Box2I(
-        geom.IntervalI(min=xoff + 0, max=xoff + coadd_dim-1),
-        geom.IntervalI(min=0, max=coadd_dim-1),
-    )
-
-    coadd_wcs = make_coadd_dm_wcs(coadd_bbox.getCenter())
 
     return {
         'band_data': band_data,
@@ -192,6 +182,7 @@ def make_exp(
     dim,
     psf,
     psf_dim,
+    coadd_bbox_cen_gs_skypos,
     dither=False,
     rotate=False,
     bright_objlist=None,
@@ -224,6 +215,9 @@ def make_exp(
         the psf
     psf_dim: int
         Dimensions of psf image that will be drawn when psf func is called
+    coadd_bbox_cen_gs_skypos: galsim.CelestialCoord
+        The sky position of the center (origin) of the coadd we
+        will make, as a galsim object not stack object
     dither: bool
         If set to True, dither randomly by a pixel width
     rotate: bool
@@ -267,7 +261,7 @@ def make_exp(
         scale=SCALE,
         theta=theta,
         image_origin=se_origin,
-        world_origin=WORLD_ORIGIN,
+        world_origin=coadd_bbox_cen_gs_skypos,
     )
 
     convolved_objects, _ = get_convolved_objects(
@@ -364,29 +358,19 @@ def make_exp(
     masked_image.variance.array[:, :] = variance.array
     masked_image.mask.array[:, :] = bmask.array
 
-    noise_masked_image = afw_image.MaskedImageF(dim, dim)
-    noise_masked_image.image.array[:, :] = rng.normal(scale=noise, size=dims)
-    noise_masked_image.variance.array[:, :] = variance.array
-    noise_masked_image.mask.array[:, :] = bmask.array
-
     exp = afw_image.ExposureF(masked_image)
-    noise_exp = afw_image.ExposureF(noise_masked_image)
 
     filter_label = afw_image.FilterLabel(band=band, physical=band)
     exp.setFilterLabel(filter_label)
-    noise_exp.setFilterLabel(filter_label)
 
     exp.setPsf(dm_psf)
-    noise_exp.setPsf(dm_psf)
 
     exp.setWcs(dm_wcs)
-    noise_exp.setWcs(dm_wcs)
 
     detector = DetectorWrapper().detector
     exp.setDetector(detector)
-    noise_exp.setDetector(detector)
 
-    return exp, noise_exp
+    return exp
 
 
 def get_sim_config(config=None):
@@ -430,3 +414,33 @@ def get_se_dim(*, coadd_dim):
     integer dimensions of SE image
     """
     return int(np.ceil(coadd_dim * np.sqrt(2))) + 20
+
+
+def get_coadd_center_gs_pos(coadd_wcs, coadd_bbox):
+    """
+    get the sky position of the center of the coadd within the
+    bbox as a galsim CelestialCoord
+
+    Parameters
+    ----------
+    coadd_wcs: DM wcs
+        The wcs for the coadd
+    coadd_bbox: geom.Box2I
+        The bounding box for the coadd within larger wcs system
+
+    Returns
+    -------
+    galsim CelestialCoord
+    """
+
+    # world origin is at center of the coadd, which itself
+    # is in a bbox shifted from the overall WORLD_ORIGIN
+
+    bbox_cen_skypos = coadd_wcs.pixelToSky(
+        coadd_bbox.getCenter()
+    )
+
+    return galsim.CelestialCoord(
+        ra=float(bbox_cen_skypos.getRa()) * galsim.radians,
+        dec=float(bbox_cen_skypos.getDec()) * galsim.radians,
+    )

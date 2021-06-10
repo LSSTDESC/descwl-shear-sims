@@ -87,7 +87,7 @@ def test_star_mask_in_sim():
             star_bleeds=True,
         )
 
-        exp = sim_data['band_data'][bands[0]][0]['exp']
+        exp = sim_data['band_data'][bands[0]][0]
 
         # import lsst.afw.display as afw_display
         # display = afw_display.getDisplay(backend='ds9')
@@ -152,7 +152,7 @@ def test_star_mask_in_sim_repeatable():
                 star_bleeds=True,
             )
 
-            exp = sim_data['band_data'][bands[0]][0]['exp']
+            exp = sim_data['band_data'][bands[0]][0]
 
             mask = exp.mask.array
             wsat = np.where((mask & get_flagval('SAT')) != 0)

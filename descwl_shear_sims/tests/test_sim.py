@@ -63,7 +63,7 @@ def test_sim_smoke(dither, rotate):
 
     for band, bdata in data['band_data'].items():
         assert len(bdata) == 1
-        assert isinstance(bdata[0]['exp'], afw_image.ExposureF)
+        assert isinstance(bdata[0], afw_image.ExposureF)
 
 
 @pytest.mark.parametrize("rotate", [False, True])
@@ -98,7 +98,7 @@ def test_sim_exp_mag(rotate):
         rotate=rotate,
     )
 
-    image = sim_data["band_data"]["i"][0]['exp'].image.array
+    image = sim_data["band_data"]["i"][0].image.array
     subim_sum = image[105:130, 100:125].sum()
 
     if rotate:
