@@ -3,7 +3,6 @@ import galsim
 import numpy as np
 
 import lsst.afw.image as afw_image
-# import lsst.geom as geom
 from lsst.afw.cameraGeom.testUtils import DetectorWrapper
 
 from .lsst_bits import get_flagval
@@ -262,7 +261,6 @@ def make_exp(
         scale=SCALE,
         theta=theta,
         image_origin=se_origin,
-        # world_origin=WORLD_ORIGIN,
         world_origin=coadd_bbox_cen_gs_skypos,
     )
 
