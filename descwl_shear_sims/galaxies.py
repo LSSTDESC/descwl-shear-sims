@@ -125,6 +125,9 @@ class FixedGalaxyCatalog(object):
             layout=layout,
         )
 
+    def __len__(self):
+        return self.shifts.size
+
     def get_objlist(self, *, survey, g1, g2):
         """
         get a list of galsim objects
@@ -216,6 +219,9 @@ class WLDeblendGalaxyCatalog(object):
         )
 
         self.angles = self.rng.uniform(low=0, high=360, size=num)
+
+    def __len__(self):
+        return self.shifts.size
 
     def get_objlist(self, *, survey, g1, g2):
         """
