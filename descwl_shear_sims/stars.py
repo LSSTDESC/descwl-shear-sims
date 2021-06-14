@@ -61,6 +61,9 @@ class StarCatalog(object):
             size=num,
         )
 
+    def __len__(self):
+        return self.shifts.size
+
     def get_objlist(self, *, survey, noise):
         """
         get a list of galsim objects

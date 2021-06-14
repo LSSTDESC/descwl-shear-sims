@@ -389,7 +389,7 @@ def get_sim_config(config=None):
     config dict
     """
     out_config = copy.deepcopy(DEFAULT_SIM_CONFIG)
-    sub_configs = ['gal_config']
+    sub_configs = ['gal_config', 'star_config']
 
     if config is not None:
         for key in config:
