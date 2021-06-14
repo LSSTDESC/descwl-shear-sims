@@ -288,6 +288,8 @@ def test_sim_stars():
         buff=buff,
         density=100,
     )
+    assert len(star_catalog) == star_catalog.nobj
+    assert len(star_catalog) == star_catalog.shifts.size
 
     psf = make_fixed_psf(psf_type="moffat")
     # tests that we actually get BRIGHT set are in

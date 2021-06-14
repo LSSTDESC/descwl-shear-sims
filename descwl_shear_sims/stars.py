@@ -42,16 +42,16 @@ class StarCatalog(object):
         # one square degree catalog, convert to arcmin
         area = ((coadd_dim - 2*buff)*SCALE/60)**2
         nobj_mean = area * density_mean
-        nobj = rng.poisson(nobj_mean)
+        self.nobj = rng.poisson(nobj_mean)
 
-        self.density = nobj/area
+        self.density = self.nobj/area
 
         self.shifts = get_shifts(
             rng=rng,
             coadd_dim=coadd_dim,
             buff=buff,
             layout="random",
-            nobj=nobj,
+            nobj=self.nobj,
         )
 
         num = self.shifts.size
@@ -60,6 +60,9 @@ class StarCatalog(object):
             self._star_cat.size,
             size=num,
         )
+
+    def __len__(self):
+        return self.nobj
 
     def get_objlist(self, *, survey, noise):
         """
