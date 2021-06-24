@@ -78,7 +78,7 @@ class FixedDMPSF(ImagePsf):
 
         return self._make_image(image_pos, offset=offset)
 
-    def computeKernelImage(self, image_pos):  # noqa
+    def computeKernelImage(self, image_pos, color=None):  # noqa
         """
         compute a centered kernel image appropriate for convolution
 
@@ -86,6 +86,25 @@ class FixedDMPSF(ImagePsf):
         ----------
         pos: geom.Point2D
             A point in the original image at which evaluate the kernel
+        color: afw_image.Color
+            A color, which is ignored
+        """
+
+        return self._doComputeKernelImage(
+            image_pos=image_pos,
+            color=color,
+        )
+
+    def _doComputeKernelImage(self, image_pos, color=None):  # noqa
+        """
+        compute a centered kernel image appropriate for convolution
+
+        Parameters
+        ----------
+        pos: geom.Point2D
+            A point in the original image at which evaluate the kernel
+        color: afw_image.Color
+            A color, which is ignored
         """
 
         return self._make_image(image_pos)

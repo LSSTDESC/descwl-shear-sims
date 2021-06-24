@@ -39,7 +39,7 @@ def test_sim_smoke(dither, rotate):
     data = make_sim(
         rng=rng,
         galaxy_catalog=galaxy_catalog,
-        coadd_dim=351,
+        coadd_dim=coadd_dim,
         psf_dim=psf_dim,
         bands=bands,
         g1=0.02,
@@ -64,6 +64,42 @@ def test_sim_smoke(dither, rotate):
     for band, bdata in data['band_data'].items():
         assert len(bdata) == 1
         assert isinstance(bdata[0], afw_image.ExposureF)
+
+
+def test_sim_se_dim():
+    """
+    test sim can run
+    """
+    seed = 74321
+    rng = np.random.RandomState(seed)
+
+    coadd_dim = 351
+    se_dim = 351
+    psf_dim = 51
+    bands = ["i"]
+    galaxy_catalog = make_galaxy_catalog(
+        rng=rng,
+        gal_type="exp",
+        coadd_dim=coadd_dim,
+        buff=30,
+        layout="grid",
+    )
+
+    psf = make_fixed_psf(psf_type="gauss")
+    data = make_sim(
+        rng=rng,
+        galaxy_catalog=galaxy_catalog,
+        coadd_dim=coadd_dim,
+        se_dim=se_dim,
+        psf_dim=psf_dim,
+        bands=bands,
+        g1=0.02,
+        g2=0.00,
+        psf=psf,
+    )
+
+    dims = (se_dim, )*2
+    assert data['band_data']['i'][0].image.array.shape == dims
 
 
 @pytest.mark.parametrize("rotate", [False, True])

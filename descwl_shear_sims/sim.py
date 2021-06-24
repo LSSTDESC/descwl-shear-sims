@@ -43,6 +43,7 @@ def make_sim(
     g1,
     g2,
     psf,
+    se_dim=None,
     star_catalog=None,
     psf_dim=51,
     dither=False,
@@ -71,6 +72,10 @@ def make_sim(
         Shear g2 for galaxies
     psf: GSObject or PowerSpectrumPSF
         The psf object or power spectrum psf
+    se_dim: int, optional
+        Force the single epoch images to have this dimension.  If not
+        sent it is calculated to be large enough to encompass the coadd
+        with rotations and small dithers.
     star_catalog: catalog
         e.g. StarCatalog
     psf_dim: int, optional
@@ -96,7 +101,8 @@ def make_sim(
         coadd_wcs=coadd_wcs, coadd_bbox=coadd_bbox,
     )
 
-    se_dim = get_se_dim(coadd_dim=coadd_dim)
+    if se_dim is None:
+        se_dim = get_se_dim(coadd_dim=coadd_dim)
 
     band_data = {}
     for band in bands:
