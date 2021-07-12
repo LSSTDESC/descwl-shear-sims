@@ -38,6 +38,7 @@ DEFAULT_SIM_CONFIG = {
 def make_sim(
     *,
     rng,
+    galsim_rng,
     galaxy_catalog,
     coadd_dim,
     g1,
@@ -54,6 +55,9 @@ def make_sim(
     cosmic_rays=False,
     bad_columns=False,
     star_bleeds=False,
+    corr_noise=False,
+    g1_noise=0.01,
+    g2_noise=0.01,
 ):
     """
     Make simulation data
@@ -62,6 +66,8 @@ def make_sim(
     ----------
     rng: numpy.random.RandomState
         Numpy random state
+    galsim_rng: galsim.BaseDeviate
+        Galsim random state (used for noise realisation)
     galaxy_catalog: catalog
         E.g. WLDeblendGalaxyCatalog or FixedGalaxyCatalog
     coadd_dim: int
@@ -94,6 +100,12 @@ def make_sim(
         If True, add cosmic rays
     bad_columns: bool
         If True, add bad columns
+    corr_noise: bool
+        If True, make correlated noise
+    g1_noise: float
+        g1 for shear correlated noise
+    g2_noise: float
+        g2 for shear correlated noise
     """
 
     coadd_wcs, coadd_bbox = make_coadd_dm_wcs(coadd_dim)
@@ -132,6 +144,7 @@ def make_sim(
         for epoch in range(epochs_per_band):
             exp = make_exp(
                 rng=rng,
+                galsim_rng=galsim_rng,
                 band=band,
                 noise=noise_per_epoch,
                 objlist=objlist,
@@ -149,6 +162,9 @@ def make_sim(
                 cosmic_rays=cosmic_rays,
                 bad_columns=bad_columns,
                 star_bleeds=star_bleeds,
+                corr_noise=corr_noise,
+                g1_noise=g1_noise,
+                g2_noise=g2_noise,
             )
             if galaxy_catalog.gal_type == 'wldeblend':
                 rescale_wldeblend_exp(
@@ -181,6 +197,7 @@ def make_sim(
 def make_exp(
     *,
     rng,
+    galsim_rng,
     band,
     noise,
     objlist,
@@ -198,6 +215,9 @@ def make_exp(
     cosmic_rays=False,
     bad_columns=False,
     star_bleeds=False,
+    corr_noise=False,
+    g1_noise=0.01,
+    g2_noise=0.01,
 ):
     """
     Make an SEObs
@@ -206,6 +226,8 @@ def make_exp(
     ----------
     rng: numpy.random.RandomState
         The random number generator
+    galsim_rng: galsim.BaseDeviate
+        Galsim random number generator
     band: str
         Band as a string, e.g. 'i'
     noise: float
@@ -243,6 +265,12 @@ def make_exp(
         If True, put in bad columns
     star_bleeds: bool
         If True, add bleed trails to stars
+    corr_noise: bool
+        If True, make correlated noise
+    g1_noise: float
+        g1 for shear correlated noise
+    g2_noise: float
+        g2 for shear correlated noise
     """
 
     dims = [dim]*2
@@ -289,7 +317,18 @@ def make_exp(
         offset=offset,
     )
 
-    image.array[:, :] += rng.normal(scale=noise, size=dims)
+    # Make correlated noise
+    if corr_noise:
+        corr_noise = galsim.UncorrelatedNoise(variance=noise**2.,
+                                          rng=galsim_rng,
+                                          scale=SCALE)
+        # Shear correlation in the noise
+        corr_noise.shear(g1=g1_noise, g2=g2_noise)
+        image.addNoise(corr_noise)
+    else:
+        # Maybe change this to use galsim noise generator?
+        # To fit with the correlated noise option
+        image.array[:, :] += rng.normal(scale=noise, size=dims)
 
     bmask = get_bmask(
         image=image,
