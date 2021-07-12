@@ -162,7 +162,7 @@ def run_sim(seed, mdet_seed, **kwargs):
         seed=seed, 
         mdet_seed=mdet_seed, 
         g1=0.02, g2=0, 
-        g1_noise=0., g2_noise=0.1,
+        g1_noise=0., g2_noise=0.1,      # High value for the purpose of testing
         **kwargs,
         )
     if _pres is None:
@@ -173,7 +173,7 @@ def run_sim(seed, mdet_seed, **kwargs):
         seed=seed,
         mdet_seed=mdet_seed,
         g1=-0.02, g2=0,
-        g1_noise=0., g2_noise=0.1,
+        g1_noise=0., g2_noise=0.1,      # High value for the purpose of testing
         **kwargs,
         )
     if _mres is None:

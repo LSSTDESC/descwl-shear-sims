@@ -38,7 +38,6 @@ DEFAULT_SIM_CONFIG = {
 def make_sim(
     *,
     rng,
-    galsim_rng,
     galaxy_catalog,
     coadd_dim,
     g1,
@@ -55,6 +54,7 @@ def make_sim(
     cosmic_rays=False,
     bad_columns=False,
     star_bleeds=False,
+    galsim_rng=None,
     corr_noise=False,
     g1_noise=0.01,
     g2_noise=0.01,
@@ -66,8 +66,6 @@ def make_sim(
     ----------
     rng: numpy.random.RandomState
         Numpy random state
-    galsim_rng: galsim.BaseDeviate
-        Galsim random state (used for noise realisation)
     galaxy_catalog: catalog
         E.g. WLDeblendGalaxyCatalog or FixedGalaxyCatalog
     coadd_dim: int
@@ -100,6 +98,8 @@ def make_sim(
         If True, add cosmic rays
     bad_columns: bool
         If True, add bad columns
+    galsim_rng: galsim.BaseDeviate
+        Galsim random state (used for noise realisation)
     corr_noise: bool
         If True, make correlated noise
     g1_noise: float
@@ -197,7 +197,6 @@ def make_sim(
 def make_exp(
     *,
     rng,
-    galsim_rng,
     band,
     noise,
     objlist,
@@ -215,6 +214,7 @@ def make_exp(
     cosmic_rays=False,
     bad_columns=False,
     star_bleeds=False,
+    galsim_rng=None,
     corr_noise=False,
     g1_noise=0.01,
     g2_noise=0.01,
@@ -226,8 +226,6 @@ def make_exp(
     ----------
     rng: numpy.random.RandomState
         The random number generator
-    galsim_rng: galsim.BaseDeviate
-        Galsim random number generator
     band: str
         Band as a string, e.g. 'i'
     noise: float
@@ -265,6 +263,8 @@ def make_exp(
         If True, put in bad columns
     star_bleeds: bool
         If True, add bleed trails to stars
+    galsim_rng: galsim.BaseDeviate
+        Galsim random number generator
     corr_noise: bool
         If True, make correlated noise
     g1_noise: float
@@ -319,9 +319,11 @@ def make_exp(
 
     # Make correlated noise
     if corr_noise:
-        corr_noise = galsim.UncorrelatedNoise(variance=noise**2.,
-                                          rng=galsim_rng,
-                                          scale=SCALE)
+        corr_noise = galsim.UncorrelatedNoise(
+            variance=noise**2., 
+            rng=galsim_rng,
+            scale=SCALE,
+            )
         # Shear correlation in the noise
         corr_noise.shear(g1=g1_noise, g2=g2_noise)
         image.addNoise(corr_noise)
