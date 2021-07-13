@@ -54,7 +54,6 @@ def make_sim(
     cosmic_rays=False,
     bad_columns=False,
     star_bleeds=False,
-    galsim_rng=None,
     corr_noise=False,
     g1_noise=0.01,
     g2_noise=0.01,
@@ -98,8 +97,6 @@ def make_sim(
         If True, add cosmic rays
     bad_columns: bool
         If True, add bad columns
-    galsim_rng: galsim.BaseDeviate
-        Galsim random state (used for noise realisation)
     corr_noise: bool
         If True, make correlated noise
     g1_noise: float
@@ -144,7 +141,6 @@ def make_sim(
         for epoch in range(epochs_per_band):
             exp = make_exp(
                 rng=rng,
-                galsim_rng=galsim_rng,
                 band=band,
                 noise=noise_per_epoch,
                 objlist=objlist,
@@ -263,8 +259,6 @@ def make_exp(
         If True, put in bad columns
     star_bleeds: bool
         If True, add bleed trails to stars
-    galsim_rng: galsim.BaseDeviate
-        Galsim random number generator
     corr_noise: bool
         If True, make correlated noise
     g1_noise: float
@@ -319,11 +313,13 @@ def make_exp(
 
     # Make correlated noise
     if corr_noise:
+        galsim_seed = rng.randint(low=1, high=2**29, size=1)
+        galsim_rng = galsim.BaseDeviate(seed=galsim_seed)
         corr_noise = galsim.UncorrelatedNoise(
-            variance=noise**2., 
+            variance=noise**2.,
             rng=galsim_rng,
             scale=SCALE,
-            )
+        )
         # Shear correlation in the noise
         corr_noise.shear(g1=g1_noise, g2=g2_noise)
         image.addNoise(corr_noise)

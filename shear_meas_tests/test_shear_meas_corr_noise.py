@@ -36,7 +36,6 @@ CONFIG = {
 
 def _make_lsst_sim(*, seed, g1, g2, g1_noise, g2_noise, layout):
     rng = np.random.RandomState(seed=seed)
-    galsim_rng = galsim.BaseDeviate(seed=seed)
 
     galaxy_catalog = sim.galaxies.make_galaxy_catalog(
         rng=rng,
@@ -50,7 +49,6 @@ def _make_lsst_sim(*, seed, g1, g2, g1_noise, g2_noise, layout):
 
     sim_data = sim.make_sim(
         rng=rng,
-        galsim_rng=galsim_rng,
         galaxy_catalog=galaxy_catalog,
         coadd_dim=sim.sim.DEFAULT_SIM_CONFIG["coadd_dim"],
         g1=g1,
@@ -132,7 +130,7 @@ def _run_sim_one(*, seed, mdet_seed, g1, g2, g1_noise, g2_noise, **kwargs):
         g1=g1, g2=g2,
         g1_noise=g1_noise, g2_noise=g2_noise, 
         **kwargs,
-        )
+    )
     coadd_obs = make_coadd_obs(
         exps=sim_data['band_data']['i'],
         coadd_wcs=sim_data['coadd_wcs'],
@@ -164,7 +162,7 @@ def run_sim(seed, mdet_seed, **kwargs):
         g1=0.02, g2=0, 
         g1_noise=0., g2_noise=0.1,      # High value for the purpose of testing
         **kwargs,
-        )
+    )
     if _pres is None:
         return None
 
@@ -175,7 +173,7 @@ def run_sim(seed, mdet_seed, **kwargs):
         g1=-0.02, g2=0,
         g1_noise=0., g2_noise=0.1,      # High value for the purpose of testing
         **kwargs,
-        )
+    )
     if _mres is None:
         return None
 
