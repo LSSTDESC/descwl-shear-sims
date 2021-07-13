@@ -31,6 +31,7 @@ CONFIG = {
         "thresh": 10.0,
     },
     'meds': {},
+    'subtract_sky': False,
 }
 
 
