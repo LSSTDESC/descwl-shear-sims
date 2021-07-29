@@ -291,12 +291,17 @@ def make_exp(
     objects = galsim.Add(convolved_objects)
 
     # everything gets shifted by the dither offset
+    kw = {}
+    if draw_method == 'phot':
+        kw['maxN'] = 1_000_000
+
     image = objects.drawImage(
         nx=dim,
         ny=dim,
         wcs=se_wcs,
         offset=offset,
         method=draw_method,
+        **kw
     )
 
     image.array[:, :] += rng.normal(scale=noise, size=dims)
