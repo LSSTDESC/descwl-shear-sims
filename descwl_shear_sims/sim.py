@@ -294,7 +294,7 @@ def make_exp(
     kw = {}
     if draw_method == 'phot':
         kw['maxN'] = 1_000_000
-        kw['rng'] = galsim.BaseDeviate(seed=rng.uniform(low=0, high=2**30))
+        kw['rng'] = galsim.BaseDeviate(seed=rng.randint(low=0, high=2**30))
 
     image = objects.drawImage(
         nx=dim,
