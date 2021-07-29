@@ -104,6 +104,11 @@ def make_sim(
     if se_dim is None:
         se_dim = get_se_dim(coadd_dim=coadd_dim)
 
+    if galaxy_catalog.gal_type == 'wldeblend':
+        draw_method = 'phot'
+    else:
+        draw_method = 'auto'
+
     band_data = {}
     for band in bands:
 
@@ -139,6 +144,7 @@ def make_sim(
                 dim=se_dim,
                 psf=psf,
                 psf_dim=psf_dim,
+                draw_method=draw_method,
                 coadd_bbox_cen_gs_skypos=coadd_bbox_cen_gs_skypos,
                 dither=dither,
                 rotate=rotate,
@@ -188,6 +194,7 @@ def make_exp(
     dim,
     psf,
     psf_dim,
+    draw_method,
     coadd_bbox_cen_gs_skypos,
     dither=False,
     rotate=False,
@@ -221,6 +228,8 @@ def make_exp(
         the psf
     psf_dim: int
         Dimensions of psf image that will be drawn when psf func is called
+    draw_method: string
+        Method for galsim drawImage
     coadd_bbox_cen_gs_skypos: galsim.CelestialCoord
         The sky position of the center (origin) of the coadd we
         will make, as a galsim object not stack object
@@ -287,6 +296,7 @@ def make_exp(
         ny=dim,
         wcs=se_wcs,
         offset=offset,
+        method=draw_method,
     )
 
     image.array[:, :] += rng.normal(scale=noise, size=dims)
