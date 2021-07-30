@@ -143,7 +143,6 @@ def make_sim(
                 dim=se_dim,
                 psf=psf,
                 psf_dim=psf_dim,
-                draw_method=draw_method,
                 coadd_bbox_cen_gs_skypos=coadd_bbox_cen_gs_skypos,
                 dither=dither,
                 rotate=rotate,
@@ -154,6 +153,7 @@ def make_sim(
                 cosmic_rays=cosmic_rays,
                 bad_columns=bad_columns,
                 star_bleeds=star_bleeds,
+                draw_method=draw_method,
             )
             if galaxy_catalog.gal_type == 'wldeblend':
                 rescale_wldeblend_exp(
@@ -193,7 +193,6 @@ def make_exp(
     dim,
     psf,
     psf_dim,
-    draw_method,
     coadd_bbox_cen_gs_skypos,
     dither=False,
     rotate=False,
@@ -204,6 +203,7 @@ def make_exp(
     cosmic_rays=False,
     bad_columns=False,
     star_bleeds=False,
+    draw_method='auto',
 ):
     """
     Make an SEObs
@@ -301,8 +301,8 @@ def make_exp(
         ny=dim,
         wcs=se_wcs,
         offset=offset,
-        # method=draw_method,
-        # **kw
+        method=draw_method,
+        **kw
     )
 
     image.array[:, :] += rng.normal(scale=noise, size=dims)
