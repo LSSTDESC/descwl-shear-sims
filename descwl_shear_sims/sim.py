@@ -54,6 +54,7 @@ def make_sim(
     cosmic_rays=False,
     bad_columns=False,
     star_bleeds=False,
+    draw_method='auto',
 ):
     """
     Make simulation data
@@ -94,6 +95,9 @@ def make_sim(
         If True, add cosmic rays
     bad_columns: bool
         If True, add bad columns
+    draw_method: string
+        Draw method for galsim objects, default 'auto'.  Set to
+        'phot' to get poisson noise.  Note this is much slower.
     """
 
     coadd_wcs, coadd_bbox = make_coadd_dm_wcs(coadd_dim)
@@ -114,11 +118,6 @@ def make_sim(
         # but we could if we want to be more conservative
         mask_threshold = survey.noise*noise_factor
 
-        objlist, shifts = galaxy_catalog.get_objlist(
-            survey=survey,
-            g1=g1,
-            g2=g2,
-        )
         objlist, shifts, bright_objlist, bright_shifts, bright_mags = get_objlist(
             galaxy_catalog=galaxy_catalog,
             survey=survey,
@@ -149,6 +148,7 @@ def make_sim(
                 cosmic_rays=cosmic_rays,
                 bad_columns=bad_columns,
                 star_bleeds=star_bleeds,
+                draw_method=draw_method,
             )
             if galaxy_catalog.gal_type == 'wldeblend':
                 rescale_wldeblend_exp(
@@ -198,6 +198,7 @@ def make_exp(
     cosmic_rays=False,
     bad_columns=False,
     star_bleeds=False,
+    draw_method='auto',
 ):
     """
     Make an SEObs
@@ -243,6 +244,9 @@ def make_exp(
         If True, put in bad columns
     star_bleeds: bool
         If True, add bleed trails to stars
+    draw_method: string
+        Draw method for galsim objects, default 'auto'.  Set to
+        'phot' to get poisson noise.  Note this is much slower.
     """
 
     dims = [dim]*2
@@ -282,11 +286,18 @@ def make_exp(
     objects = galsim.Add(convolved_objects)
 
     # everything gets shifted by the dither offset
+    kw = {}
+    if draw_method == 'phot':
+        kw['maxN'] = 1_000_000
+        kw['rng'] = galsim.BaseDeviate(seed=rng.randint(low=0, high=2**30))
+
     image = objects.drawImage(
         nx=dim,
         ny=dim,
         wcs=se_wcs,
         offset=offset,
+        method=draw_method,
+        **kw
     )
 
     image.array[:, :] += rng.normal(scale=noise, size=dims)

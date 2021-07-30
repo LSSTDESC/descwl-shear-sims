@@ -379,3 +379,33 @@ def test_sim_star_bleeds():
         psf=psf,
         star_bleeds=True,
     )
+
+
+@pytest.mark.parametrize("draw_method", (None, "auto", "phot"))
+def test_sim_draw_method_smoke(draw_method):
+    seed = 881
+    coadd_dim = 201
+    rng = np.random.RandomState(seed)
+
+    galaxy_catalog = make_galaxy_catalog(
+        rng=rng,
+        gal_type="exp",
+        coadd_dim=coadd_dim,
+        buff=30,
+        layout='grid',
+    )
+
+    kw = {}
+    if draw_method is not None:
+        kw['draw_method'] = draw_method
+
+    psf = make_fixed_psf(psf_type="gauss")
+    _ = make_sim(
+        rng=rng,
+        galaxy_catalog=galaxy_catalog,
+        coadd_dim=coadd_dim,
+        g1=0.02,
+        g2=0.00,
+        psf=psf,
+        **kw
+    )
