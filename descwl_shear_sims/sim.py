@@ -118,11 +118,6 @@ def make_sim(
         # but we could if we want to be more conservative
         mask_threshold = survey.noise*noise_factor
 
-        objlist, shifts = galaxy_catalog.get_objlist(
-            survey=survey,
-            g1=g1,
-            g2=g2,
-        )
         objlist, shifts, bright_objlist, bright_shifts, bright_mags = get_objlist(
             galaxy_catalog=galaxy_catalog,
             survey=survey,
