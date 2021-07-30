@@ -54,6 +54,7 @@ def make_sim(
     cosmic_rays=False,
     bad_columns=False,
     star_bleeds=False,
+    draw_method='auto',
 ):
     """
     Make simulation data
@@ -94,6 +95,9 @@ def make_sim(
         If True, add cosmic rays
     bad_columns: bool
         If True, add bad columns
+    draw_method: string
+        Draw method for galsim objects, default 'auto'.  Set to
+        'phot' to get poisson noise.  Note this is much slower.
     """
 
     coadd_wcs, coadd_bbox = make_coadd_dm_wcs(coadd_dim)
@@ -103,11 +107,6 @@ def make_sim(
 
     if se_dim is None:
         se_dim = get_se_dim(coadd_dim=coadd_dim)
-
-    if galaxy_catalog.gal_type == 'wldeblend':
-        draw_method = 'phot'
-    else:
-        draw_method = 'auto'
 
     band_data = {}
     for band in bands:
@@ -228,8 +227,6 @@ def make_exp(
         the psf
     psf_dim: int
         Dimensions of psf image that will be drawn when psf func is called
-    draw_method: string
-        Method for galsim drawImage
     coadd_bbox_cen_gs_skypos: galsim.CelestialCoord
         The sky position of the center (origin) of the coadd we
         will make, as a galsim object not stack object
@@ -252,6 +249,9 @@ def make_exp(
         If True, put in bad columns
     star_bleeds: bool
         If True, add bleed trails to stars
+    draw_method: string
+        Draw method for galsim objects, default 'auto'.  Set to
+        'phot' to get poisson noise.  Note this is much slower.
     """
 
     dims = [dim]*2
@@ -301,8 +301,8 @@ def make_exp(
         ny=dim,
         wcs=se_wcs,
         offset=offset,
-        method=draw_method,
-        **kw
+        # method=draw_method,
+        # **kw
     )
 
     image.array[:, :] += rng.normal(scale=noise, size=dims)
