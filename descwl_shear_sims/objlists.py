@@ -1,8 +1,7 @@
-import numpy as np
 import galsim
 
 
-def get_objlist(*, galaxy_catalog, survey, g1, g2, star_catalog=None, noise=None):
+def get_objlist(*, galaxy_catalog, survey, star_catalog=None, noise=None):
     """
     get the objlist and shifts, possibly combining the galaxy catalog
     with a star catalog
@@ -13,10 +12,6 @@ def get_objlist(*, galaxy_catalog, survey, g1, g2, star_catalog=None, noise=None
         e.g. WLDeblendGalaxyCatalog
     survey: descwl Survey
         For the appropriate band
-    g1: float
-        Shear for galaxies
-    g2: float
-        Shear for galaxies
     star_catalog: catalog
         e.g. StarCatalog
     noise: float
@@ -28,11 +23,7 @@ def get_objlist(*, galaxy_catalog, survey, g1, g2, star_catalog=None, noise=None
         objlist is a list of galsim GSObject with transformations applied. Shifts
         is an array with fields dx and dy for each object
     """
-    objlist, shifts = galaxy_catalog.get_objlist(
-        survey=survey,
-        g1=g1,
-        g2=g2,
-    )
+    objlist, shifts = galaxy_catalog.get_objlist(survey=survey)
 
     if star_catalog is not None:
         assert noise is not None
@@ -41,20 +32,29 @@ def get_objlist(*, galaxy_catalog, survey, g1, g2, star_catalog=None, noise=None
         )
         sobjlist, sshifts, bright_objlist, bright_shifts, bright_mags = res
 
-        objlist = objlist + sobjlist
-
-        shifts = np.hstack((shifts, sshifts))
+        # objlist = objlist + sobjlist
+        # shifts = np.hstack((shifts, sshifts))
     else:
+        sobjlist = None
+        sshifts = None
         bright_objlist = None
         bright_shifts = None
         bright_mags = None
 
-    return objlist, shifts, bright_objlist, bright_shifts, bright_mags
+    return {
+        'objlist': objlist,
+        'shifts': shifts,
+        'star_objlist': sobjlist,
+        'star_shifts': sshifts,
+        'bright_objlist': bright_objlist,
+        'bright_shifts': bright_shifts,
+        'bright_mags': bright_mags,
+    }
 
 
-def get_convolved_objects(*, objlist, psf, shifts, offset, se_wcs, se_origin):
+def get_convolved_objects(*, objlist, psf, shifts, se_wcs, se_origin):
     """
-    get a list of convolved objects
+    get a list of convolved objects.  This code is used for bright stars only.
 
     Parameters
     ----------
