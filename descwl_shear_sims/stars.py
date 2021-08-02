@@ -46,7 +46,7 @@ class StarCatalog(object):
 
         self.density = nobj/area
 
-        self.shifts = get_shifts(
+        self.shifts_array = get_shifts(
             rng=rng,
             coadd_dim=coadd_dim,
             buff=buff,
@@ -54,7 +54,7 @@ class StarCatalog(object):
             nobj=nobj,
         )
 
-        num = self.shifts.size
+        num = len(self)
         self.indices = self.rng.randint(
             0,
             self._star_cat.size,
@@ -62,7 +62,7 @@ class StarCatalog(object):
         )
 
     def __len__(self):
-        return self.shifts.size
+        return self.shifts_array.size
 
     def get_objlist(self, *, survey, noise):
         """
@@ -77,34 +77,31 @@ class StarCatalog(object):
 
         Returns
         -------
-        [galsim objects]
+        [galsim objects], [shifts],
+        [bright_objlist], [bright_shifts], [bright_mags]
         """
 
-        num = self.shifts.size
+        sarray = self.shifts_array
 
         band = survey.filter_band
         objlist = []
-        shift_ind = []
+        shifts = []
+
         bright_objlist = []
-        bright_shift_ind = []
+        bright_shifts = []
         bright_mags = []
-        for i in range(num):
+
+        for i in range(len(self)):
+            pos = galsim.PositionD(sarray['dx'][i], sarray['dy'][i])
             star, mag, isbright = self._get_star(survey, band, i, noise)
             if isbright:
                 bright_objlist.append(star)
-                bright_shift_ind.append(i)
+                bright_shifts.append(pos)
                 bright_mags.append(mag)
             else:
                 objlist.append(star)
-                shift_ind.append(i)
+                shifts.append(pos)
 
-        # objlist = [
-        #     self._get_star(survey, band, i, noise)
-        #     for i in range(num)
-        # ]
-
-        shifts = self.shifts[shift_ind].copy()
-        bright_shifts = self.shifts[bright_shift_ind].copy()
         return objlist, shifts, bright_objlist, bright_shifts, bright_mags
 
     def _get_star(self, survey, band, i, noise):
@@ -126,8 +123,6 @@ class StarCatalog(object):
         """
 
         index = self.indices[i]
-        dx = self.shifts['dx'][i]
-        dy = self.shifts['dy'][i]
 
         mag = get_star_mag(stars=self._star_cat, index=index, band=band)
         flux = survey.get_flux(mag)
@@ -137,9 +132,6 @@ class StarCatalog(object):
             fwhm=1.0e-4,
             flux=flux,
             gsparams=gsparams,
-        ).shift(
-            dx=dx,
-            dy=dy,
         )
 
         return star, mag, isbright
