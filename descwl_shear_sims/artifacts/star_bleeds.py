@@ -9,55 +9,6 @@ from ..saturation import BAND_SAT_VALS
 from ..lsst_bits import get_flagval
 
 
-def add_bleeds(*, image, origin, bmask, shifts, mags, band):
-    """
-    Add a bleed for each saturated object
-
-    Parameters
-    ----------
-    image: galsim Image
-        Image will be modified to have saturated values in the
-        bleed
-    origin: galsim.PositionD
-        Origin of image in pixels
-    bmask: galsim Image
-        Mask will be modified to have saturated values in the
-        bleed
-    shifts: array
-        Fields dx and dy.
-    mags: list
-        List of mags
-    band: string
-        Filter band
-
-    Returns
-    --------
-    None
-    """
-
-    wcs = image.wcs
-
-    jac_wcs = wcs.jacobian(world_pos=wcs.center)
-    max_mag = get_max_mag_with_bleed(band=band)
-
-    for i in range(shifts.size):
-        mag = mags[i]
-        if mag < max_mag:
-            shift_pos = galsim.PositionD(
-                x=shifts['dx'][i],
-                y=shifts['dy'][i],
-            )
-            pos = jac_wcs.toImage(shift_pos) + origin
-
-            add_bleed(
-                image=image.array,
-                bmask=bmask.array,
-                pos=pos,
-                mag=mag,
-                band=band,
-            )
-
-
 def add_bleed(*, image, bmask, pos, mag, band):
     """
     add a bleed mask at the specified location
