@@ -9,9 +9,9 @@ from .lsst_bits import get_flagval
 from .saturation import saturate_image_and_mask, BAND_SAT_VALS
 from .surveys import get_survey, rescale_wldeblend_exp
 from .constants import SCALE
-from .artifacts import add_bleeds
+from .artifacts import add_bleed, get_max_mag_with_bleed
 from .masking import get_bmask, calculate_and_add_bright_star_mask
-from .objlists import get_objlist, get_convolved_objects
+from .objlists import get_objlist
 from .psfs import make_dm_psf
 from .wcs import make_wcs, make_dm_wcs, make_coadd_dm_wcs
 
@@ -118,11 +118,9 @@ def make_sim(
         # but we could if we want to be more conservative
         mask_threshold = survey.noise*noise_factor
 
-        objlist, shifts, bright_objlist, bright_shifts, bright_mags = get_objlist(
+        lists = get_objlist(
             galaxy_catalog=galaxy_catalog,
             survey=survey,
-            g1=g1,
-            g2=g2,
             star_catalog=star_catalog,
             noise=noise_per_epoch,
         )
@@ -133,17 +131,20 @@ def make_sim(
                 rng=rng,
                 band=band,
                 noise=noise_per_epoch,
-                objlist=objlist,
-                shifts=shifts,
+                objlist=lists['objlist'],
+                shifts=lists['shifts'],
                 dim=se_dim,
                 psf=psf,
                 psf_dim=psf_dim,
+                g1=g1, g2=g2,
+                star_objlist=lists['star_objlist'],
+                star_shifts=lists['star_shifts'],
+                bright_objlist=lists['bright_objlist'],
+                bright_shifts=lists['bright_shifts'],
+                bright_mags=lists['bright_mags'],
                 coadd_bbox_cen_gs_skypos=coadd_bbox_cen_gs_skypos,
                 dither=dither,
                 rotate=rotate,
-                bright_objlist=bright_objlist,
-                bright_shifts=bright_shifts,
-                bright_mags=bright_mags,
                 mask_threshold=mask_threshold,
                 cosmic_rays=cosmic_rays,
                 bad_columns=bad_columns,
@@ -166,6 +167,13 @@ def make_sim(
             )
 
             bdata_list.append(exp)
+            # if show:
+            #     # TODO expose this as a keyword
+            #     import lsst.afw.display as afw_display
+            #     display = afw_display.getDisplay(backend='ds9')
+            #     display.mtv(exp)
+            #     display.scale('log', 'minmax')
+            #     input('hit a key')
 
         band_data[band] = bdata_list
 
@@ -188,12 +196,16 @@ def make_exp(
     dim,
     psf,
     psf_dim,
-    coadd_bbox_cen_gs_skypos,
-    dither=False,
-    rotate=False,
+    g1,
+    g2,
+    star_objlist=None,
+    star_shifts=None,
     bright_objlist=None,
     bright_shifts=None,
     bright_mags=None,
+    coadd_bbox_cen_gs_skypos,
+    dither=False,
+    rotate=False,
     mask_threshold=None,
     cosmic_rays=False,
     bad_columns=False,
@@ -214,8 +226,7 @@ def make_exp(
     objlist: list
         List of GSObj
     shifts: array
-        Array with fields dx and dy, which are du, dv offsets
-        in sky coords.
+        List of PositionD representing offsets
     dim: int
         Dimension of image
     psf: GSObject or PowerSpectrumPSF
@@ -229,10 +240,14 @@ def make_exp(
         If set to True, dither randomly by a pixel width
     rotate: bool
         If set to True, rotate the image randomly
+    star_objlist: list
+        List of GSObj for stars
+    star_shifts: array
+        List of PositionD for stars representing offsets
     bright_objlist: list, optional
-        List of bright objects to mask
+        List of GSObj for bright objects
     bright_shifts: array, optional
-        Shifts for the bright objects
+        List of PositionD for stars representing offsets
     bright_mags: array, optional
         Mags for the bright objects
     mask_threshold: float
@@ -249,6 +264,7 @@ def make_exp(
         'phot' to get poisson noise.  Note this is much slower.
     """
 
+    shear = galsim.Shear(g1=g1, g2=g2)
     dims = [dim]*2
     cen = (np.array(dims)-1)/2
 
@@ -274,31 +290,23 @@ def make_exp(
         world_origin=coadd_bbox_cen_gs_skypos,
     )
 
-    convolved_objects, _ = get_convolved_objects(
-        objlist=objlist,
-        psf=psf,
-        shifts=shifts,
-        offset=offset,
-        se_wcs=se_wcs,
-        se_origin=se_origin,
+    image = galsim.Image(dim, dim, wcs=se_wcs)
+
+    _draw_objects(
+        image,
+        objlist, shifts, psf, draw_method,
+        coadd_bbox_cen_gs_skypos,
+        rng,
+        shear=shear,
     )
-
-    objects = galsim.Add(convolved_objects)
-
-    # everything gets shifted by the dither offset
-    kw = {}
-    if draw_method == 'phot':
-        kw['maxN'] = 1_000_000
-        kw['rng'] = galsim.BaseDeviate(seed=rng.randint(low=0, high=2**30))
-
-    image = objects.drawImage(
-        nx=dim,
-        ny=dim,
-        wcs=se_wcs,
-        offset=offset,
-        method=draw_method,
-        **kw
-    )
+    if star_objlist is not None:
+        assert star_shifts is not None, 'send star_shifts with star_objlist'
+        _draw_objects(
+            image,
+            star_objlist, star_shifts, psf, draw_method,
+            coadd_bbox_cen_gs_skypos,
+            rng,
+        )
 
     image.array[:, :] += rng.normal(scale=noise, size=dims)
 
@@ -310,58 +318,20 @@ def make_exp(
     )
 
     if bright_objlist is not None:
-        timage = image.copy()
-
-        assert bright_shifts is not None
-        assert bright_mags is not None
-        assert mask_threshold is not None
-
-        bright_convolved_objects, _ = get_convolved_objects(
-            objlist=bright_objlist,
-            psf=psf,
-            shifts=bright_shifts,
-            offset=offset,
-            se_wcs=se_wcs,
-            se_origin=se_origin,
-        )
-        for i, obj in enumerate(bright_convolved_objects):
-
-            # profiles can have detectably sharp edges if the
-            # profile is very high s/n and we have not set the
-            # thresholds right in the gs params.
-            #
-            # photon shooting reduces these sharp edges, reducing
-            # sensitivity to such an error
-
-            obj.drawImage(
-                image=timage,
-                offset=offset,
-                method='phot',
-                n_photons=10_000_000,
-                maxN=1_000_000,
-                rng=galsim.BaseDeviate(rng.randint(0, 2**30)),
-            )
-
-            image += timage
-
-            calculate_and_add_bright_star_mask(
-                image=timage.array,
-                bmask=bmask.array,
-                shift=bright_shifts[i],
-                wcs=se_wcs,
-                origin=se_origin,
-                threshold=mask_threshold,
-            )
-
-    if star_bleeds and bright_objlist is not None:
-        # add bleeds at bright star locations if they are saturated
-        add_bleeds(
+        _draw_bright_objects(
             image=image,
+            noise=noise,
             origin=se_origin,
             bmask=bmask,
+            band=band,
+            objlist=bright_objlist,
             shifts=bright_shifts,
             mags=bright_mags,
-            band=band,
+            psf=psf,
+            coadd_bbox_cen_gs_skypos=coadd_bbox_cen_gs_skypos,
+            mask_threshold=mask_threshold,
+            rng=rng,
+            star_bleeds=star_bleeds,
         )
 
     dm_wcs = make_dm_wcs(se_wcs)
@@ -388,6 +358,163 @@ def make_exp(
     exp.setDetector(detector)
 
     return exp
+
+
+def _draw_objects(
+    image, objlist, shifts, psf, draw_method,
+    coadd_bbox_cen_gs_skypos,
+    rng,
+    shear=None,
+):
+
+    wcs = image.wcs
+    kw = {}
+    if draw_method == 'phot':
+        kw['maxN'] = 1_000_000
+        kw['rng'] = galsim.BaseDeviate(seed=rng.randint(low=0, high=2**30))
+
+    for obj, shift in zip(objlist, shifts):
+
+        if shear is not None:
+            obj = obj.shear(shear)
+            shift = shift.shear(shear)
+
+        # Deproject from u,v onto sphere.  Then use wcs to get to image pos.
+        world_pos = coadd_bbox_cen_gs_skypos.deproject(
+            shift.x * galsim.arcsec,
+            shift.y * galsim.arcsec,
+        )
+
+        image_pos = wcs.toImage(world_pos)
+        local_wcs = wcs.local(image_pos=image_pos)
+
+        convolved_object = get_convolved_object(obj, psf, image_pos)
+
+        stamp = convolved_object.drawImage(
+            center=image_pos, wcs=local_wcs, method=draw_method, **kw
+        )
+
+        b = stamp.bounds & image.bounds
+        if b.isDefined():
+            image[b] += stamp[b]
+
+
+def _draw_bright_objects(
+    image,
+    noise,
+    origin,
+    bmask,
+    band,
+    objlist,
+    shifts,
+    mags,
+    psf,
+    coadd_bbox_cen_gs_skypos,
+    mask_threshold,
+    rng,
+    star_bleeds,
+):
+    # extra array needed to determine star mask accurately
+    timage = image.copy()
+    timage.array[:, :] = 0
+
+    grng = galsim.BaseDeviate(rng.randint(0, 2**30))
+
+    assert shifts is not None
+    assert mags is not None and len(mags) == len(shifts)
+    assert mask_threshold is not None
+
+    max_bleed_mag = get_max_mag_with_bleed(band=band)
+
+    wcs = image.wcs
+    for obj, shift, mag in zip(objlist, shifts, mags):
+
+        obj = _set_star_gsparams(obj, mag, noise)
+
+        # profiles can have detectably sharp edges if the
+        # profile is very high s/n and we have not set the
+        # thresholds right in the gs params.
+        #
+        # photon shooting reduces these sharp edges, reducing
+        # sensitivity to such an error
+
+        world_pos = coadd_bbox_cen_gs_skypos.deproject(
+            shift.x * galsim.arcsec,
+            shift.y * galsim.arcsec,
+        )
+
+        image_pos = wcs.toImage(world_pos)
+        local_wcs = wcs.local(image_pos=image_pos)
+
+        convolved_object = get_convolved_object(obj, psf, image_pos)
+
+        maxn = 10_000_000
+        n_photons = int(obj.flux) if obj.flux < maxn else maxn
+
+        stamp = convolved_object.drawImage(
+            center=image_pos, wcs=local_wcs,
+            method='phot',
+            n_photons=n_photons,
+            maxN=1_000_000,
+            rng=grng,
+        )
+        b = stamp.bounds & image.bounds
+        if b.isDefined():
+            image[b] += stamp[b]
+
+            # use smooth version for radius calculation
+            stamp_fft = convolved_object.drawImage(
+                center=image_pos, wcs=local_wcs,
+            )
+
+            timage[b] += stamp_fft[b]
+
+            calculate_and_add_bright_star_mask(
+                image=timage.array,
+                bmask=bmask.array,
+                image_pos=image_pos,
+                threshold=mask_threshold,
+            )
+            if star_bleeds and mag < max_bleed_mag:
+                add_bleed(
+                    image=image.array,
+                    bmask=bmask.array,
+                    pos=image_pos,
+                    mag=mag,
+                    band=band,
+                )
+
+            # reset for next object
+            timage.array[:, :] = 0
+
+
+def _set_star_gsparams(obj, mag, noise):
+    # do_thresh = do_acc = False
+    do_thresh = do_acc = True
+    if mag < 18:
+        do_thresh = True
+    if mag < 15:
+        do_acc = True
+
+    if do_thresh or do_acc:
+        kw = {}
+        if do_thresh:
+
+            folding_threshold = noise / obj.flux
+            folding_threshold = np.exp(
+                np.floor(np.log(folding_threshold))
+            )
+
+            kw['folding_threshold'] = min(folding_threshold, 0.005)
+
+        if do_acc:
+            kw['kvalue_accuracy'] = 1.0e-8
+            kw['maxk_threshold'] = 1.0e-5
+
+        gsp = galsim.GSParams(**kw)
+        obj = obj.withGSParams(gsp)
+
+    return obj
 
 
 def get_sim_config(config=None):
@@ -461,3 +588,29 @@ def get_coadd_center_gs_pos(coadd_wcs, coadd_bbox):
         ra=float(bbox_cen_skypos.getRa()) * galsim.radians,
         dec=float(bbox_cen_skypos.getDec()) * galsim.radians,
     )
+
+
+def get_convolved_object(obj, psf, image_pos):
+    """
+    Get a convolved object for either constant or varying psf
+
+    Parameters
+    ----------
+    obj: galsim object
+        The object to be convolved
+    psf: galsim object or PowerSpectrumPSF
+        Constant or varying psf
+    image_pos: galsim.PositionD
+        For varying psfs, will be used to get the psf
+
+    Returns
+    -------
+    galsim object
+    """
+    if isinstance(psf, galsim.GSObject):
+        convolved_object = galsim.Convolve(obj, psf)
+    else:
+        psf_gsobj = psf.getPSF(image_pos)
+        convolved_object = galsim.Convolve(obj, psf_gsobj)
+
+    return convolved_object
