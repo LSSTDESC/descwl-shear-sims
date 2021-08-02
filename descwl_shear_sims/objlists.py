@@ -29,8 +29,6 @@ def get_objlist(*, galaxy_catalog, survey, star_catalog=None, noise=None):
         )
         sobjlist, sshifts, bright_objlist, bright_shifts, bright_mags = res
 
-        # objlist = objlist + sobjlist
-        # shifts = np.hstack((shifts, sshifts))
     else:
         sobjlist = None
         sshifts = None
