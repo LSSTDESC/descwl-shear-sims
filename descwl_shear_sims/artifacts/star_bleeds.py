@@ -1,6 +1,5 @@
 import functools
 import os
-import galsim
 import numpy as np
 from glob import glob
 import esutil as eu
