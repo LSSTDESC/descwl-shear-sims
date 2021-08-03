@@ -21,6 +21,7 @@ DEFAULT_SIM_CONFIG = {
     "psf_type": "gauss",
     "psf_dim": 51,
     "coadd_dim": 351,
+    "se_dim": None,
     "buff": 50,
     "layout": "grid",
     "dither": False,
