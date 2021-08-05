@@ -113,6 +113,7 @@ def make_sim(
     for band in bands:
 
         survey = get_survey(gal_type=galaxy_catalog.gal_type, band=band)
+        noise_for_gsparams = survey.noise*noise_factor
         noise_per_epoch = survey.noise*np.sqrt(epochs_per_band)*noise_factor
 
         # go down to coadd depth in this band, not dividing by sqrt(nbands)
@@ -123,7 +124,7 @@ def make_sim(
             galaxy_catalog=galaxy_catalog,
             survey=survey,
             star_catalog=star_catalog,
-            noise=noise_per_epoch,
+            noise=noise_for_gsparams,
         )
 
         bdata_list = []
