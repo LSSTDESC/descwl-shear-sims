@@ -449,7 +449,8 @@ def _draw_bright_objects(
         convolved_object = get_convolved_object(obj, psf, image_pos)
 
         max_n_photons = 10_000_000
-        n_photons = None if obj.flux < max_n_photons else max_n_photons
+        # 0 means use the flux for n_photons
+        n_photons = 0 if obj.flux < max_n_photons else max_n_photons
 
         stamp = convolved_object.drawImage(
             center=image_pos, wcs=local_wcs,
