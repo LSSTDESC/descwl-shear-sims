@@ -165,6 +165,12 @@ def get_star_gsparams(mag, flux, noise):
 
         kw = {}
         if do_thresh:
+
+            # this is designed to quantize the folding_threshold values,
+            # so that there are fewer objects in the GalSim C++ cache.
+            # With continuous values of folding_threshold, there would be
+            # a moderately largish overhead for each object.
+
             folding_threshold = noise/flux
             folding_threshold = np.exp(
                 np.floor(np.log(folding_threshold))
