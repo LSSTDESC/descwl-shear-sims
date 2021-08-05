@@ -430,8 +430,6 @@ def _draw_bright_objects(
     wcs = image.wcs
     for obj, shift, mag in zip(objlist, shifts, mags):
 
-        obj = _set_star_gsparams(obj, mag, noise)
-
         # profiles can have detectably sharp edges if the
         # profile is very high s/n and we have not set the
         # thresholds right in the gs params.
@@ -488,40 +486,6 @@ def _draw_bright_objects(
 
             # reset for next object
             timage.setZero()
-
-
-def _set_star_gsparams(obj, mag, noise):
-    # do_thresh = do_acc = False
-    do_thresh = do_acc = True
-    if mag < 18:
-        do_thresh = True
-    if mag < 15:
-        do_acc = True
-
-    if do_thresh or do_acc:
-        kw = {}
-        if do_thresh:
-
-            # this is designed to quantize the folding_threshold values,
-            # so that there are fewer objects in the GalSim C++ cache.
-            # With continuous values of folding_threshold, there would be
-            # a moderately largish overhead for each object.
-
-            folding_threshold = noise / obj.flux
-            folding_threshold = np.exp(
-                np.floor(np.log(folding_threshold))
-            )
-
-            kw['folding_threshold'] = min(folding_threshold, 0.005)
-
-        if do_acc:
-            kw['kvalue_accuracy'] = 1.0e-8
-            kw['maxk_threshold'] = 1.0e-5
-
-        gsp = galsim.GSParams(**kw)
-        obj = obj.withGSParams(gsp)
-
-    return obj
 
 
 def get_sim_config(config=None):
