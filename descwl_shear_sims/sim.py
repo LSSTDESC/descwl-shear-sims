@@ -417,7 +417,7 @@ def _draw_bright_objects(
 ):
     # extra array needed to determine star mask accurately
     timage = image.copy()
-    timage.array[:, :] = 0
+    timage.setZero()
 
     grng = galsim.BaseDeviate(rng.randint(0, 2**30))
 
@@ -449,14 +449,15 @@ def _draw_bright_objects(
 
         convolved_object = get_convolved_object(obj, psf, image_pos)
 
-        maxn = 10_000_000
-        n_photons = int(obj.flux) if obj.flux < maxn else maxn
+        max_n_photons = 10_000_000
+        n_photons = None if obj.flux < max_n_photons else max_n_photons
 
         stamp = convolved_object.drawImage(
             center=image_pos, wcs=local_wcs,
             method='phot',
             n_photons=n_photons,
-            maxN=1_000_000,
+            poisson_flux=True,
+            maxN=1_000_000,  # shoot in batches this size
             rng=grng,
         )
         b = stamp.bounds & image.bounds
@@ -486,7 +487,7 @@ def _draw_bright_objects(
                 )
 
             # reset for next object
-            timage.array[:, :] = 0
+            timage.setZero()
 
 
 def _set_star_gsparams(obj, mag, noise):
@@ -500,6 +501,11 @@ def _set_star_gsparams(obj, mag, noise):
     if do_thresh or do_acc:
         kw = {}
         if do_thresh:
+
+            # this is designed to quantize the folding_threshold values,
+            # so that there are fewer objects in the GalSim C++ cache.
+            # With continuous values of folding_threshold, there would be
+            # a moderately largish overhead for each object.
 
             folding_threshold = noise / obj.flux
             folding_threshold = np.exp(
