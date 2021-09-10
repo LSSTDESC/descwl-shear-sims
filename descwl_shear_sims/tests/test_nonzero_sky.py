@@ -43,7 +43,6 @@ def test_nonzero_sky():
             sky_n_sigma=sky_n_sigma,
         )
 
-
         for band in bands:
             calexp = data['band_data'][band][0]
             image = calexp.image.array
