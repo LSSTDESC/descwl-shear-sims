@@ -118,7 +118,7 @@ class FixedGalaxyCatalog(object):
         self.hlr = hlr
         self.rng = rng
 
-        self.shifts = get_shifts(
+        self.shifts_array = get_shifts(
             rng=rng,
             coadd_dim=coadd_dim,
             buff=buff,
@@ -126,9 +126,9 @@ class FixedGalaxyCatalog(object):
         )
 
     def __len__(self):
-        return self.shifts.size
+        return len(self.shifts_array)
 
-    def get_objlist(self, *, survey, g1, g2):
+    def get_objlist(self, *, survey):
         """
         get a list of galsim objects
 
@@ -140,21 +140,21 @@ class FixedGalaxyCatalog(object):
 
         Returns
         -------
-        [galsim objects]
+        [galsim objects], [shifts]
         """
 
         flux = survey.get_flux(self.mag)
 
-        num = self.shifts.size
-        objlist = [
-            self._get_galaxy(i, flux).shear(g1=g1, g2=g2)
-            for i in range(num)
-        ]
+        sarray = self.shifts_array
+        objlist = []
+        shifts = []
+        for i in range(len(self)):
+            objlist.append(self._get_galaxy(flux))
+            shifts.append(galsim.PositionD(sarray['dx'][i], sarray['dy'][i]))
 
-        shifts = self.shifts.copy()
         return objlist, shifts
 
-    def _get_galaxy(self, i, flux):
+    def _get_galaxy(self, flux):
         """
         get a galaxy object
 
@@ -169,12 +169,10 @@ class FixedGalaxyCatalog(object):
         --------
         galsim.GSObject
         """
+
         return galsim.Exponential(
             half_light_radius=self.hlr,
             flux=flux,
-        ).shift(
-            dx=self.shifts['dx'][i],
-            dy=self.shifts['dy'][i]
         )
 
 
@@ -203,7 +201,7 @@ class WLDeblendGalaxyCatalog(object):
         nobj_mean = area * gal_dens
         nobj = rng.poisson(nobj_mean)
 
-        self.shifts = get_shifts(
+        self.shifts_array = get_shifts(
             rng=rng,
             coadd_dim=coadd_dim,
             buff=buff,
@@ -211,7 +209,7 @@ class WLDeblendGalaxyCatalog(object):
             nobj=nobj,
         )
 
-        num = self.shifts.size
+        num = len(self)
         self.indices = self.rng.randint(
             0,
             self._wldeblend_cat.size,
@@ -221,9 +219,9 @@ class WLDeblendGalaxyCatalog(object):
         self.angles = self.rng.uniform(low=0, high=360, size=num)
 
     def __len__(self):
-        return self.shifts.size
+        return len(self.shifts_array)
 
-    def get_objlist(self, *, survey, g1, g2):
+    def get_objlist(self, *, survey):
         """
         get a list of galsim objects
 
@@ -231,14 +229,10 @@ class WLDeblendGalaxyCatalog(object):
         ----------
         survey: WLDeblendSurvey
             The survey object
-        g1: float
-            The g1 shear to apply to these objects
-        g2: float
-            The g2 shear to apply to these objects
 
         Returns
         -------
-        [galsim objects]
+        [galsim objects], [shifts]
         """
 
         builder = descwl.model.GalaxyBuilder(
@@ -249,18 +243,15 @@ class WLDeblendGalaxyCatalog(object):
             verbose_model=False,
         )
 
-        num = self.shifts.size
-
         band = survey.filter_band
 
-        # object is already shifted, so this results in the scene
-        # being sheared
-        objlist = [
-            self._get_galaxy(builder, band, i).shear(g1=g1, g2=g2)
-            for i in range(num)
-        ]
+        sarray = self.shifts_array
+        objlist = []
+        shifts = []
+        for i in range(len(self)):
+            objlist.append(self._get_galaxy(builder, band, i))
+            shifts.append(galsim.PositionD(sarray['dx'][i], sarray['dy'][i]))
 
-        shifts = self.shifts.copy()
         return objlist, shifts
 
     def _get_galaxy(self, builder, band, i):
@@ -281,8 +272,6 @@ class WLDeblendGalaxyCatalog(object):
         galsim.GSObject
         """
         index = self.indices[i]
-        dx = self.shifts['dx'][i]
-        dy = self.shifts['dy'][i]
 
         angle = self.angles[i]
 
@@ -293,9 +282,6 @@ class WLDeblendGalaxyCatalog(object):
             band,
         ).model.rotate(
             angle * galsim.degrees,
-        ).shift(
-            dx=dx,
-            dy=dy,
         )
 
         return galaxy

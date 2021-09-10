@@ -62,6 +62,7 @@ def test_star_mask_in_sim():
     star_density = 100
     psf = make_fixed_psf(psf_type='moffat')
 
+    some_were_saturated = False
     for i in range(1000):
         galaxy_catalog = make_galaxy_catalog(
             rng=rng,
