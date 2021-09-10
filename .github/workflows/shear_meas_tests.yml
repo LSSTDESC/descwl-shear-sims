@@ -38,7 +38,7 @@ jobs:
             pytest \
             numpy \
             galsim \
-            numba \
+            "numba!=0.54.0" \
             ngmix \
             lsstdesc-weaklensingdeblending \
             fitsio \
