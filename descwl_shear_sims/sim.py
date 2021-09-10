@@ -33,6 +33,7 @@ DEFAULT_SIM_CONFIG = {
     "star_bleeds": False,
     "cosmic_rays": False,
     "bad_columns": False,
+    "sky_n_sigma": None,
 }
 
 
