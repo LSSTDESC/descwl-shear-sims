@@ -260,7 +260,7 @@ def test_sim_defects(cosmic_rays, bad_columns):
         layout="grid",
         buff=30,
     )
-    assert len(galaxy_catalog) == galaxy_catalog.shifts.size
+    assert len(galaxy_catalog) == galaxy_catalog.shifts_array.size
 
     psf = make_fixed_psf(psf_type="gauss")
     _ = make_sim(
@@ -318,7 +318,7 @@ def test_sim_stars():
         coadd_dim=coadd_dim,
         buff=buff,
     )
-    assert len(galaxy_catalog) == galaxy_catalog.shifts.size
+    assert len(galaxy_catalog) == galaxy_catalog.shifts_array.size
 
     star_catalog = StarCatalog(
         rng=rng,
@@ -326,7 +326,7 @@ def test_sim_stars():
         buff=buff,
         density=100,
     )
-    assert len(star_catalog) == star_catalog.shifts.size
+    assert len(star_catalog) == star_catalog.shifts_array.size
 
     psf = make_fixed_psf(psf_type="moffat")
     # tests that we actually get BRIGHT set are in
