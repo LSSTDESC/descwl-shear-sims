@@ -33,6 +33,7 @@ DEFAULT_SIM_CONFIG = {
     "star_bleeds": False,
     "cosmic_rays": False,
     "bad_columns": False,
+    "sky_n_sigma": None,
 }
 
 
@@ -55,6 +56,7 @@ def make_sim(
     cosmic_rays=False,
     bad_columns=False,
     star_bleeds=False,
+    sky_n_sigma=None,
     draw_method='auto',
 ):
     """
@@ -96,6 +98,9 @@ def make_sim(
         If True, add cosmic rays
     bad_columns: bool
         If True, add bad columns
+    sky_n_sigma: float
+        Number of sigma to set the sky value.  Can be negative to
+        mock up a sky oversubtraction.  Default None.
     draw_method: string
         Draw method for galsim objects, default 'auto'.  Set to
         'phot' to get poisson noise.  Note this is much slower.
@@ -151,6 +156,7 @@ def make_sim(
                 cosmic_rays=cosmic_rays,
                 bad_columns=bad_columns,
                 star_bleeds=star_bleeds,
+                sky_n_sigma=sky_n_sigma,
                 draw_method=draw_method,
             )
             if galaxy_catalog.gal_type == 'wldeblend':
@@ -212,6 +218,7 @@ def make_exp(
     cosmic_rays=False,
     bad_columns=False,
     star_bleeds=False,
+    sky_n_sigma=None,
     draw_method='auto',
 ):
     """
@@ -261,6 +268,9 @@ def make_exp(
         If True, put in bad columns
     star_bleeds: bool
         If True, add bleed trails to stars
+    sky_n_sigma: float
+        Number of sigma to set the sky value.  Can be negative to
+        mock up a sky oversubtraction.  Default None.
     draw_method: string
         Draw method for galsim objects, default 'auto'.  Set to
         'phot' to get poisson noise.  Note this is much slower.
@@ -311,6 +321,8 @@ def make_exp(
         )
 
     image.array[:, :] += rng.normal(scale=noise, size=dims)
+    if sky_n_sigma is not None:
+        image.array[:, :] += sky_n_sigma * noise
 
     bmask = get_bmask(
         image=image,

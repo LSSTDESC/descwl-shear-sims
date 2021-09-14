@@ -38,7 +38,7 @@ jobs:
             pytest \
             numpy \
             galsim \
-            numba \
+            "numba!=0.54.0" \
             ngmix \
             lsstdesc-weaklensingdeblending \
             fitsio \
@@ -69,32 +69,13 @@ jobs:
           popd
           popd
 
-          # temporarily use branch
-          git clone --branch u/erykoff/onlinecoadd https://github.com/lsst/pipe_tasks.git /tmp/pipe_tasks
-
-      - name: temporarily use branch
-        shell: bash -l {0}
-        run: |
-            env
-
-            setup -j -r /tmp/pipe_tasks
-
-            pushd /tmp/pipe_tasks
-            # this might partly fail but that's ok
-            scons || echo "ok scons fails"
-            popd
-
-            pip install --no-deps -e .
-
       - name: fast test
         shell: bash -l {0}
         run: |
-          setup -j -r /tmp/pipe_tasks
           pytest -vvsx shear_meas_tests/test_shear_meas.py -k test_shear_meas[grid-500]
 
       - name: slow test
         if: ${{ success() && github.event_name == 'push' }}
         shell: bash -l {0}
         run: |
-          setup -j -r /tmp/pipe_tasks
           pytest -vvsx shear_meas_tests/test_shear_meas.py -k test_shear_meas[random-2500]
