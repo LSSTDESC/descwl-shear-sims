@@ -167,7 +167,7 @@ def get_pair_shifts(*, rng, sep):
 
     shifts = np.zeros(2, dtype=[('dx', 'f8'), ('dy', 'f8')])
 
-    angle = rng.uniform(low=0, high=2*np.pi)
+    angle = rng.uniform(low=0, high=np.pi)
     shift_radius = sep / 2
 
     dx = np.cos(angle)*shift_radius
