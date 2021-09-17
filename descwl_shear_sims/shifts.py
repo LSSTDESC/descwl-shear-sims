@@ -170,13 +170,23 @@ def get_pair_shifts(*, rng, sep):
     angle = rng.uniform(low=0, high=np.pi)
     shift_radius = sep / 2
 
-    dx = np.cos(angle)*shift_radius
-    dy = np.sin(angle)*shift_radius
+    xdither, ydither = SCALE*rng.uniform(low=-0.5, high=0.5, size=2)
 
-    shifts['dx'][0] = dx
-    shifts['dy'][0] = dy
+    dx1 = np.cos(angle)*shift_radius
+    dy1 = np.sin(angle)*shift_radius
+    dx2 = -dx1
+    dy2 = -dy1
 
-    shifts['dx'][1] = -dx
-    shifts['dy'][1] = -dy
+    dx1 += xdither
+    dy1 += ydither
+
+    dx2 += xdither
+    dy2 += ydither
+
+    shifts['dx'][0] = dx1
+    shifts['dy'][0] = dy1
+
+    shifts['dx'][1] = dx2
+    shifts['dy'][1] = dy2
 
     return shifts
