@@ -3,7 +3,7 @@ import copy
 import galsim
 import descwl
 
-from .shifts import get_shifts
+from .shifts import get_shifts, get_pair_shifts
 from .constants import SCALE
 from .cache_tools import cached_catalog_read
 
@@ -18,10 +18,11 @@ def make_galaxy_catalog(
     *,
     rng,
     gal_type,
-    coadd_dim,
-    buff,
+    coadd_dim=None,
+    buff=None,
     layout=None,
     gal_config=None,
+    sep=None,
 ):
     """
     rng: numpy.random.RandomState
@@ -38,27 +39,51 @@ def make_galaxy_catalog(
     gal_config: dict or None
         Can be sent for fixed galaxy catalog.  See DEFAULT_FIXED_GAL_CONFIG
         for defaults
+    sep: float, optional
+        Separation of pair in arcsec for layout='pair'
     """
-    if gal_type == 'wldeblend':
-        galaxy_catalog = WLDeblendGalaxyCatalog(
-            rng=rng,
-            coadd_dim=coadd_dim,
-            buff=buff,
-        )
-    else:
-
-        if layout is None:
-            raise ValueError("send layout= for gal_type '%s'" % gal_type)
-
+    if layout == 'pair':
+        if sep is None:
+            raise ValueError(
+                f'send sep= for gal_type {gal_type} and layout {layout}'
+            )
         gal_config = get_fixed_gal_config(config=gal_config)
-        galaxy_catalog = FixedGalaxyCatalog(
+        galaxy_catalog = FixedPairGalaxyCatalog(
             rng=rng,
-            coadd_dim=coadd_dim,
-            buff=buff,
-            layout=layout,
             mag=gal_config['mag'],
             hlr=gal_config['hlr'],
+            sep=sep,
         )
+    else:
+        if coadd_dim is None:
+            raise ValueError(
+                f'send coadd_dim= for gal_type {gal_type} and layout {layout}'
+            )
+        if buff is None:
+            raise ValueError(
+                f'send buff= for gal_type {gal_type} and layout {layout}'
+            )
+
+        if gal_type == 'wldeblend':
+            galaxy_catalog = WLDeblendGalaxyCatalog(
+                rng=rng,
+                coadd_dim=coadd_dim,
+                buff=buff,
+            )
+        else:
+
+            if layout is None:
+                raise ValueError("send layout= for gal_type '%s'" % gal_type)
+
+            gal_config = get_fixed_gal_config(config=gal_config)
+            galaxy_catalog = FixedGalaxyCatalog(
+                rng=rng,
+                coadd_dim=coadd_dim,
+                buff=buff,
+                layout=layout,
+                mag=gal_config['mag'],
+                hlr=gal_config['hlr'],
+            )
 
     return galaxy_catalog
 
@@ -173,6 +198,40 @@ class FixedGalaxyCatalog(object):
         return galsim.Exponential(
             half_light_radius=self.hlr,
             flux=flux,
+        )
+
+
+class FixedPairGalaxyCatalog(FixedGalaxyCatalog):
+    """
+    A pair of galaxies of fixed galsim type, flux, and size
+
+    Same for all bands
+
+    Parameters
+    ----------
+    rng: np.random.RandomState
+        The random number generator
+    mag: float
+        Magnitude of all objects. Objects brighter than magntiude 17 (e.g., 14
+        since mags are opposite) tend to cause the Rubin Observatory science
+        pipeline detection algorithm to misdetect isolted objects in unphysical
+        ways. This effect causes the shear response to be non-linear and so
+        metadetect will fail. For this reason, you should use the default
+        magnitude of 17 or fainter for this kind of galaxy.
+    hlr: float
+        Half light radius of all objects
+    sep: float
+        Separation of pair in arcsec
+    """
+    def __init__(self, *, rng, mag, hlr, sep):
+        self.gal_type = 'exp'
+        self.mag = mag
+        self.hlr = hlr
+        self.rng = rng
+
+        self.shifts_array = get_pair_shifts(
+            rng=rng,
+            sep=sep,
         )
 
 
