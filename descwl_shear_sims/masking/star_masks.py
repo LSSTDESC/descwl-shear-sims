@@ -1,5 +1,4 @@
 import numpy as np
-import galsim
 from numba import njit
 from ..lsst_bits import get_flagval
 
@@ -46,9 +45,7 @@ def calculate_and_add_bright_star_mask(
     *,
     image,
     bmask,
-    shift,
-    wcs,
-    origin,  # pixel origin
+    image_pos,
     threshold,
 ):
     """
@@ -60,35 +57,22 @@ def calculate_and_add_bright_star_mask(
         numpy array representing the image
     bmask: array
         numpy array representing the bitmask
-    shift: array
-        scalar array with fields dx and dy, which are du, dv offsets in sky
-        coords.
-    wcs: galsim wcs
-        For the SE image
-    origin: galsim.PositionD
-        Origin of SE image (with offset included)
+    image_pos: galsim.PositionD
+        Center of object in image
     threshold: float
         The mask will extend to where the profile reaches this value
     """
 
-    jac_wcs = wcs.jacobian(world_pos=wcs.center)
-
-    shift_pos = galsim.PositionD(
-        x=shift['dx'],
-        y=shift['dy'],
-    )
-    pos = jac_wcs.toImage(shift_pos) + origin
-
     radius = calculate_bright_star_mask_radius(
         image=image,
-        objrow=pos.y,
-        objcol=pos.x,
+        objrow=image_pos.y,
+        objcol=image_pos.x,
         threshold=threshold,
     )
     add_bright_star_mask(
         bmask=bmask,
-        x=pos.x,
-        y=pos.y,
+        x=image_pos.x,
+        y=image_pos.y,
         radius=radius,
         val=get_flagval('BRIGHT'),
     )

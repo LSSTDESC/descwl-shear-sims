@@ -12,8 +12,7 @@ import descwl_shear_sims as sim
 from descwl_coadd.coadd import make_coadd_obs
 
 CONFIG = {
-    "model": "wmom",
-    "bmask_flags": 0,
+    "meas_type": "wmom",
     "metacal": {
         "use_noise_image": True,
         "psf": "fitgauss",
@@ -29,8 +28,6 @@ CONFIG = {
     "detect": {
         "thresh": 10.0,
     },
-    'meds': {},
-    'subtract_sky': False,
 }
 
 
@@ -137,13 +134,14 @@ def _run_sim_one(*, seed, mdet_seed, g1, g2, **kwargs):
     obslist.append(coadd_obs)
     coadd_mbobs.append(obslist)
 
-    md = lsst_metadetect.LSSTMetadetect(
-        copy.deepcopy(CONFIG),
-        coadd_mbobs,
-        np.random.RandomState(seed=mdet_seed),
+    rng = np.random.RandomState(seed=mdet_seed)
+
+    results = lsst_metadetect.run_metadetect(
+        mbobs=coadd_mbobs,
+        rng=rng,
+        config=copy.deepcopy(CONFIG),
     )
-    md.go()
-    return md.result
+    return results
 
 
 def run_sim(seed, mdet_seed, **kwargs):

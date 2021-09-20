@@ -10,10 +10,11 @@ from .constants import (
 def get_shifts(
     *,
     rng,
-    coadd_dim,
-    buff,
     layout,
+    coadd_dim=None,
+    buff=None,
     nobj=None,
+    sep=None,
 ):
     """
     make position shifts for objects
@@ -30,29 +31,44 @@ def get_shifts(
         Optional number of objects to draw, defaults to None
         in which case a poission deviate is draw according
         to RANDOM_DENSITY
+    sep: float, optional
+        The separation in arcseconds for layout='pair'
     """
 
-    if layout == 'grid':
-        shifts = get_grid_shifts(
-            rng=rng,
-            dim=coadd_dim,
-            n_on_side=GRID_N_ON_SIDE,
-        )
-    elif layout == 'random':
-        # area covered by objects
-        if nobj is None:
-            area = ((coadd_dim - 2*buff)*SCALE/60)**2
-            nobj_mean = area * RANDOM_DENSITY
-            nobj = rng.poisson(nobj_mean)
+    if layout == 'pair':
 
-        shifts = get_random_shifts(
-            rng=rng,
-            dim=coadd_dim,
-            buff=buff,
-            size=nobj,
-        )
+        if sep is None:
+            raise ValueError(f'send sep= for layout {layout}')
+
+        shifts = get_pair_shifts(rng=rng, sep=sep)
     else:
-        raise ValueError("bad layout: '%s'" % layout)
+
+        if coadd_dim is None:
+            raise ValueError(f'send coadd_dim= for layout {layout}')
+        if buff is None:
+            raise ValueError(f'send buff= for layout {layout}')
+
+        if layout == 'grid':
+            shifts = get_grid_shifts(
+                rng=rng,
+                dim=coadd_dim,
+                n_on_side=GRID_N_ON_SIDE,
+            )
+        elif layout == 'random':
+            # area covered by objects
+            if nobj is None:
+                area = ((coadd_dim - 2*buff)*SCALE/60)**2
+                nobj_mean = area * RANDOM_DENSITY
+                nobj = rng.poisson(nobj_mean)
+
+            shifts = get_random_shifts(
+                rng=rng,
+                dim=coadd_dim,
+                buff=buff,
+                size=nobj,
+            )
+        else:
+            raise ValueError("bad layout: '%s'" % layout)
 
     return shifts
 
@@ -127,5 +143,50 @@ def get_random_shifts(*, rng, dim, buff, size):
 
     shifts['dx'] = rng.uniform(low=low, high=high, size=size)
     shifts['dy'] = rng.uniform(low=low, high=high, size=size)
+
+    return shifts
+
+
+def get_pair_shifts(*, rng, sep):
+    """
+    get a set of gridded shifts, with random shifts at the pixel scale
+
+    Parameters
+    ----------
+    rng: numpy.random.RandomState
+        The random number generator
+    sep: float
+        Separation of pair in arcsec
+
+    Returns
+    -------
+    shifts: array
+        Array with dx, dy offset fields for each point, in
+        arcsec
+    """
+
+    shifts = np.zeros(2, dtype=[('dx', 'f8'), ('dy', 'f8')])
+
+    angle = rng.uniform(low=0, high=np.pi)
+    shift_radius = sep / 2
+
+    xdither, ydither = SCALE*rng.uniform(low=-0.5, high=0.5, size=2)
+
+    dx1 = np.cos(angle)*shift_radius
+    dy1 = np.sin(angle)*shift_radius
+    dx2 = -dx1
+    dy2 = -dy1
+
+    dx1 += xdither
+    dy1 += ydither
+
+    dx2 += xdither
+    dy2 += ydither
+
+    shifts['dx'][0] = dx1
+    shifts['dy'][0] = dy1
+
+    shifts['dx'][1] = dx2
+    shifts['dy'][1] = dy2
 
     return shifts

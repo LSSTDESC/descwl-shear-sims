@@ -3,7 +3,7 @@ import copy
 import galsim
 import descwl
 
-from .shifts import get_shifts
+from .shifts import get_shifts, get_pair_shifts
 from .constants import SCALE
 from .cache_tools import cached_catalog_read
 
@@ -18,10 +18,11 @@ def make_galaxy_catalog(
     *,
     rng,
     gal_type,
-    coadd_dim,
-    buff,
+    coadd_dim=None,
+    buff=None,
     layout=None,
     gal_config=None,
+    sep=None,
 ):
     """
     rng: numpy.random.RandomState
@@ -38,27 +39,51 @@ def make_galaxy_catalog(
     gal_config: dict or None
         Can be sent for fixed galaxy catalog.  See DEFAULT_FIXED_GAL_CONFIG
         for defaults
+    sep: float, optional
+        Separation of pair in arcsec for layout='pair'
     """
-    if gal_type == 'wldeblend':
-        galaxy_catalog = WLDeblendGalaxyCatalog(
-            rng=rng,
-            coadd_dim=coadd_dim,
-            buff=buff,
-        )
-    else:
-
-        if layout is None:
-            raise ValueError("send layout= for gal_type '%s'" % gal_type)
-
+    if layout == 'pair':
+        if sep is None:
+            raise ValueError(
+                f'send sep= for gal_type {gal_type} and layout {layout}'
+            )
         gal_config = get_fixed_gal_config(config=gal_config)
-        galaxy_catalog = FixedGalaxyCatalog(
+        galaxy_catalog = FixedPairGalaxyCatalog(
             rng=rng,
-            coadd_dim=coadd_dim,
-            buff=buff,
-            layout=layout,
             mag=gal_config['mag'],
             hlr=gal_config['hlr'],
+            sep=sep,
         )
+    else:
+        if coadd_dim is None:
+            raise ValueError(
+                f'send coadd_dim= for gal_type {gal_type} and layout {layout}'
+            )
+        if buff is None:
+            raise ValueError(
+                f'send buff= for gal_type {gal_type} and layout {layout}'
+            )
+
+        if gal_type == 'wldeblend':
+            galaxy_catalog = WLDeblendGalaxyCatalog(
+                rng=rng,
+                coadd_dim=coadd_dim,
+                buff=buff,
+            )
+        else:
+
+            if layout is None:
+                raise ValueError("send layout= for gal_type '%s'" % gal_type)
+
+            gal_config = get_fixed_gal_config(config=gal_config)
+            galaxy_catalog = FixedGalaxyCatalog(
+                rng=rng,
+                coadd_dim=coadd_dim,
+                buff=buff,
+                layout=layout,
+                mag=gal_config['mag'],
+                hlr=gal_config['hlr'],
+            )
 
     return galaxy_catalog
 
@@ -118,7 +143,7 @@ class FixedGalaxyCatalog(object):
         self.hlr = hlr
         self.rng = rng
 
-        self.shifts = get_shifts(
+        self.shifts_array = get_shifts(
             rng=rng,
             coadd_dim=coadd_dim,
             buff=buff,
@@ -126,9 +151,9 @@ class FixedGalaxyCatalog(object):
         )
 
     def __len__(self):
-        return self.shifts.size
+        return len(self.shifts_array)
 
-    def get_objlist(self, *, survey, g1, g2):
+    def get_objlist(self, *, survey):
         """
         get a list of galsim objects
 
@@ -140,21 +165,21 @@ class FixedGalaxyCatalog(object):
 
         Returns
         -------
-        [galsim objects]
+        [galsim objects], [shifts]
         """
 
         flux = survey.get_flux(self.mag)
 
-        num = self.shifts.size
-        objlist = [
-            self._get_galaxy(i, flux).shear(g1=g1, g2=g2)
-            for i in range(num)
-        ]
+        sarray = self.shifts_array
+        objlist = []
+        shifts = []
+        for i in range(len(self)):
+            objlist.append(self._get_galaxy(flux))
+            shifts.append(galsim.PositionD(sarray['dx'][i], sarray['dy'][i]))
 
-        shifts = self.shifts.copy()
         return objlist, shifts
 
-    def _get_galaxy(self, i, flux):
+    def _get_galaxy(self, flux):
         """
         get a galaxy object
 
@@ -169,12 +194,44 @@ class FixedGalaxyCatalog(object):
         --------
         galsim.GSObject
         """
+
         return galsim.Exponential(
             half_light_radius=self.hlr,
             flux=flux,
-        ).shift(
-            dx=self.shifts['dx'][i],
-            dy=self.shifts['dy'][i]
+        )
+
+
+class FixedPairGalaxyCatalog(FixedGalaxyCatalog):
+    """
+    A pair of galaxies of fixed galsim type, flux, and size
+
+    Same for all bands
+
+    Parameters
+    ----------
+    rng: np.random.RandomState
+        The random number generator
+    mag: float
+        Magnitude of all objects. Objects brighter than magntiude 17 (e.g., 14
+        since mags are opposite) tend to cause the Rubin Observatory science
+        pipeline detection algorithm to misdetect isolted objects in unphysical
+        ways. This effect causes the shear response to be non-linear and so
+        metadetect will fail. For this reason, you should use the default
+        magnitude of 17 or fainter for this kind of galaxy.
+    hlr: float
+        Half light radius of all objects
+    sep: float
+        Separation of pair in arcsec
+    """
+    def __init__(self, *, rng, mag, hlr, sep):
+        self.gal_type = 'exp'
+        self.mag = mag
+        self.hlr = hlr
+        self.rng = rng
+
+        self.shifts_array = get_pair_shifts(
+            rng=rng,
+            sep=sep,
         )
 
 
@@ -203,7 +260,7 @@ class WLDeblendGalaxyCatalog(object):
         nobj_mean = area * gal_dens
         nobj = rng.poisson(nobj_mean)
 
-        self.shifts = get_shifts(
+        self.shifts_array = get_shifts(
             rng=rng,
             coadd_dim=coadd_dim,
             buff=buff,
@@ -211,7 +268,7 @@ class WLDeblendGalaxyCatalog(object):
             nobj=nobj,
         )
 
-        num = self.shifts.size
+        num = len(self)
         self.indices = self.rng.randint(
             0,
             self._wldeblend_cat.size,
@@ -221,9 +278,9 @@ class WLDeblendGalaxyCatalog(object):
         self.angles = self.rng.uniform(low=0, high=360, size=num)
 
     def __len__(self):
-        return self.shifts.size
+        return len(self.shifts_array)
 
-    def get_objlist(self, *, survey, g1, g2):
+    def get_objlist(self, *, survey):
         """
         get a list of galsim objects
 
@@ -231,14 +288,10 @@ class WLDeblendGalaxyCatalog(object):
         ----------
         survey: WLDeblendSurvey
             The survey object
-        g1: float
-            The g1 shear to apply to these objects
-        g2: float
-            The g2 shear to apply to these objects
 
         Returns
         -------
-        [galsim objects]
+        [galsim objects], [shifts]
         """
 
         builder = descwl.model.GalaxyBuilder(
@@ -249,18 +302,15 @@ class WLDeblendGalaxyCatalog(object):
             verbose_model=False,
         )
 
-        num = self.shifts.size
-
         band = survey.filter_band
 
-        # object is already shifted, so this results in the scene
-        # being sheared
-        objlist = [
-            self._get_galaxy(builder, band, i).shear(g1=g1, g2=g2)
-            for i in range(num)
-        ]
+        sarray = self.shifts_array
+        objlist = []
+        shifts = []
+        for i in range(len(self)):
+            objlist.append(self._get_galaxy(builder, band, i))
+            shifts.append(galsim.PositionD(sarray['dx'][i], sarray['dy'][i]))
 
-        shifts = self.shifts.copy()
         return objlist, shifts
 
     def _get_galaxy(self, builder, band, i):
@@ -281,8 +331,6 @@ class WLDeblendGalaxyCatalog(object):
         galsim.GSObject
         """
         index = self.indices[i]
-        dx = self.shifts['dx'][i]
-        dy = self.shifts['dy'][i]
 
         angle = self.angles[i]
 
@@ -293,9 +341,6 @@ class WLDeblendGalaxyCatalog(object):
             band,
         ).model.rotate(
             angle * galsim.degrees,
-        ).shift(
-            dx=dx,
-            dy=dy,
         )
 
         return galaxy
