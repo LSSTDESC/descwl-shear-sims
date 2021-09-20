@@ -321,7 +321,7 @@ def make_exp(
             scale=SCALE,
         )
         # Shear correlation in the noise
-        corr_noise.shear(g1=g1_noise, g2=g2_noise)
+        corr_noise = corr_noise.shear(g1=g1_noise, g2=g2_noise)
         image.addNoise(corr_noise)
     else:
         # Maybe change this to use galsim noise generator?

@@ -4,7 +4,6 @@ import numpy as np
 import ngmix
 import tqdm
 import joblib
-import galsim
 
 import pytest
 
@@ -126,9 +125,9 @@ def _boostrap_m_c(pres, mres):
 
 def _run_sim_one(*, seed, mdet_seed, g1, g2, g1_noise, g2_noise, **kwargs):
     sim_data = _make_lsst_sim(
-        seed=seed, 
+        seed=seed,
         g1=g1, g2=g2,
-        g1_noise=g1_noise, g2_noise=g2_noise, 
+        g1_noise=g1_noise, g2_noise=g2_noise,
         **kwargs,
     )
     coadd_obs = make_coadd_obs(
@@ -157,10 +156,9 @@ def _run_sim_one(*, seed, mdet_seed, g1, g2, g1_noise, g2_noise, **kwargs):
 def run_sim(seed, mdet_seed, **kwargs):
     # positive shear
     _pres = _run_sim_one(
-        seed=seed, 
-        mdet_seed=mdet_seed, 
-        g1=0.02, g2=0, 
-        g1_noise=0., g2_noise=0.1,      # High value for the purpose of testing
+        seed=seed,
+        mdet_seed=mdet_seed,
+        g1=0.02, g2=0,
         **kwargs,
     )
     if _pres is None:
@@ -171,7 +169,6 @@ def run_sim(seed, mdet_seed, **kwargs):
         seed=seed,
         mdet_seed=mdet_seed,
         g1=-0.02, g2=0,
-        g1_noise=0., g2_noise=0.1,      # High value for the purpose of testing
         **kwargs,
     )
     if _mres is None:
@@ -181,9 +178,13 @@ def run_sim(seed, mdet_seed, **kwargs):
 
 
 @pytest.mark.parametrize(
-    'layout,ntrial', [('grid', 500), ('random', 2500)]
+    'layout,ntrial',
+    [('grid', 100),
+     ('random', 2500)]
 )
-def test_shear_meas(layout, ntrial):
+def test_shear_meas(layout, ntrial, g1_noise, g2_noise, save, save_dir, n_jobs):
+    if save:
+        date = time.strftime('_%d-%m-%Y_%H-%M-%S')
     nsub = max(ntrial // 100, 10)
     nitr = ntrial // nsub
     rng = np.random.RandomState(seed=116)
@@ -200,11 +201,17 @@ def test_shear_meas(layout, ntrial):
     for itr in tqdm.trange(nitr):
         jobs = [
             joblib.delayed(run_sim)(
-                seeds[loc+i], mdet_seeds[loc+i], layout=layout,
+                seeds[loc+i],
+                mdet_seeds[loc+i],
+                layout=layout,
+                g1_noise=g1_noise,
+                g2_noise=g2_noise,
             )
             for i in range(nsub)
         ]
-        outputs = joblib.Parallel(n_jobs=-2, verbose=0, backend='loky')(jobs)
+        outputs = joblib.Parallel(n_jobs=n_jobs,
+                                  verbose=0,
+                                  backend='loky')(jobs)
 
         for out in outputs:
             if out is None:
@@ -253,6 +260,37 @@ def test_shear_meas(layout, ntrial):
         ),
         flush=True,
     )
+
+    if save:
+        base_name = '/results{}.txt'
+        add_name = ''
+        if g1_noise != 0:
+            add_name += '_corr_g1'
+        if g2_noise != 0:
+            add_name += '_corr_g2'
+        if (g1_noise == 0) and (g2_noise == 0):
+            add_name += '_no_corr'
+        add_name += date
+        res_name = base_name.format(add_name)
+        res_file = open(save_dir + res_name, 'w+')
+        res_file.write((
+            "g1 noise: %s"
+            "g2 noise: %s"
+            "nsims: %d"
+            "\nm [1e-3, 3sigma]: %s +/- %s"
+            "\nc [1e-5, 3sigma]: %s +/- %s"
+            "\ntotal time: %s s"
+        ) % (
+            g1_noise,
+            g2_noise,
+            ntrial,
+            m/1e-3,
+            3*merr/1e-3,
+            c/1e-5,
+            3*cerr/1e-5,
+            total_time,
+        ))
+        res_file.close()
 
     assert np.abs(m) < max(1e-3, 3*merr)
     assert np.abs(c) < 3*cerr
