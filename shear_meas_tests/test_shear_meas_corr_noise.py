@@ -34,8 +34,12 @@ CONFIG = {
 }
 
 
-def _make_lsst_sim(*, seed, g1, g2, g1_noise, g2_noise, layout):
+def _make_lsst_sim(*, seed, g1, g2, g1_noise, g2_noise, layout, galaxy_mag=None):
     rng = np.random.RandomState(seed=seed)
+
+    gal_config = None
+    if not isinstance(galaxy_mag, type(None)):
+        gal_config = dict(mag=galaxy_mag)
 
     galaxy_catalog = sim.galaxies.make_galaxy_catalog(
         rng=rng,
@@ -43,6 +47,7 @@ def _make_lsst_sim(*, seed, g1, g2, g1_noise, g2_noise, layout):
         buff=sim.sim.DEFAULT_SIM_CONFIG["buff"],
         layout=layout,
         gal_type='exp',
+        gal_config=gal_config,
     )
 
     psf = sim.psfs.make_fixed_psf(psf_type='gauss')
@@ -124,11 +129,20 @@ def _boostrap_m_c(pres, mres):
     return m, merr, c, cerr
 
 
-def _run_sim_one(*, seed, mdet_seed, g1, g2, g1_noise, g2_noise, **kwargs):
+def _run_sim_one(
+    *,
+    seed,
+    mdet_seed,
+    g1, g2,
+    g1_noise, g2_noise,
+    gal_mag=None,
+    **kwargs
+):
     sim_data = _make_lsst_sim(
         seed=seed,
         g1=g1, g2=g2,
         g1_noise=g1_noise, g2_noise=g2_noise,
+        galaxy_mag=gal_mag,
         **kwargs,
     )
     coadd_obs = make_coadd_obs(
@@ -183,7 +197,16 @@ def run_sim(seed, mdet_seed, **kwargs):
     [('grid', 100),
      ('random', 2500)]
 )
-def test_shear_meas(layout, ntrial, g1_noise, g2_noise, save, save_dir, n_jobs):
+def test_shear_meas(
+    layout,
+    ntrial,
+    g1_noise,
+    g2_noise,
+    gal_mag,
+    save,
+    save_dir,
+    n_jobs
+):
     if save:
         date = time.strftime('_%d-%m-%Y_%H-%M-%S')
     nsub = max(ntrial // 100, 10)
@@ -207,6 +230,7 @@ def test_shear_meas(layout, ntrial, g1_noise, g2_noise, save, save_dir, n_jobs):
                 layout=layout,
                 g1_noise=g1_noise,
                 g2_noise=g2_noise,
+                gal_mag=gal_mag,
             )
             for i in range(nsub)
         ]

@@ -30,6 +30,13 @@ def pytest_addoption(parser):
         help="--g2_noise: g2 shear to apply on the noise"
     )
     parser.addoption(
+        "--gal_mag",
+        action="store",
+        default=None,
+        type=float,
+        help="--gal_mag: magnitude of the galaxies drawn"
+    )
+    parser.addoption(
         "--n_jobs",
         action="store",
         default=2,
@@ -56,6 +63,11 @@ def g1_noise(request):
 @pytest.fixture()
 def g2_noise(request):
     return request.config.getoption("--g2_noise")
+
+
+@pytest.fixture()
+def gal_mag(request):
+    return request.config.getoption("--gal_mag")
 
 
 @pytest.fixture()

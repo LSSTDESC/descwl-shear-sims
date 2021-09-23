@@ -233,7 +233,6 @@ def make_exp(
     star_bleeds=False,
     sky_n_sigma=None,
     draw_method='auto',
-    galsim_rng=None,
     corr_noise=False,
     g1_noise=0.01,
     g2_noise=0.01,
