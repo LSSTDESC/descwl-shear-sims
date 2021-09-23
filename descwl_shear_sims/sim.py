@@ -59,6 +59,9 @@ def make_sim(
     star_bleeds=False,
     sky_n_sigma=None,
     draw_method='auto',
+    g2_noise=0.01,
+    g1_noise=0.01,
+    corr_noise=False,
 ):
     """
     Make simulation data
@@ -105,6 +108,12 @@ def make_sim(
     draw_method: string
         Draw method for galsim objects, default 'auto'.  Set to
         'phot' to get poisson noise.  Note this is much slower.
+    corr_noise: bool
+        If True, make correlated noise
+    g1_noise: float
+        g1 for shear correlated noise
+    g2_noise: float
+        g2 for shear correlated noise
     """
 
     coadd_wcs, coadd_bbox = make_coadd_dm_wcs(coadd_dim)
@@ -159,6 +168,9 @@ def make_sim(
                 star_bleeds=star_bleeds,
                 sky_n_sigma=sky_n_sigma,
                 draw_method=draw_method,
+                corr_noise=corr_noise,
+                g1_noise=g1_noise,
+                g2_noise=g2_noise,
             )
             if galaxy_catalog.gal_type == 'wldeblend':
                 rescale_wldeblend_exp(
@@ -221,6 +233,9 @@ def make_exp(
     star_bleeds=False,
     sky_n_sigma=None,
     draw_method='auto',
+    corr_noise=False,
+    g1_noise=0.01,
+    g2_noise=0.01,
 ):
     """
     Make an SEObs
@@ -275,6 +290,12 @@ def make_exp(
     draw_method: string
         Draw method for galsim objects, default 'auto'.  Set to
         'phot' to get poisson noise.  Note this is much slower.
+    corr_noise: bool
+        If True, make correlated noise
+    g1_noise: float
+        g1 for shear correlated noise
+    g2_noise: float
+        g2 for shear correlated noise
     """
 
     shear = galsim.Shear(g1=g1, g2=g2)
@@ -321,9 +342,22 @@ def make_exp(
             rng,
         )
 
-    image.array[:, :] += rng.normal(scale=noise, size=dims)
-    if sky_n_sigma is not None:
-        image.array[:, :] += sky_n_sigma * noise
+    # Make correlated noise
+    if corr_noise:
+        galsim_seed = rng.randint(low=1, high=2**29, size=1)
+        galsim_rng = galsim.BaseDeviate(seed=galsim_seed)
+        corr_noise = galsim.UncorrelatedNoise(
+            variance=noise**2.,
+            rng=galsim_rng,
+            scale=SCALE,
+        )
+        # Shear correlation in the noise
+        corr_noise = corr_noise.shear(g1=g1_noise, g2=g2_noise)
+        image.addNoise(corr_noise)
+    else:
+        image.array[:, :] += rng.normal(scale=noise, size=dims)
+        if sky_n_sigma is not None:
+            image.array[:, :] += sky_n_sigma * noise
 
     bmask = get_bmask(
         image=image,
