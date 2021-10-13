@@ -17,7 +17,7 @@ from .wcs import make_wcs, make_dm_wcs, make_coadd_dm_wcs
 
 
 DEFAULT_SIM_CONFIG = {
-    "gal_type": "exp",
+    "gal_type": "fixed",  # note "exp" also means "fixed" for back compat
     "psf_type": "gauss",
     "psf_dim": 51,
     "coadd_dim": 351,

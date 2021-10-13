@@ -1,3 +1,4 @@
+import numpy as np
 import os
 import copy
 import galsim
@@ -11,6 +12,7 @@ from .cache_tools import cached_catalog_read
 DEFAULT_FIXED_GAL_CONFIG = {
     "mag": 17.0,
     "hlr": 0.5,
+    "morph": "exp",
 }
 
 
@@ -28,7 +30,7 @@ def make_galaxy_catalog(
     rng: numpy.random.RandomState
         Numpy random state
     gal_type: string
-        'exp' or 'wldeblend'
+        'fixed' or 'wldeblend'
     coadd_dim: int
         Dimensions of coadd
     buff: int
@@ -38,7 +40,7 @@ def make_galaxy_catalog(
         required.
     gal_config: dict or None
         Can be sent for fixed galaxy catalog.  See DEFAULT_FIXED_GAL_CONFIG
-        for defaults
+        for defaults mag, hlr and morph
     sep: float, optional
         Separation of pair in arcsec for layout='pair'
     """
@@ -52,6 +54,7 @@ def make_galaxy_catalog(
             rng=rng,
             mag=gal_config['mag'],
             hlr=gal_config['hlr'],
+            type=gal_config['type'],
             sep=sep,
         )
     else:
@@ -83,6 +86,7 @@ def make_galaxy_catalog(
                 layout=layout,
                 mag=gal_config['mag'],
                 hlr=gal_config['hlr'],
+                morph=gal_config['morph'],
             )
 
     return galaxy_catalog
@@ -113,7 +117,8 @@ def get_fixed_gal_config(config=None):
 
 class FixedGalaxyCatalog(object):
     """
-    Galaxies of fixed galsim type, flux, and size
+    Galaxies of fixed galsim type, flux, and size.  For the type
+    bdk the ellipticity varies.
 
     Same for all bands
 
@@ -136,9 +141,12 @@ class FixedGalaxyCatalog(object):
         magnitude of 17 or fainter for this kind of galaxy.
     hlr: float
         Half light radius of all objects
+    morph: str
+        Galaxy morphology, 'exp', 'dev' or 'bdk'.  Default 'exp'
     """
-    def __init__(self, *, rng, coadd_dim, buff, layout, mag, hlr):
-        self.gal_type = 'exp'
+    def __init__(self, *, rng, coadd_dim, buff, layout, mag, hlr, morph='exp'):
+        self.gal_type = 'fixed'
+        self.morph = morph
         self.mag = mag
         self.hlr = hlr
         self.rng = rng
@@ -195,10 +203,95 @@ class FixedGalaxyCatalog(object):
         galsim.GSObject
         """
 
-        return galsim.Exponential(
-            half_light_radius=self.hlr,
-            flux=flux,
-        )
+        if self.morph == 'exp':
+            gal = galsim.Exponential(
+                half_light_radius=self.hlr,
+                flux=flux,
+            )
+        elif self.morph == 'dev':
+            gal = galsim.DeVaucouleurs(
+                half_light_radius=self.hlr,
+                flux=flux,
+            )
+        elif self.morph == 'bdk':
+            gal = _generate_bdk(
+                rng=self.rng,
+                hlr=self.hlr,
+                flux=flux,
+            )
+        else:
+            raise ValueError(f"bad gal type '{self.morph}'")
+
+        return gal
+
+
+def _generate_bdk(rng, hlr, flux):
+    # knots_hlr = 0.5 * hlr
+    knots_hlr = 1.0 * hlr
+
+    g1disk, g2disk = _generate_g1g2(rng)
+    bulge_angle_offset = rng.uniform(low=-25, high=25)
+    bulge_angle_offset = np.deg2rad(bulge_angle_offset)
+
+    g1bulge, g2bulge = _rotate_shape(g1disk, g2disk, bulge_angle_offset)
+
+    bulge_frac = rng.uniform(low=0.0, high=1.0)
+    all_disk_frac = (1.0 - bulge_frac)
+
+    knots_sub_frac = rng.uniform(low=0.0, high=0.2)
+
+    disk_frac = (1 - knots_sub_frac) * all_disk_frac
+    knots_frac = knots_sub_frac * all_disk_frac
+
+    bulge = galsim.DeVaucouleurs(
+        half_light_radius=hlr,
+        flux=flux * bulge_frac,
+    ).shear(
+        g1=g1bulge, g2=g2bulge,
+    )
+
+    disk = galsim.Exponential(
+        half_light_radius=hlr,
+        flux=flux * disk_frac,
+    ).shear(
+        g1=g1disk, g2=g2disk,
+    )
+    # knots_profile = galsim.Exponential(
+    #     half_light_radius=hlr,
+    #     flux=flux * knots_frac,
+    # ).shear(
+    #     g1=g1disk, g2=g2disk,
+    # )
+    knots = galsim.RandomKnots(
+        npoints=50,
+        half_light_radius=knots_hlr,
+        flux=flux * knots_frac,
+    ).shear(
+        g1=g1disk, g2=g2disk,
+    )
+
+    return galsim.Add(bulge, disk, knots)
+
+
+def _generate_g1g2(rng, std=0.2):
+    while True:
+        g1, g2 = rng.normal(scale=std, size=2)
+        g = np.sqrt(g1**2 + g2**2)
+        if abs(g) < 0.9999:
+            break
+
+    return g1, g2
+
+
+def _rotate_shape(g1, g2, theta_radians):
+    twotheta = 2.0 * theta_radians
+
+    cos2angle = np.cos(twotheta)
+    sin2angle = np.sin(twotheta)
+    g1rot = g1 * cos2angle + g2 * sin2angle
+    g2rot = -g1 * sin2angle + g2 * cos2angle
+
+    return g1rot, g2rot
 
 
 class FixedPairGalaxyCatalog(FixedGalaxyCatalog):
@@ -224,7 +317,7 @@ class FixedPairGalaxyCatalog(FixedGalaxyCatalog):
         Separation of pair in arcsec
     """
     def __init__(self, *, rng, mag, hlr, sep):
-        self.gal_type = 'exp'
+        self.gal_type = 'fixed'
         self.mag = mag
         self.hlr = hlr
         self.rng = rng
