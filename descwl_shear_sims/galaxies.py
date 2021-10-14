@@ -149,7 +149,7 @@ class FixedGalaxyCatalog(object):
         self.morph = morph
         self.mag = mag
         self.hlr = hlr
-        self.rng = rng
+        self.morph_seed = rng.randint(0, 2**31)
 
         self.shifts_array = get_shifts(
             rng=rng,
@@ -175,6 +175,8 @@ class FixedGalaxyCatalog(object):
         -------
         [galsim objects], [shifts]
         """
+
+        self._morph_rng = np.random.RandomState(self.morph_seed)
 
         flux = survey.get_flux(self.mag)
 
@@ -215,7 +217,7 @@ class FixedGalaxyCatalog(object):
             )
         elif self.morph == 'bdk':
             gal = _generate_bdk(
-                rng=self.rng,
+                rng=self._morph_rng,
                 hlr=self.hlr,
                 flux=flux,
             )
