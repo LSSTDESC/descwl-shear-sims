@@ -215,6 +215,12 @@ class FixedGalaxyCatalog(object):
                 half_light_radius=self.hlr,
                 flux=flux,
             )
+        elif self.morph == 'bd':
+            gal = _generate_bd(
+                rng=self._morph_rng,
+                hlr=self.hlr,
+                flux=flux,
+            )
         elif self.morph == 'bdk':
             gal = _generate_bdk(
                 rng=self._morph_rng,
@@ -273,6 +279,34 @@ def _generate_bdk(rng, hlr, flux):
     )
 
     return galsim.Add(bulge, disk, knots)
+
+
+def _generate_bd(rng, hlr, flux):
+
+    g1disk, g2disk = _generate_g1g2(rng)
+    bulge_angle_offset = rng.uniform(low=-25, high=25)
+    bulge_angle_offset = np.deg2rad(bulge_angle_offset)
+
+    g1bulge, g2bulge = _rotate_shape(g1disk, g2disk, bulge_angle_offset)
+
+    bulge_frac = rng.uniform(low=0.0, high=1.0)
+    disk_frac = (1.0 - bulge_frac)
+
+    bulge = galsim.DeVaucouleurs(
+        half_light_radius=hlr,
+        flux=flux * bulge_frac,
+    ).shear(
+        g1=g1bulge, g2=g2bulge,
+    )
+
+    disk = galsim.Exponential(
+        half_light_radius=hlr,
+        flux=flux * disk_frac,
+    ).shear(
+        g1=g1disk, g2=g2disk,
+    )
+
+    return galsim.Add(bulge, disk)
 
 
 def _generate_g1g2(rng, std=0.2):
