@@ -39,7 +39,7 @@ def _make_lsst_sim(*, seed, g1, g2, layout):
         coadd_dim=sim.sim.DEFAULT_SIM_CONFIG["coadd_dim"],
         buff=sim.sim.DEFAULT_SIM_CONFIG["buff"],
         layout=layout,
-        gal_type='exp',
+        gal_type='fixed',
     )
 
     psf = sim.psfs.make_fixed_psf(psf_type='gauss')

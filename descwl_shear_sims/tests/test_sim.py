@@ -29,7 +29,7 @@ def test_sim_smoke(dither, rotate):
     bands = ["i"]
     galaxy_catalog = make_galaxy_catalog(
         rng=rng,
-        gal_type="exp",
+        gal_type="fixed",
         coadd_dim=coadd_dim,
         buff=30,
         layout="grid",
@@ -79,7 +79,7 @@ def test_sim_se_dim():
     bands = ["i"]
     galaxy_catalog = make_galaxy_catalog(
         rng=rng,
-        gal_type="exp",
+        gal_type="fixed",
         coadd_dim=coadd_dim,
         buff=30,
         layout="grid",
@@ -116,7 +116,7 @@ def test_sim_exp_mag(rotate):
 
     galaxy_catalog = make_galaxy_catalog(
         rng=rng,
-        gal_type="exp",
+        gal_type="fixed",
         coadd_dim=coadd_dim,
         buff=30,
         layout="grid",
@@ -155,7 +155,7 @@ def test_sim_psf_type(psf_type):
     coadd_dim = 101
     galaxy_catalog = make_galaxy_catalog(
         rng=rng,
-        gal_type="exp",
+        gal_type="fixed",
         coadd_dim=coadd_dim,
         buff=5,
         layout="grid",
@@ -191,7 +191,7 @@ def test_sim_epochs(epochs_per_band):
 
     galaxy_catalog = make_galaxy_catalog(
         rng=rng,
-        gal_type="exp",
+        gal_type="fixed",
         coadd_dim=coadd_dim,
         buff=10,
         layout="grid",
@@ -224,7 +224,7 @@ def test_sim_layout(layout):
 
     galaxy_catalog = make_galaxy_catalog(
         rng=rng,
-        gal_type="exp",
+        gal_type="fixed",
         coadd_dim=coadd_dim,
         buff=30,
         layout=layout,
@@ -255,7 +255,7 @@ def test_sim_defects(cosmic_rays, bad_columns):
 
     galaxy_catalog = make_galaxy_catalog(
         rng=rng,
-        gal_type="exp",
+        gal_type="fixed",
         coadd_dim=coadd_dim,
         layout="grid",
         buff=30,
@@ -389,7 +389,7 @@ def test_sim_draw_method_smoke(draw_method):
 
     galaxy_catalog = make_galaxy_catalog(
         rng=rng,
-        gal_type="exp",
+        gal_type="fixed",
         coadd_dim=coadd_dim,
         buff=30,
         layout='grid',

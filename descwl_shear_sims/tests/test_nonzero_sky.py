@@ -23,7 +23,7 @@ def test_nonzero_sky():
     for i in range(ntrial):
         galaxy_catalog = make_galaxy_catalog(
             rng=rng,
-            gal_type='exp',
+            gal_type='fixed',
             coadd_dim=coadd_dim,
             buff=0,
             layout='random',

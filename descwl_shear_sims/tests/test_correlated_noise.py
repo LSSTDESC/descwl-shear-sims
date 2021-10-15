@@ -44,7 +44,7 @@ def test_correlated_noise():
         coadd_dim = 301
         galaxy_catalog = make_galaxy_catalog(
             rng=rng,
-            gal_type='exp',
+            gal_type='fixed',
             coadd_dim=coadd_dim,
             buff=0,
             layout="grid",
