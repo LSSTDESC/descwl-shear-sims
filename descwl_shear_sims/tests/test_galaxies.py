@@ -16,7 +16,8 @@ from descwl_shear_sims.sim import make_sim
 @pytest.mark.parametrize('morph', ('exp', 'dev', 'bd', 'bdk'))
 def test_galaxies_smoke(layout, gal_type, morph):
     """
-    test sim can run
+    test sim can run and is repeatable.  This is relevant as we now support
+    varying galaxies
     """
     seed = 74321
 
