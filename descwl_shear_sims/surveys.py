@@ -13,7 +13,7 @@ def get_survey(*, gal_type, band):
     Parameters
     ----------
     gal_type: string
-        'wldeblend' or 'fixed'
+        'fixed', 'varying', or 'wldeblend'
     band: string
         e.g. 'r'
 
@@ -24,7 +24,7 @@ def get_survey(*, gal_type, band):
     """
     if gal_type == 'wldeblend':
         survey = WLDeblendSurvey(band=band)
-    elif gal_type == 'fixed':
+    elif gal_type in ['fixed', 'varying']:
         survey = BasicSurvey(band=band)
     else:
         raise ValueError("bad gal_type: '%s'" % gal_type)

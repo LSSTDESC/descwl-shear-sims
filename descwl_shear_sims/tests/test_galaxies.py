@@ -1,13 +1,20 @@
 import pytest
 import numpy as np
-from ..galaxies import make_galaxy_catalog
-from ..psfs import make_fixed_psf
+from descwl_shear_sims.galaxies import (
+    make_galaxy_catalog,
+    FixedGalaxyCatalog,
+    GalaxyCatalog,
+    FixedPairGalaxyCatalog,
+    PairGalaxyCatalog,
+)
+from descwl_shear_sims.psfs import make_fixed_psf
+from descwl_shear_sims.sim import make_sim
 
-from ..sim import make_sim
 
-
+@pytest.mark.parametrize('layout', ('pair', 'random'))
+@pytest.mark.parametrize('gal_type', ('fixed', 'varying'))
 @pytest.mark.parametrize('morph', ('exp', 'dev', 'bd', 'bdk'))
-def test_pairs_smoke(morph):
+def test_pairs_smoke(layout, gal_type, morph):
     """
     test sim can run
     """
@@ -32,11 +39,21 @@ def test_pairs_smoke(morph):
             rng=rng,
             coadd_dim=coadd_dim,
             buff=buff,
-            gal_type='fixed',
+            gal_type=gal_type,
             gal_config=gal_config,
-            layout='random',
+            layout=layout,
             sep=sep,
         )
+        if layout == 'pair':
+            if gal_type == 'fixed':
+                assert isinstance(galaxy_catalog, FixedPairGalaxyCatalog)
+            elif gal_type == 'varying':
+                assert isinstance(galaxy_catalog, PairGalaxyCatalog)
+        else:
+            if gal_type == 'fixed':
+                assert isinstance(galaxy_catalog, FixedGalaxyCatalog)
+            elif gal_type == 'varying':
+                assert isinstance(galaxy_catalog, GalaxyCatalog)
 
         psf = make_fixed_psf(psf_type='gauss')
         sim_data = make_sim(
