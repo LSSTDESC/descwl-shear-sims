@@ -54,7 +54,7 @@ def make_galaxy_catalog(
             rng=rng,
             mag=gal_config['mag'],
             hlr=gal_config['hlr'],
-            type=gal_config['type'],
+            morph=gal_config['morph'],
             sep=sep,
         )
     else:
@@ -142,7 +142,7 @@ class FixedGalaxyCatalog(object):
     hlr: float
         Half light radius of all objects
     morph: str
-        Galaxy morphology, 'exp', 'dev' or 'bdk'.  Default 'exp'
+        Galaxy morphology, 'exp', 'dev' or 'bd', 'bdk'.  Default 'exp'
     """
     def __init__(self, *, rng, coadd_dim, buff, layout, mag, hlr, morph='exp'):
         self.gal_type = 'fixed'
@@ -150,6 +150,7 @@ class FixedGalaxyCatalog(object):
         self.mag = mag
         self.hlr = hlr
         self.morph_seed = rng.randint(0, 2**31)
+        self.gs_morph_seed = rng.randint(0, 2**31)
 
         self.shifts_array = get_shifts(
             rng=rng,
@@ -177,6 +178,7 @@ class FixedGalaxyCatalog(object):
         """
 
         self._morph_rng = np.random.RandomState(self.morph_seed)
+        self._gs_morph_rng = galsim.BaseDeviate(seed=self.gs_morph_seed)
 
         flux = survey.get_flux(self.mag)
 
@@ -224,6 +226,7 @@ class FixedGalaxyCatalog(object):
         elif self.morph == 'bdk':
             gal = _generate_bdk(
                 rng=self._morph_rng,
+                gsrng=self._gs_morph_rng,
                 hlr=self.hlr,
                 flux=flux,
             )
@@ -233,61 +236,22 @@ class FixedGalaxyCatalog(object):
         return gal
 
 
-def _generate_bdk(rng, hlr, flux):
-    # knots_hlr = 0.5 * hlr
-    knots_hlr = 1.0 * hlr
+def _generate_bd(
+    rng, hlr, flux,
+    max_bulge_shift_frac=0.1,  # fraction of hlr
+    max_bulge_rot=np.pi/4,
+):
+
+    bulge_shift = rng.uniform(low=0.0, high=max_bulge_shift_frac*hlr)
+    bulge_offangle = rng.uniform(low=0, high=2*np.pi)
+    bulge_shiftx = bulge_shift * np.cos(bulge_offangle)
+    bulge_shifty = bulge_shift * np.sin(bulge_offangle)
+
+    bulge_rot = rng.uniform(low=-max_bulge_rot, high=max_bulge_rot/4)
 
     g1disk, g2disk = _generate_g1g2(rng)
-    bulge_angle_offset = rng.uniform(low=-25, high=25)
-    bulge_angle_offset = np.deg2rad(bulge_angle_offset)
 
-    g1bulge, g2bulge = _rotate_shape(g1disk, g2disk, bulge_angle_offset)
-
-    bulge_frac = rng.uniform(low=0.0, high=1.0)
-    all_disk_frac = (1.0 - bulge_frac)
-
-    knots_sub_frac = rng.uniform(low=0.0, high=0.2)
-
-    disk_frac = (1 - knots_sub_frac) * all_disk_frac
-    knots_frac = knots_sub_frac * all_disk_frac
-
-    bulge = galsim.DeVaucouleurs(
-        half_light_radius=hlr,
-        flux=flux * bulge_frac,
-    ).shear(
-        g1=g1bulge, g2=g2bulge,
-    )
-
-    disk = galsim.Exponential(
-        half_light_radius=hlr,
-        flux=flux * disk_frac,
-    ).shear(
-        g1=g1disk, g2=g2disk,
-    )
-    # knots_profile = galsim.Exponential(
-    #     half_light_radius=hlr,
-    #     flux=flux * knots_frac,
-    # ).shear(
-    #     g1=g1disk, g2=g2disk,
-    # )
-    knots = galsim.RandomKnots(
-        npoints=50,
-        half_light_radius=knots_hlr,
-        flux=flux * knots_frac,
-    ).shear(
-        g1=g1disk, g2=g2disk,
-    )
-
-    return galsim.Add(bulge, disk, knots)
-
-
-def _generate_bd(rng, hlr, flux):
-
-    g1disk, g2disk = _generate_g1g2(rng)
-    bulge_angle_offset = rng.uniform(low=-25, high=25)
-    bulge_angle_offset = np.deg2rad(bulge_angle_offset)
-
-    g1bulge, g2bulge = _rotate_shape(g1disk, g2disk, bulge_angle_offset)
+    g1bulge, g2bulge = _rotate_shape(g1disk, g2disk, bulge_rot)
 
     bulge_frac = rng.uniform(low=0.0, high=1.0)
     disk_frac = (1.0 - bulge_frac)
@@ -297,6 +261,8 @@ def _generate_bd(rng, hlr, flux):
         flux=flux * bulge_frac,
     ).shear(
         g1=g1bulge, g2=g2bulge,
+    ).shift(
+        bulge_shiftx, bulge_shifty,
     )
 
     disk = galsim.Exponential(
@@ -307,6 +273,60 @@ def _generate_bd(rng, hlr, flux):
     )
 
     return galsim.Add(bulge, disk)
+
+
+def _generate_bdk(
+    rng, gsrng, hlr, flux,
+    knots_hlr_frac=0.25,
+    max_knots_disk_frac=0.1,  # fraction of disk light
+    max_bulge_shift_frac=0.1,  # fraction of hlr
+    max_bulge_rot=np.pi/4,
+):
+    knots_hlr = knots_hlr_frac * hlr
+    knots_sub_frac = rng.uniform(low=0.0, high=max_knots_disk_frac)
+
+    bulge_shift = rng.uniform(low=0.0, high=max_bulge_shift_frac*hlr)
+    bulge_offangle = rng.uniform(low=0, high=2*np.pi)
+    bulge_shiftx = bulge_shift * np.cos(bulge_offangle)
+    bulge_shifty = bulge_shift * np.sin(bulge_offangle)
+
+    bulge_rot = rng.uniform(low=-max_bulge_rot, high=max_bulge_rot/4)
+
+    g1disk, g2disk = _generate_g1g2(rng)
+
+    g1bulge, g2bulge = _rotate_shape(g1disk, g2disk, bulge_rot)
+
+    bulge_frac = rng.uniform(low=0.0, high=1.0)
+    all_disk_frac = (1.0 - bulge_frac)
+
+    disk_frac = (1 - knots_sub_frac) * all_disk_frac
+    knots_frac = knots_sub_frac * all_disk_frac
+
+    bulge = galsim.DeVaucouleurs(
+        half_light_radius=hlr,
+        flux=flux * bulge_frac,
+    ).shear(
+        g1=g1bulge, g2=g2bulge,
+    ).shift(
+        bulge_shiftx, bulge_shifty,
+    )
+
+    disk = galsim.Exponential(
+        half_light_radius=hlr,
+        flux=flux * disk_frac,
+    ).shear(
+        g1=g1disk, g2=g2disk,
+    )
+    knots = galsim.RandomKnots(
+        npoints=10,
+        half_light_radius=knots_hlr,
+        flux=flux * knots_frac,
+        rng=gsrng,
+    ).shear(
+        g1=g1disk, g2=g2disk,
+    )
+
+    return galsim.Add(bulge, disk, knots)
 
 
 def _generate_g1g2(rng, std=0.2):
@@ -351,12 +371,18 @@ class FixedPairGalaxyCatalog(FixedGalaxyCatalog):
         Half light radius of all objects
     sep: float
         Separation of pair in arcsec
+    morph: str
+        Galaxy morphology, 'exp', 'dev' or 'bd', 'bdk'.  Default 'exp'
     """
-    def __init__(self, *, rng, mag, hlr, sep):
+    def __init__(self, *, rng, mag, hlr, sep, morph='exp'):
         self.gal_type = 'fixed'
+        self.morph = morph
         self.mag = mag
         self.hlr = hlr
         self.rng = rng
+
+        self.morph_seed = rng.randint(0, 2**31)
+        self.gs_morph_seed = rng.randint(0, 2**31)
 
         self.shifts_array = get_pair_shifts(
             rng=rng,
