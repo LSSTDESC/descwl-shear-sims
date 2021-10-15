@@ -14,7 +14,7 @@ from descwl_shear_sims.sim import make_sim
 @pytest.mark.parametrize('layout', ('pair', 'random'))
 @pytest.mark.parametrize('gal_type', ('fixed', 'varying'))
 @pytest.mark.parametrize('morph', ('exp', 'dev', 'bd', 'bdk'))
-def test_pairs_smoke(layout, gal_type, morph):
+def test_galaxies_smoke(layout, gal_type, morph):
     """
     test sim can run
     """
