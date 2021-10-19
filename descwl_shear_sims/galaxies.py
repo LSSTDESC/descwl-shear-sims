@@ -53,7 +53,7 @@ def make_galaxy_catalog(
             )
         gal_config = get_fixed_gal_config(config=gal_config)
 
-        if gal_type == 'fixed':
+        if gal_type == ['fixed', 'exp']:  # TODO remove
             cls = FixedPairGalaxyCatalog
         else:
             cls = PairGalaxyCatalog
@@ -82,7 +82,7 @@ def make_galaxy_catalog(
                 coadd_dim=coadd_dim,
                 buff=buff,
             )
-        elif gal_type in ['fixed', 'varying']:
+        elif gal_type in ['fixed', 'varying', 'exp']:  # TODO remove exp
             if layout is None:
                 raise ValueError("send layout= for gal_type '%s'" % gal_type)
 
@@ -323,7 +323,7 @@ class GalaxyCatalog(FixedGalaxyCatalog):
                 rng=self._morph_rng, gsrng=self._gs_morph_rng,
             )
         else:
-            raise ValueError(f"bad gal type '{self.morph}'")
+            raise ValueError(f"bad morph '{self.morph}'")
 
         return gal
 
