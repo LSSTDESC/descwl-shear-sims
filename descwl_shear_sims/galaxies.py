@@ -53,7 +53,7 @@ def make_galaxy_catalog(
             )
         gal_config = get_fixed_gal_config(config=gal_config)
 
-        if gal_type == ['fixed', 'exp']:  # TODO remove
+        if gal_type in ['fixed', 'exp']:  # TODO remove exp
             cls = FixedPairGalaxyCatalog
         else:
             cls = PairGalaxyCatalog
