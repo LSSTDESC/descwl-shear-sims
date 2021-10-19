@@ -30,6 +30,12 @@ def test_fixed_dmpsf_smoke():
     msim = psf.computeKernelImage(pos)
     assert msim.array.shape == (psf_dim, psf_dim)
 
+    bbox = msim.getBBox()
+    off = -(psf_dim//2)
+
+    assert bbox.beginX == off
+    assert bbox.beginY == off
+
     gsim = gspsf.drawImage(
         nx=psf_dim, ny=psf_dim,
         wcs=wcs.local(image_pos=gs_pos),
@@ -64,6 +70,12 @@ def test_fixed_dmpsf_offset_smoke():
         # this one is shifted
         msim = psf.computeImage(pos)
         assert msim.array.shape == (psf_dim, psf_dim)
+        ix = int(np.floor(x + 0.5))
+        iy = int(np.floor(y + 0.5))
+        bbox = msim.getBBox()
+        off = -(psf_dim//2)
+        assert bbox.beginX == (ix + off)
+        assert bbox.beginY == (iy + off)
 
         offset_x = x - int(x + 0.5)
         offset_y = y - int(y + 0.5)
