@@ -1,3 +1,4 @@
+import numpy as np
 import galsim
 import lsst.afw.image as afw_image
 import lsst.geom as geom
@@ -76,7 +77,7 @@ class FixedDMPSF(ImagePsf):
 
         offset = (offset_x, offset_y)
 
-        return self._make_image(image_pos, offset=offset)
+        return self._make_image(image_pos, is_kernel=False, offset=offset)
 
     def computeKernelImage(self, image_pos, color=None):  # noqa
         """
@@ -107,7 +108,7 @@ class FixedDMPSF(ImagePsf):
             A color, which is ignored
         """
 
-        return self._make_image(image_pos)
+        return self._make_image(image_pos, is_kernel=True)
 
     def _get_gspsf(self, image_pos):
         """
@@ -121,7 +122,7 @@ class FixedDMPSF(ImagePsf):
         """
         return self._gspsf
 
-    def _make_image(self, image_pos, offset=None):
+    def _make_image(self, image_pos, is_kernel, offset=None):
         """
         make the image, including a possible offset
 
@@ -132,6 +133,7 @@ class FixedDMPSF(ImagePsf):
         offset: tuple, optional
             The (x, y) offset, default None
         """
+        from lsst.geom import Point2I
         dim = self._psf_dim
 
         x = image_pos.getX()
@@ -147,9 +149,18 @@ class FixedDMPSF(ImagePsf):
             wcs=self._wcs.local(image_pos=gs_pos),
         )
 
-        origin = -(dim//2)
-        dims = (dim, )*2
-        bbox = geom.Box2I(geom.Point2I(origin), geom.Extent2I(dims))
+        dims = [dim]*2
+
+        off = -(dim // 2)
+        if is_kernel:
+            # Point2I(x) is same as Point2I(x, x)
+            corner = Point2I(off)
+        else:
+            ix = int(np.floor(x + 0.5))
+            iy = int(np.floor(y + 0.5))
+            corner = Point2I(ix + off, iy + off)
+
+        bbox = geom.Box2I(corner, geom.Extent2I(dims))
 
         image = gsimage.array.astype('f8')
         aimage = afw_image.ImageD(bbox)
