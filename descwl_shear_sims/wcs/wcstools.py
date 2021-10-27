@@ -39,7 +39,6 @@ def make_wcs(*, scale, image_origin, world_origin, theta=None):
         affine=galsim.AffineTransform(
             mat[0, 0], mat[0, 1], mat[1, 0], mat[1, 1],
             origin=image_origin,
-            world_origin=galsim.PositionD(0, 0),
         ),
         world_origin=world_origin,
         units=galsim.arcsec,
