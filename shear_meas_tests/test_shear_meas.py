@@ -7,7 +7,7 @@ import joblib
 
 import pytest
 
-import metadetect.lsst_metadetect as lsst_metadetect
+import metadetect.lsst.metadetect as lsst_metadetect
 import descwl_shear_sims as sim
 from descwl_coadd.coadd import make_coadd_obs
 
