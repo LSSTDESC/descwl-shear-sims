@@ -1,6 +1,7 @@
 import galsim
 import coord
 import lsst.geom as geom
+from lsst.geom import Point2I, Extent2I, Point2D, Box2I
 from lsst.afw.geom import makeSkyWcs
 from lsst.daf.base import PropertyList
 from .wcstools import make_wcs
@@ -23,7 +24,8 @@ def make_dm_wcs(galsim_wcs):
 
     if galsim_wcs.wcs_type == 'TAN':
         crpix = galsim_wcs.crpix
-        stack_crpix = geom.Point2D(crpix[0], crpix[1])
+        # DM uses 0 offset, galsim uses FITS 1 offset
+        stack_crpix = Point2D(crpix[0]-1, crpix[1]-1)
         cd_matrix = galsim_wcs.cd
 
         crval = geom.SpherePoint(
@@ -37,8 +39,10 @@ def make_dm_wcs(galsim_wcs):
             cdMatrix=cd_matrix,
         )
     elif galsim_wcs.wcs_type == 'TAN-SIP':
-        import galsim
 
+        # No currently supported
+        # this works with the 1-offset assumption from galsim
+        #
         # this is not used if the lower bounds are 1, but the extra keywords
         # GS_{X,Y}MIN are set which we will remove below
 
@@ -77,21 +81,47 @@ def make_coadd_dm_wcs(coadd_dim):
 
     # make a larger coadd region
     big_coadd_dim = 3000 + coadd_dim
-    big_coadd_bbox = geom.Box2I(
-        geom.IntervalI(min=0, max=big_coadd_dim-1),
-        geom.IntervalI(min=0, max=big_coadd_dim-1),
-    )
+    big_coadd_bbox = Box2I(Point2I(0), Extent2I(big_coadd_dim))
 
     # make this coadd a subset of larger coadd
     xoff = 1000
     yoff = 450
-    coadd_bbox = geom.Box2I(
-        geom.IntervalI(min=xoff + 0, max=xoff + coadd_dim-1),
-        geom.IntervalI(min=yoff + 0, max=yoff + coadd_dim-1),
-    )
+    coadd_bbox = Box2I(Point2I(xoff, yoff), Extent2I(coadd_dim))
 
     # center the coadd wcs in the bigger coord system
     coadd_origin = big_coadd_bbox.getCenter()
+
+    gs_coadd_origin = galsim.PositionD(
+        x=coadd_origin.x,
+        y=coadd_origin.y,
+    )
+    coadd_wcs = make_dm_wcs(
+        make_wcs(
+            scale=SCALE,
+            image_origin=gs_coadd_origin,
+            world_origin=WORLD_ORIGIN,
+        )
+    )
+    return coadd_wcs, coadd_bbox
+
+
+def make_coadd_dm_wcs_simple(coadd_dim):
+    """
+    make a coadd wcs, using the default world origin.
+
+    Parameters
+    ----------
+    coadd_origin: int
+        Origin in pixels of the coadd, can be within a larger
+        pixel grid e.g. tract surrounding the patch
+
+    Returns
+    --------
+    A galsim wcs, see make_wcs for return type
+    """
+
+    coadd_bbox = Box2I(Point2I(0), Extent2I(coadd_dim))
+    coadd_origin = coadd_bbox.getCenter()
 
     gs_coadd_origin = galsim.PositionD(
         x=coadd_origin.x,
