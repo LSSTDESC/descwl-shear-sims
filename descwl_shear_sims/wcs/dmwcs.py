@@ -41,7 +41,7 @@ def make_dm_wcs(galsim_wcs):
     elif galsim_wcs.wcs_type == 'TAN-SIP':
 
         # No currently supported
-        # this works with the 1-offset assumption from calsim
+        # this works with the 1-offset assumption from galsim
         #
         # this is not used if the lower bounds are 1, but the extra keywords
         # GS_{X,Y}MIN are set which we will remove below
