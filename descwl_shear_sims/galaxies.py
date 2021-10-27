@@ -219,7 +219,7 @@ class FixedGalaxyCatalog(object):
         if self.morph == 'exp':
             gal = _generate_exp(hlr=self.hlr, flux=flux)
         elif self.morph == 'dev':
-            gal = _generate_exp(hlr=self.hlr, flux=flux)
+            gal = _generate_dev(hlr=self.hlr, flux=flux)
         elif self.morph == 'bd':
             gal = _generate_bd(hlr=self.hlr, flux=flux)
         elif self.morph == 'bdk':
@@ -308,7 +308,7 @@ class GalaxyCatalog(FixedGalaxyCatalog):
                 hlr=self.hlr, flux=flux, vary=True, rng=self._morph_rng,
             )
         elif self.morph == 'dev':
-            gal = _generate_exp(
+            gal = _generate_dev(
                 hlr=self.hlr, flux=flux, vary=True, rng=self._morph_rng,
             )
         elif self.morph == 'bd':
