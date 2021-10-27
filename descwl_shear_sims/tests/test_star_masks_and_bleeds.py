@@ -66,7 +66,7 @@ def test_star_mask_in_sim():
     for i in range(1000):
         galaxy_catalog = make_galaxy_catalog(
             rng=rng,
-            gal_type='exp',
+            gal_type='fixed',
             coadd_dim=coadd_dim,
             buff=buff,
             layout='random',
@@ -131,7 +131,7 @@ def test_star_mask_in_sim_repeatable():
         for i in range(1000):
             galaxy_catalog = make_galaxy_catalog(
                 rng=rng,
-                gal_type='exp',
+                gal_type='fixed',
                 coadd_dim=coadd_dim,
                 buff=buff,
                 layout='random',

@@ -27,7 +27,7 @@ def test_pairs_smoke(dither, rotate):
 
     galaxy_catalog = make_galaxy_catalog(
         rng=rng,
-        gal_type='exp',
+        gal_type='fixed',
         layout='pair',
         sep=sep,
     )

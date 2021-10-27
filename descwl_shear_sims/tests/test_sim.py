@@ -3,12 +3,13 @@ import pytest
 import numpy as np
 import lsst.afw.image as afw_image
 import lsst.afw.geom as afw_geom
-from ..galaxies import make_galaxy_catalog, DEFAULT_FIXED_GAL_CONFIG
-from ..stars import StarCatalog
-from ..psfs import make_fixed_psf, make_ps_psf
 
-from ..sim import make_sim, get_se_dim
-from ..constants import ZERO_POINT
+from descwl_shear_sims.galaxies import make_galaxy_catalog, DEFAULT_FIXED_GAL_CONFIG
+from descwl_shear_sims.stars import StarCatalog
+from descwl_shear_sims.psfs import make_fixed_psf, make_ps_psf
+
+from descwl_shear_sims.sim import make_sim, get_se_dim
+from descwl_shear_sims.constants import ZERO_POINT
 
 
 @pytest.mark.parametrize('dither,rotate', [
@@ -29,7 +30,7 @@ def test_sim_smoke(dither, rotate):
     bands = ["i"]
     galaxy_catalog = make_galaxy_catalog(
         rng=rng,
-        gal_type="exp",
+        gal_type="fixed",
         coadd_dim=coadd_dim,
         buff=30,
         layout="grid",
@@ -79,7 +80,7 @@ def test_sim_se_dim():
     bands = ["i"]
     galaxy_catalog = make_galaxy_catalog(
         rng=rng,
-        gal_type="exp",
+        gal_type="fixed",
         coadd_dim=coadd_dim,
         buff=30,
         layout="grid",
@@ -103,47 +104,69 @@ def test_sim_se_dim():
 
 
 @pytest.mark.parametrize("rotate", [False, True])
-def test_sim_exp_mag(rotate):
+def test_sim_exp_mag(rotate, show=False):
     """
     test we get the right mag.  Also test we get small flux when we rotate and
     there is nothing at the sub image location we choose
+
+    This requires getting lucky with the rotation, so try a few
     """
 
+    ntrial = 10
+
     bands = ["i"]
-    seed = 8123
+    seed = 55
     coadd_dim = 301
     rng = np.random.RandomState(seed)
 
-    galaxy_catalog = make_galaxy_catalog(
-        rng=rng,
-        gal_type="exp",
-        coadd_dim=coadd_dim,
-        buff=30,
-        layout="grid",
-    )
+    ok = False
+    for i in range(ntrial):
+        galaxy_catalog = make_galaxy_catalog(
+            rng=rng,
+            gal_type="fixed",
+            coadd_dim=coadd_dim,
+            buff=30,
+            layout="grid",
+        )
 
-    psf = make_fixed_psf(psf_type="gauss")
-    sim_data = make_sim(
-        rng=rng,
-        galaxy_catalog=galaxy_catalog,
-        coadd_dim=coadd_dim,
-        g1=0.02,
-        g2=0.00,
-        psf=psf,
-        bands=bands,
-        rotate=rotate,
-    )
+        psf = make_fixed_psf(psf_type="gauss")
+        sim_data = make_sim(
+            rng=rng,
+            galaxy_catalog=galaxy_catalog,
+            coadd_dim=coadd_dim,
+            g1=0.02,
+            g2=0.00,
+            psf=psf,
+            bands=bands,
+            rotate=rotate,
+        )
 
-    image = sim_data["band_data"]["i"][0].image.array
-    subim_sum = image[105:130, 100:125].sum()
+        image = sim_data["band_data"]["i"][0].image.array
+        sub_image = image[105:130, 100:125]
+        subim_sum = sub_image.sum()
+
+        if show:
+            import matplotlib.pyplot as mplt
+            fig, ax = mplt.subplots(nrows=1, ncols=2)
+            ax[0].imshow(image)
+            ax[1].imshow(sub_image)
+            mplt.show()
+
+        if rotate:
+            # we expect nothing there
+            if abs(subim_sum) < 30:
+                ok = True
+                break
+
+        else:
+            # we expect something there with about the right magnitude
+            mag = ZERO_POINT - 2.5*np.log10(subim_sum)
+            assert abs(mag - DEFAULT_FIXED_GAL_CONFIG['mag']) < 0.005
+
+            break
 
     if rotate:
-        # we expect nothing there
-        assert abs(subim_sum) < 30
-    else:
-        # we expect something there with about the right magnitude
-        mag = ZERO_POINT - 2.5*np.log10(subim_sum)
-        assert abs(mag - DEFAULT_FIXED_GAL_CONFIG['mag']) < 0.005
+        assert ok, 'expected at least one to be empty upon rotation'
 
 
 @pytest.mark.parametrize("psf_type", ["gauss", "moffat", "ps"])
@@ -155,7 +178,7 @@ def test_sim_psf_type(psf_type):
     coadd_dim = 101
     galaxy_catalog = make_galaxy_catalog(
         rng=rng,
-        gal_type="exp",
+        gal_type="fixed",
         coadd_dim=coadd_dim,
         buff=5,
         layout="grid",
@@ -191,7 +214,7 @@ def test_sim_epochs(epochs_per_band):
 
     galaxy_catalog = make_galaxy_catalog(
         rng=rng,
-        gal_type="exp",
+        gal_type="fixed",
         coadd_dim=coadd_dim,
         buff=10,
         layout="grid",
@@ -224,7 +247,7 @@ def test_sim_layout(layout):
 
     galaxy_catalog = make_galaxy_catalog(
         rng=rng,
-        gal_type="exp",
+        gal_type="fixed",
         coadd_dim=coadd_dim,
         buff=30,
         layout=layout,
@@ -255,7 +278,7 @@ def test_sim_defects(cosmic_rays, bad_columns):
 
     galaxy_catalog = make_galaxy_catalog(
         rng=rng,
-        gal_type="exp",
+        gal_type="fixed",
         coadd_dim=coadd_dim,
         layout="grid",
         buff=30,
@@ -389,7 +412,7 @@ def test_sim_draw_method_smoke(draw_method):
 
     galaxy_catalog = make_galaxy_catalog(
         rng=rng,
-        gal_type="exp",
+        gal_type="fixed",
         coadd_dim=coadd_dim,
         buff=30,
         layout='grid',
@@ -409,3 +432,7 @@ def test_sim_draw_method_smoke(draw_method):
         psf=psf,
         **kw
     )
+
+
+if __name__ == '__main__':
+    test_sim_exp_mag(True, show=True)
