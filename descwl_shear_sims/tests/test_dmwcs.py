@@ -54,5 +54,5 @@ def test_dmwcs():
     )
 
     impos = dm_wcs.skyToPixel(skypos)
-    assert np.allclose(impos.x, x)
-    assert np.allclose(impos.y, y)
+    assert np.allclose(impos.x, x - 1)
+    assert np.allclose(impos.y, y - 1)
