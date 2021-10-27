@@ -287,8 +287,6 @@ def make_exp(
         off = rng.uniform(low=-dither_range, high=dither_range, size=2)
         offset = galsim.PositionD(x=off[0], y=off[1])
         se_origin = se_origin + offset
-    else:
-        offset = None
 
     if rotate:
         theta = rng.uniform(low=0, high=2*np.pi)
