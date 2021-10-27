@@ -24,10 +24,14 @@ def test_dmwcs():
 
     x = 8.5
     y = 10.1
-    pos = geom.Point2D(x=x, y=y)
+
+    # galsim uses 1 offset
     gs_pos = galsim.PositionD(x=x, y=y)
+    # DM uses zero offest
+    pos = geom.Point2D(x=x - 1, y=y - 1)
 
     skypos = dm_wcs.pixelToSky(pos)
+
     print(type(skypos))
     print(skypos)
     print(skypos.getRa(), skypos.getDec())
@@ -36,6 +40,7 @@ def test_dmwcs():
     print()
 
     gs_skypos = galsim_wcs.toWorld(gs_pos)
+
     print(type(gs_skypos))
     print(gs_skypos)
     print(gs_skypos.ra, gs_skypos.dec)
