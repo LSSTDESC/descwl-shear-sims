@@ -81,19 +81,19 @@ def test_star_mask_in_sim():
             star_bleeds=True,
         )
 
-        nbright = len(sim_data['bright_info'])
+        nbright = sim_data['bright_info'].size
         if nbright > 0:
             some_were_bright = True
 
         for bi in sim_data['bright_info']:
 
-            assert 'world_pos' in bi
-            assert isinstance(bi['world_pos'], galsim.CelestialCoord)
+            assert 'ra' in bi.dtype.names
+            assert 'dec' in bi.dtype.names
 
-            assert 'radius_pixels' in bi
+            assert 'radius_pixels' in bi.dtype.names
             assert bi['radius_pixels'] >= 0
 
-            assert 'has_bleed' in bi
+            assert 'has_bleed' in bi.dtype.names
 
         exp = sim_data['band_data'][bands[0]][0]
 

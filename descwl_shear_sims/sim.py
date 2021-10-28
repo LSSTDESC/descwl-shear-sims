@@ -1,4 +1,5 @@
 import copy
+import esutil as eu
 import galsim
 import numpy as np
 
@@ -202,6 +203,7 @@ def make_sim(
 
         band_data[band] = bdata_list
 
+    bright_info = eu.numpy_util.combine_arrlist(bright_info)
     return {
         'band_data': band_data,
         'coadd_wcs': coadd_wcs,
@@ -532,10 +534,10 @@ def _draw_bright_objects(
                 threshold=mask_threshold,
             )
 
-            info = {
-                'world_pos': world_pos,
-                'radius_pixels': radius_pixels,
-            }
+            info = get_bright_info_struct()
+            info['ra'] = world_pos.ra / galsim.degrees
+            info['dec'] = world_pos.dec / galsim.degrees
+            info['radius_pixels'] = radius_pixels
 
             if star_bleeds and mag < max_bleed_mag:
                 info['has_bleed'] = True
@@ -654,3 +656,13 @@ def get_convolved_object(obj, psf, image_pos):
         convolved_object = galsim.Convolve(obj, psf_gsobj)
 
     return convolved_object
+
+
+def get_bright_info_struct():
+    dt = [
+        ('ra', 'f8'),
+        ('dec', 'f8'),
+        ('radius_pixels', 'f4'),
+        ('has_bleed', bool),
+    ]
+    return np.zeros(1, dtype=dt)
