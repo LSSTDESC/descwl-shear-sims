@@ -114,9 +114,9 @@ def make_sim(
     -------
     sim_data: dict
         band_data: a dict keyed by band name, holding a list of exp
-        coadd_wcs
-        psf_dims
-        coadd_dims
+        coadd_wcs: lsst.afw.geom.makeSkyWcs
+        psf_dims: (int, int)
+        coadd_dims: (int, int)
         coadd_bbox: lsst.geom.Box2I
         bright_info: structured array
             fields are
