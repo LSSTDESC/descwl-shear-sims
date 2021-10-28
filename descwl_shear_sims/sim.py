@@ -11,7 +11,7 @@ from .surveys import get_survey, rescale_wldeblend_exp
 from .constants import SCALE
 from .artifacts import add_bleed, get_max_mag_with_bleed
 from .masking import (
-    get_bmask,
+    get_bmask_and_set_image,
     calculate_bright_star_mask_radius,
 )
 from .objlists import get_objlist
@@ -350,7 +350,8 @@ def make_exp(
     if sky_n_sigma is not None:
         image.array[:, :] += sky_n_sigma * noise
 
-    bmask = get_bmask(
+    # bad cols will get zeros in the image
+    bmask = get_bmask_and_set_image(
         image=image,
         rng=rng,
         cosmic_rays=cosmic_rays,

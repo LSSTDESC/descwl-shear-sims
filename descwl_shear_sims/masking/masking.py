@@ -2,17 +2,16 @@ import numpy as np
 import lsst.afw.image as afw_image
 import galsim
 from ..artifacts import (
-    generate_edge_mask,
     generate_cosmic_rays,
     generate_bad_columns,
 )
 from ..lsst_bits import get_flagval
 
 
-def get_bmask(*, image, rng, cosmic_rays, bad_columns):
+def get_bmask_and_set_image(*, image, rng, cosmic_rays, bad_columns):
     """
-    get a bitmask for the image, including EDGE and
-    optional cosmic rays and bad columns
+    get a bitmask for the image, including optional cosmic rays and bad columns.
+    If bad columns are set, the image is set to zero in those pixels
 
     Parameters
     ----------
@@ -31,7 +30,7 @@ def get_bmask(*, image, rng, cosmic_rays, bad_columns):
     """
     shape = image.array.shape
 
-    mask = generate_edge_mask(shape=shape, edge_width=5)
+    mask = np.zeros(shape, dtype=np.int64)
 
     if cosmic_rays:
 
@@ -42,9 +41,6 @@ def get_bmask(*, image, rng, cosmic_rays, bad_columns):
             mean_cosmic_rays=1,
         )
         mask[c_mask] |= get_flagval('CR') + get_flagval('SAT')
-
-        # wait to do this later
-        # image.array[cmask] = BAND_SAT_VALS[band]
 
     if bad_columns:
         # bool mask
