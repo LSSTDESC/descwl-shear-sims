@@ -11,7 +11,10 @@ from ..lsst_bits import get_flagval
 def get_bmask_and_set_image(*, image, rng, cosmic_rays, bad_columns):
     """
     get a bitmask for the image, including optional cosmic rays and bad columns.
-    If bad columns are set, the image is set to zero in those pixels
+
+    If bad columns or cosmics are set, the image is set to np.nan in those
+    pixels This is not what happens in the stack but is useful for "poisoning"
+    the pixels so we can ensure the interpolation works properly downstream.
 
     Parameters
     ----------
@@ -40,17 +43,18 @@ def get_bmask_and_set_image(*, image, rng, cosmic_rays, bad_columns):
             rng=rng,
             mean_cosmic_rays=1,
         )
-        mask[c_mask] |= get_flagval('CR') + get_flagval('SAT')
+        mask[c_mask] |= get_flagval('CR')
+        image.array[c_mask] = np.nan
 
     if bad_columns:
         # bool mask
-        bc_msk = generate_bad_columns(
+        bc_mask = generate_bad_columns(
             shape=shape,
             rng=rng,
             mean_bad_cols=1,
         )
-        mask[bc_msk] |= afw_image.Mask.getPlaneBitMask('BAD')
-        image.array[bc_msk] = 0.0
+        mask[bc_mask] |= afw_image.Mask.getPlaneBitMask('BAD')
+        image.array[bc_mask] = np.nan
 
     return galsim.Image(
         mask,
