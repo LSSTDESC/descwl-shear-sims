@@ -93,6 +93,8 @@ def test_star_mask_in_sim():
             assert 'radius_pixels' in bi
             assert bi['radius_pixels'] >= 0
 
+            assert 'has_bleed' in bi
+
         exp = sim_data['band_data'][bands[0]][0]
 
         mask = exp.mask.array

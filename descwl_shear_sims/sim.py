@@ -120,6 +120,7 @@ def make_sim(
         bright_info: list of dict, each with
             world_pos: galsim.CelestialCoord
             radius_pixels: radius of mask in pixels
+            has_bleed: bool, True if there is a bleed trail
     """
 
     coadd_wcs, coadd_bbox = make_coadd_dm_wcs(coadd_dim)
@@ -300,6 +301,7 @@ def make_exp(
         Each dict contains
             world_pos: galsim.CelestialCoord
             radius_pixels: radius of mask in pixels
+            has_bleed: bool, True if there is a bleed trail
     """
 
     shear = galsim.Shear(g1=g1, g2=g2)
@@ -460,7 +462,7 @@ def _draw_bright_objects(
     Returns
     -------
     list of dicts
-        Each dict contains the world_pos and radius_pixels
+        Each dict contains the world_pos and radius_pixels, has_bleed
     """
     # extra array needed to determine star mask accurately
     timage = image.copy()
