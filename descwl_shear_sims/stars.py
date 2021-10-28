@@ -1,4 +1,5 @@
 import os
+from copy import deepcopy
 import functools
 import numpy as np
 import fitsio
@@ -7,6 +8,72 @@ import galsim
 from .constants import SCALE
 from .cache_tools import cached_catalog_read
 from .shifts import get_shifts
+
+DEFAULT_MIN_STAR_DENSITY = 2
+DEFAULT_MAX_STAR_DENSITY = 100
+DEFAULT_DENSITY = None
+
+DEFAULT_STAR_CONFIG = {
+    'min_density': DEFAULT_MIN_STAR_DENSITY,
+    'max_density': DEFAULT_MAX_STAR_DENSITY,
+    'density': DEFAULT_DENSITY,  # overrides sampling
+}
+
+
+def get_star_config(config=None):
+    """
+    get the configuration for a star catalog, with defaults in place
+
+    Parameters
+    ----------
+    config: dict, optional
+        The input config. Over-rides defaults
+
+    Returns
+    -------
+    the config dict
+    """
+    out_config = deepcopy(DEFAULT_STAR_CONFIG)
+
+    if config is not None:
+        for key in config:
+            if key not in out_config:
+                raise ValueError("bad key for stars: '%s'" % key)
+        out_config.update(config)
+
+    return out_config
+
+
+def make_star_catalog(rng, coadd_dim, buff, star_config=None):
+    """
+    Creat a StarCatalog
+
+    Parameters
+    ----------
+    rng: np.random.RandomState
+        The random number generator
+    coadd_dim: int
+        Dimensions of the coadd
+    buff: int
+        Buffer region with no objects, on all sides of image
+    star_config: dict
+        Entries can be 'min_density', 'max_density' for sampling
+        and 'density' to pick an exact density
+
+    Returns
+    ------
+    StarCatalog
+    """
+
+    star_config = get_star_config(config=star_config)
+    return StarCatalog(
+        rng=rng,
+        coadd_dim=coadd_dim,
+        buff=buff,
+        density=star_config['density'],
+        min_density=star_config['min_density'],
+        max_density=star_config['max_density'],
+    )
 
 
 class StarCatalog(object):
@@ -21,11 +88,18 @@ class StarCatalog(object):
         Dimensions of the coadd
     buff: int
         Buffer region with no objects, on all sides of image
+    min_density: int, optional
+        Set the minimum density to sample (ignored if density= is sent)
+    max_density: int, optional
+        Set the maximum density to sample (ignored if density= is sent)
     density: float, optional
         Optional density for catalog, if not sent the density is variable and
         drawn from the expected galactic density
     """
-    def __init__(self, *, rng, coadd_dim, buff, density=None):
+    def __init__(
+        self, *, rng, coadd_dim, buff,
+        min_density=2, max_density=100, density=None,
+    ):
         self.rng = rng
 
         self._star_cat = load_sample_stars()
@@ -33,8 +107,8 @@ class StarCatalog(object):
         if density is None:
             density_mean = sample_star_density(
                 rng=self.rng,
-                min_density=2,
-                max_density=100,
+                min_density=min_density,
+                max_density=max_density,
             )
         else:
             density_mean = density
