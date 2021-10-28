@@ -10,7 +10,10 @@ from .saturation import saturate_image_and_mask, BAND_SAT_VALS
 from .surveys import get_survey, rescale_wldeblend_exp
 from .constants import SCALE
 from .artifacts import add_bleed, get_max_mag_with_bleed
-from .masking import get_bmask, calculate_and_add_bright_star_mask
+from .masking import (
+    get_bmask,
+    calculate_bright_star_mask_radius,
+)
 from .objlists import get_objlist
 from .psfs import make_dm_psf
 from .wcs import make_wcs, make_dm_wcs, make_coadd_dm_wcs
@@ -105,6 +108,18 @@ def make_sim(
     draw_method: string
         Draw method for galsim objects, default 'auto'.  Set to
         'phot' to get poisson noise.  Note this is much slower.
+
+    Returns
+    -------
+    sim_data: dict
+        band_data: a dict keyed by band name, holding a list of exp
+        coadd_wcs
+        psf_dims
+        coadd_dims
+        coadd_bbox: lsst.geom.Box2I
+        bright_info: list of dict, each with
+            world_pos: galsim.CelestialCoord
+            radius_pixels: radius of mask in pixels
     """
 
     coadd_wcs, coadd_bbox = make_coadd_dm_wcs(coadd_dim)
@@ -116,6 +131,7 @@ def make_sim(
         se_dim = get_se_dim(coadd_dim=coadd_dim)
 
     band_data = {}
+    bright_info = []
     for band in bands:
 
         survey = get_survey(gal_type=galaxy_catalog.gal_type, band=band)
@@ -133,9 +149,12 @@ def make_sim(
             noise=noise_for_gsparams,
         )
 
+        # note the bright list is the same for all exps, so we only add
+        # bright_info once
+
         bdata_list = []
         for epoch in range(epochs_per_band):
-            exp = make_exp(
+            exp, this_bright_info = make_exp(
                 rng=rng,
                 band=band,
                 noise=noise_per_epoch,
@@ -160,6 +179,9 @@ def make_sim(
                 sky_n_sigma=sky_n_sigma,
                 draw_method=draw_method,
             )
+            if epoch == 0:
+                bright_info += this_bright_info
+
             if galaxy_catalog.gal_type == 'wldeblend':
                 rescale_wldeblend_exp(
                     survey=survey.descwl_survey,
@@ -176,13 +198,6 @@ def make_sim(
             )
 
             bdata_list.append(exp)
-            # if show:
-            #     # TODO expose this as a keyword
-            #     import lsst.afw.display as afw_display
-            #     display = afw_display.getDisplay(backend='ds9')
-            #     display.mtv(exp)
-            #     display.scale('log', 'minmax')
-            #     input('hit a key')
 
         band_data[band] = bdata_list
 
@@ -192,6 +207,7 @@ def make_sim(
         'psf_dims': (psf_dim, )*2,
         'coadd_dims': (coadd_dim, )*2,
         'coadd_bbox': coadd_bbox,
+        'bright_info': bright_info,
     }
 
 
@@ -275,6 +291,15 @@ def make_exp(
     draw_method: string
         Draw method for galsim objects, default 'auto'.  Set to
         'phot' to get poisson noise.  Note this is much slower.
+
+    Returns
+    -------
+    exp: lsst.afw.image.ExposureF
+        Exposure data
+    bright_info: list of dict
+        Each dict contains
+            world_pos: galsim.CelestialCoord
+            radius_pixels: radius of mask in pixels
     """
 
     shear = galsim.Shear(g1=g1, g2=g2)
@@ -331,7 +356,7 @@ def make_exp(
     )
 
     if bright_objlist is not None:
-        _draw_bright_objects(
+        bright_info = _draw_bright_objects(
             image=image,
             noise=noise,
             origin=se_origin,
@@ -346,6 +371,8 @@ def make_exp(
             rng=rng,
             star_bleeds=star_bleeds,
         )
+    else:
+        bright_info = []
 
     dm_wcs = make_dm_wcs(se_wcs)
     dm_psf = make_dm_psf(psf=psf, psf_dim=psf_dim, wcs=se_wcs)
@@ -370,7 +397,7 @@ def make_exp(
     detector = DetectorWrapper().detector
     exp.setDetector(detector)
 
-    return exp
+    return exp, bright_info
 
 
 def _draw_objects(
@@ -427,6 +454,14 @@ def _draw_bright_objects(
     rng,
     star_bleeds,
 ):
+    """
+    draw bright objects.
+
+    Returns
+    -------
+    list of dicts
+        Each dict contains the world_pos and radius_pixels
+    """
     # extra array needed to determine star mask accurately
     timage = image.copy()
     timage.setZero()
@@ -440,7 +475,11 @@ def _draw_bright_objects(
     max_bleed_mag = get_max_mag_with_bleed(band=band)
 
     wcs = image.wcs
-    for obj, shift, mag in zip(objlist, shifts, mags):
+
+    bright_info = []
+
+    indices = np.arange(len(objlist))
+    for index, obj, shift, mag in zip(indices, objlist, shifts, mags):
 
         # profiles can have detectably sharp edges if the
         # profile is very high s/n and we have not set the
@@ -482,13 +521,20 @@ def _draw_bright_objects(
 
             timage[b] += stamp_fft[b]
 
-            calculate_and_add_bright_star_mask(
+            radius_pixels = calculate_bright_star_mask_radius(
                 image=timage.array,
-                bmask=bmask.array,
-                image_pos=image_pos,
+                objrow=image_pos.y,
+                objcol=image_pos.x,
                 threshold=mask_threshold,
             )
+
+            info = {
+                'world_pos': world_pos,
+                'radius_pixels': radius_pixels,
+            }
+
             if star_bleeds and mag < max_bleed_mag:
+                info['has_bleed'] = True
                 add_bleed(
                     image=image.array,
                     bmask=bmask.array,
@@ -496,9 +542,15 @@ def _draw_bright_objects(
                     mag=mag,
                     band=band,
                 )
+            else:
+                info['has_bleed'] = False
+
+            bright_info.append(info)
 
             # reset for next object
             timage.setZero()
+
+    return bright_info
 
 
 def get_sim_config(config=None):

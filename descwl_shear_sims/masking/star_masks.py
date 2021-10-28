@@ -1,10 +1,9 @@
 import numpy as np
 from numba import njit
-from ..lsst_bits import get_flagval
 
 
 @njit
-def add_bright_star_mask(*, bmask, x, y, radius, val):
+def add_bright_star_mask(*, bmask, x, y, radius_pixels, val):
     """
     Add a circular bright star mask to the input mask image
 
@@ -14,7 +13,7 @@ def add_bright_star_mask(*, bmask, x, y, radius, val):
         Integer image
     x, y: floats
         The center position of the circle
-    radius: float
+    radius_pixels: float
         Radius of circle in pixels
     val: int
         Val to "or" into bmask
@@ -23,7 +22,7 @@ def add_bright_star_mask(*, bmask, x, y, radius, val):
     intx = int(x)
     inty = int(y)
 
-    radius2 = radius**2
+    radius2 = radius_pixels**2
     ny, nx = bmask.shape
 
     for iy in range(ny):
@@ -39,43 +38,6 @@ def add_bright_star_mask(*, bmask, x, y, radius, val):
                 continue
 
             bmask[iy, ix] |= val
-
-
-def calculate_and_add_bright_star_mask(
-    *,
-    image,
-    bmask,
-    image_pos,
-    threshold,
-):
-    """
-    Get a list of psf convolved objects for a variable psf
-
-    Parameters
-    ----------
-    image: array
-        numpy array representing the image
-    bmask: array
-        numpy array representing the bitmask
-    image_pos: galsim.PositionD
-        Center of object in image
-    threshold: float
-        The mask will extend to where the profile reaches this value
-    """
-
-    radius = calculate_bright_star_mask_radius(
-        image=image,
-        objrow=image_pos.y,
-        objcol=image_pos.x,
-        threshold=threshold,
-    )
-    add_bright_star_mask(
-        bmask=bmask,
-        x=image_pos.x,
-        y=image_pos.y,
-        radius=radius,
-        val=get_flagval('BRIGHT'),
-    )
 
 
 @njit
@@ -120,3 +82,47 @@ def calculate_bright_star_mask_radius(*, image, objrow, objcol, threshold):
 
     radius = np.sqrt(radius2)
     return radius
+
+
+# def calculate_and_add_bright_star_mask(
+#     *,
+#     image,
+#     bmask,
+#     image_pos,
+#     threshold,
+# ):
+#     """
+#     Get a list of psf convolved objects for a variable psf
+#
+#     Parameters
+#     ----------
+#     image: array
+#         numpy array representing the image
+#     bmask: array
+#         numpy array representing the bitmask
+#     image_pos: galsim.PositionD
+#         Center of object in image
+#     threshold: float
+#         The mask will extend to where the profile reaches this value
+#
+#     Returns
+#     -------
+#     radius_pixels: float
+#         Radius of mask in pixels
+#     """
+#     from ..lsst_bits import get_flagval
+#
+#     radius_pixels = calculate_bright_star_mask_radius(
+#         image=image,
+#         objrow=image_pos.y,
+#         objcol=image_pos.x,
+#         threshold=threshold,
+#     )
+#     add_bright_star_mask(
+#         bmask=bmask,
+#         x=image_pos.x,
+#         y=image_pos.y,
+#         radius_pixels=radius_pixels,
+#         val=get_flagval('BRIGHT'),
+#     )
+#     return radius_pixels

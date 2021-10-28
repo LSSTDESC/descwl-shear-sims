@@ -3,21 +3,20 @@ import numpy as np
 import galsim
 import pytest
 
-from ..lsst_bits import get_flagval
-from ..saturation import BAND_SAT_VALS
-from ..masking import add_bright_star_mask
-from ..artifacts.star_bleeds import add_bleed
-from ..stars import StarCatalog
-from ..galaxies import make_galaxy_catalog
-from ..psfs import make_fixed_psf
-from ..sim import make_sim
+from descwl_shear_sims.lsst_bits import get_flagval
+from descwl_shear_sims.saturation import BAND_SAT_VALS
+from descwl_shear_sims.artifacts.star_bleeds import add_bleed
+from descwl_shear_sims.stars import StarCatalog
+from descwl_shear_sims.galaxies import make_galaxy_catalog
+from descwl_shear_sims.psfs import make_fixed_psf
+from descwl_shear_sims.sim import make_sim
 
 
 @pytest.mark.skipif(
     "CATSIM_DIR" not in os.environ,
     reason='simulation input data is not present')
 @pytest.mark.parametrize('band', ('r', 'i', 'z'))
-def test_star_mask_and_bleed(band):
+def test_bleed(band):
     dims = (100, 100)
 
     cen = [50, 50]
@@ -35,15 +34,8 @@ def test_star_mask_and_bleed(band):
         mag=mag,
         band=band,
     )
-    add_bright_star_mask(
-        bmask=bmask,
-        x=pos.x,
-        y=pos.y,
-        radius=10,
-        val=get_flagval('BRIGHT'),
-    )
 
-    assert bmask[cen[0], cen[1]] == get_flagval('SAT') | get_flagval('BRIGHT')
+    assert bmask[cen[0], cen[1]] == get_flagval('SAT')
     assert image[cen[0], cen[1]] == BAND_SAT_VALS[band]
 
 
@@ -62,6 +54,7 @@ def test_star_mask_in_sim():
     star_density = 100
     psf = make_fixed_psf(psf_type='moffat')
 
+    some_were_bright = False
     some_were_saturated = False
     for i in range(1000):
         galaxy_catalog = make_galaxy_catalog(
@@ -88,26 +81,33 @@ def test_star_mask_in_sim():
             star_bleeds=True,
         )
 
-        exp = sim_data['band_data'][bands[0]][0]
+        nbright = len(sim_data['bright_info'])
+        if nbright > 0:
+            some_were_bright = True
 
-        # import lsst.afw.display as afw_display
-        # display = afw_display.getDisplay(backend='ds9')
-        # display.mtv(exp)
-        # display.scale('log', 'minmax')
+        for bi in sim_data['bright_info']:
+
+            assert 'world_pos' in bi
+            assert isinstance(bi['world_pos'], galsim.CelestialCoord)
+
+            assert 'radius_pixels' in bi
+            assert bi['radius_pixels'] >= 0
+
+        exp = sim_data['band_data'][bands[0]][0]
 
         mask = exp.mask.array
         image = exp.image.array
 
         wsat = np.where((mask & get_flagval('SAT')) != 0)
-        wbright = np.where(mask & get_flagval('BRIGHT') != 0)
-        if (wsat[0].size > 0 and
-                np.all(image[wsat] == BAND_SAT_VALS['r']) and
-                wbright[0].size > 0):
+        if (
+            wsat[0].size > 0 and
+            np.all(image[wsat] == BAND_SAT_VALS['r'])
+        ):
 
             some_were_saturated = True
             break
 
-    assert some_were_saturated
+    assert some_were_bright and some_were_saturated
 
 
 @pytest.mark.skipif(
@@ -166,3 +166,7 @@ def test_star_mask_in_sim_repeatable():
                 else:
                     assert wsat[0].size == nmarked
                     break
+
+
+if __name__ == '__main__':
+    test_star_mask_in_sim()
