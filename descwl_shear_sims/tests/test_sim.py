@@ -272,9 +272,11 @@ def test_sim_layout(layout):
      (True, True)],
 )
 def test_sim_defects(cosmic_rays, bad_columns):
+    ntrial = 10
     seed = 7421
-    coadd_dim = 201
     rng = np.random.RandomState(seed)
+
+    coadd_dim = 201
 
     galaxy_catalog = make_galaxy_catalog(
         rng=rng,
@@ -283,19 +285,32 @@ def test_sim_defects(cosmic_rays, bad_columns):
         layout="grid",
         buff=30,
     )
-    assert len(galaxy_catalog) == galaxy_catalog.shifts_array.size
 
     psf = make_fixed_psf(psf_type="gauss")
-    _ = make_sim(
-        rng=rng,
-        galaxy_catalog=galaxy_catalog,
-        coadd_dim=coadd_dim,
-        g1=0.02,
-        g2=0.00,
-        psf=psf,
-        cosmic_rays=cosmic_rays,
-        bad_columns=bad_columns,
-    )
+
+    for itrial in range(ntrial):
+        sim_data = make_sim(
+            rng=rng,
+            galaxy_catalog=galaxy_catalog,
+            coadd_dim=coadd_dim,
+            g1=0.02,
+            g2=0.00,
+            psf=psf,
+            cosmic_rays=cosmic_rays,
+            bad_columns=bad_columns,
+        )
+
+        for band, band_exps in sim_data['band_data'].items():
+            for exp in band_exps:
+                image = exp.image.array
+                mask = exp.mask.array
+                flags = exp.mask.getPlaneBitMask(('CR', 'BAD'))
+
+                if bad_columns or cosmic_rays:
+
+                    wnan = np.where(np.isnan(image))
+                    wflagged = np.where((mask & flags) != 0)
+                    assert wnan[0].size == wflagged[0].size
 
 
 @pytest.mark.skipif(
@@ -352,8 +367,10 @@ def test_sim_stars():
     assert len(star_catalog) == star_catalog.shifts_array.size
 
     psf = make_fixed_psf(psf_type="moffat")
-    # tests that we actually get BRIGHT set are in
+
+    # tests that we actually get bright objects set are in
     # test_star_masks_and_bleeds
+
     _ = make_sim(
         rng=rng,
         galaxy_catalog=galaxy_catalog,
@@ -390,8 +407,9 @@ def test_sim_star_bleeds():
     )
 
     psf = make_fixed_psf(psf_type="moffat")
-    # tests that we actually get saturation are in
-    # test_star_masks_and_bleeds
+
+    # tests that we actually get saturation are in test_star_masks_and_bleeds
+
     _ = make_sim(
         rng=rng,
         galaxy_catalog=galaxy_catalog,

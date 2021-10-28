@@ -3,23 +3,22 @@ copy-paste from my (beckermr) personal code here
 https://github.com/beckermr/metadetect-coadding-sims
 """
 import numpy as np
+import galsim
 
-from ..artifacts import (
-    generate_edge_mask,
+from descwl_shear_sims.masking import get_bmask_and_set_image
+from descwl_shear_sims.artifacts import (
     generate_bad_columns,
     generate_cosmic_rays,
 )
-from ..lsst_bits import get_flagval
 
 
-def test_generate_basic_mask():
-    n = 100
-    edge_width = 5
-    bmask = generate_edge_mask(shape=(n, n), edge_width=edge_width)
+def test_basic_mask():
+    image = galsim.ImageD(np.zeros((100, 100)))
+    bmask = get_bmask_and_set_image(
+        image=image, rng=None, cosmic_rays=False, bad_columns=False,
+    )
 
-    expected_count = edge_width*n*4 - edge_width**2*4
-    w = np.where(bmask == get_flagval('EDGE'))
-    assert w[0].size == expected_count
+    assert np.all(bmask.array == 0)
 
 
 def test_generate_cosmic_rays_smoke():
