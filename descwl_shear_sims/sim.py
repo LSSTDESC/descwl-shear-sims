@@ -350,7 +350,8 @@ def make_exp(
     if sky_n_sigma is not None:
         image.array[:, :] += sky_n_sigma * noise
 
-    # bad cols will get zeros in the image
+    # pixels flagged as bad cols and cosmics will get
+    # set to np.nan
     bmask = get_bmask_and_set_image(
         image=image,
         rng=rng,
