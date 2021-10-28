@@ -118,8 +118,9 @@ def make_sim(
         psf_dims
         coadd_dims
         coadd_bbox: lsst.geom.Box2I
-        bright_info: list of dict, each with
-            world_pos: galsim.CelestialCoord
+        bright_info: structured array
+            fields are
+            ra, dec: sky position of bright stars
             radius_pixels: radius of mask in pixels
             has_bleed: bool, True if there is a bleed trail
     """
@@ -299,11 +300,11 @@ def make_exp(
     -------
     exp: lsst.afw.image.ExposureF
         Exposure data
-    bright_info: list of dict
-        Each dict contains
-            world_pos: galsim.CelestialCoord
-            radius_pixels: radius of mask in pixels
-            has_bleed: bool, True if there is a bleed trail
+    bright_info: list of structured arrays
+        fields are
+        ra, dec: sky position of bright stars
+        radius_pixels: radius of mask in pixels
+        has_bleed: bool, True if there is a bleed trail
     """
 
     shear = galsim.Shear(g1=g1, g2=g2)
@@ -465,8 +466,11 @@ def _draw_bright_objects(
 
     Returns
     -------
-    list of dicts
-        Each dict contains the world_pos and radius_pixels, has_bleed
+    bright_info: list of structured arrays
+        fields are
+        ra, dec: sky position of bright stars
+        radius_pixels: radius of mask in pixels
+        has_bleed: bool, True if there is a bleed trail
     """
     # extra array needed to determine star mask accurately
     timage = image.copy()
