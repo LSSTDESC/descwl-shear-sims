@@ -1,43 +1,61 @@
 """
-simple example with a grid of exponential galaxies
+example with WeakLensingDeblending galaxies and stars and power spectrum psf
 
-The images are dithered and rotated
+bleed trails are turned on for bright stars
 """
+import os
 import numpy as np
 
 import lsst.afw.image as afw_image
 import lsst.afw.geom as afw_geom
 from descwl_shear_sims.galaxies import make_galaxy_catalog
-from descwl_shear_sims.psfs import make_fixed_psf
-from descwl_shear_sims.sim import make_sim
+from descwl_shear_sims.stars import make_star_catalog
+from descwl_shear_sims.psfs import make_ps_psf
+from descwl_shear_sims.sim import make_sim, get_se_dim
 
 
 def go():
-    seed = 74321
+    if "CATSIM_DIR" not in os.environ:
+        # this contains the galaxy and star catalogs for generatig
+        # WeakLensingDeblending galaxies and stars
+        print('you need CATSIM_DIR defined to run this example')
+
+    seed = 761
     rng = np.random.RandomState(seed)
 
     coadd_dim = 351
     psf_dim = 51
     bands = ['r', 'i']
+    buff = 30
 
-    # this makes a grid of fixed exponential galaxies
-    # with default properties. One exposure per band
+    # this makes WeakLensingDeblending galaxies
 
     galaxy_catalog = make_galaxy_catalog(
         rng=rng,
-        gal_type="fixed",
+        gal_type='wldeblend',
         coadd_dim=coadd_dim,
-        buff=30,
-        layout="grid",
+        buff=buff,
     )
 
-    # gaussian psf
-    psf = make_fixed_psf(psf_type="gauss")
+    # stars with the high density so we get some
+    # bright ones
+    star_config = {'density': 100}
+    star_catalog = make_star_catalog(
+        rng=rng,
+        coadd_dim=coadd_dim,
+        buff=buff,
+        star_config=star_config,
+    )
+
+    # power spectrum psf
+    se_dim = get_se_dim(coadd_dim=coadd_dim)
+    psf = make_ps_psf(rng=rng, dim=se_dim)
 
     # generate simulated data, see below for whats in this dict
     data = make_sim(
         rng=rng,
         galaxy_catalog=galaxy_catalog,
+        star_catalog=star_catalog,
         coadd_dim=coadd_dim,
         psf_dim=psf_dim,
         bands=bands,
@@ -46,6 +64,7 @@ def go():
         psf=psf,
         dither=True,
         rotate=True,
+        star_bleeds=True,
     )
 
     # data is a dict with the following keys.
@@ -72,8 +91,13 @@ def go():
     edims = (extent.getX(), extent.getY())
     assert edims == (coadd_dim, )*2
 
-    # we should have no bright objects
-    assert data['bright_info'].size == 0
+    # we might have bright objects, depends on how the star
+    # sampling went
+    bright_info = data['bright_info']
+    if bright_info.size != 0:
+        print('got bright', bright_info.size, 'bright objects')
+        for name in ['ra', 'dec', 'radius_pixels']:
+            assert name in bright_info.dtype.names
 
 
 if __name__ == '__main__':

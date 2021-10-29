@@ -1,15 +1,13 @@
 """
-simple example with a grid of exponential galaxies
-
-The images are dithered and rotated
+simple example with a power spectrum psf
 """
 import numpy as np
 
 import lsst.afw.image as afw_image
 import lsst.afw.geom as afw_geom
 from descwl_shear_sims.galaxies import make_galaxy_catalog
-from descwl_shear_sims.psfs import make_fixed_psf
-from descwl_shear_sims.sim import make_sim
+from descwl_shear_sims.psfs import make_ps_psf
+from descwl_shear_sims.sim import make_sim, get_se_dim
 
 
 def go():
@@ -31,8 +29,9 @@ def go():
         layout="grid",
     )
 
-    # gaussian psf
-    psf = make_fixed_psf(psf_type="gauss")
+    # power spectrum psf
+    se_dim = get_se_dim(coadd_dim=coadd_dim)
+    psf = make_ps_psf(rng=rng, dim=se_dim)
 
     # generate simulated data, see below for whats in this dict
     data = make_sim(
@@ -44,8 +43,6 @@ def go():
         g1=0.02,
         g2=0.00,
         psf=psf,
-        dither=True,
-        rotate=True,
     )
 
     # data is a dict with the following keys.

@@ -1,38 +1,41 @@
 """
-simple example with a grid of exponential galaxies
-
-The images are dithered and rotated
+example with WeakLensingDeblending galaxies and power spectrum psf
 """
+import os
 import numpy as np
 
 import lsst.afw.image as afw_image
 import lsst.afw.geom as afw_geom
 from descwl_shear_sims.galaxies import make_galaxy_catalog
-from descwl_shear_sims.psfs import make_fixed_psf
-from descwl_shear_sims.sim import make_sim
+from descwl_shear_sims.psfs import make_ps_psf
+from descwl_shear_sims.sim import make_sim, get_se_dim
 
 
 def go():
-    seed = 74321
+    if "CATSIM_DIR" not in os.environ:
+        # this contains the galaxy and star catalogs for generatig
+        # WeakLensingDeblending galaxies and stars
+        print('you need CATSIM_DIR defined to run this example')
+
+    seed = 761
     rng = np.random.RandomState(seed)
 
     coadd_dim = 351
     psf_dim = 51
     bands = ['r', 'i']
 
-    # this makes a grid of fixed exponential galaxies
-    # with default properties. One exposure per band
+    # this makes WeakLensingDeblending galaxies
 
     galaxy_catalog = make_galaxy_catalog(
         rng=rng,
-        gal_type="fixed",
+        gal_type='wldeblend',
         coadd_dim=coadd_dim,
         buff=30,
-        layout="grid",
     )
 
-    # gaussian psf
-    psf = make_fixed_psf(psf_type="gauss")
+    # power spectrum psf
+    se_dim = get_se_dim(coadd_dim=coadd_dim)
+    psf = make_ps_psf(rng=rng, dim=se_dim)
 
     # generate simulated data, see below for whats in this dict
     data = make_sim(
