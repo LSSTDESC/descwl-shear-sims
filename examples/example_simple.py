@@ -47,9 +47,9 @@ def example_simple():
     # data is a dict with the following keys.
     # band_data: a dict, keyed by band name, with values that are a list of
     #   exps
-    # coadd_wcs: is a DM wcs
+    # coadd_wcs: is a DM wcs for use in coadding
     # psf_dims: is the psf dim we sent in (psf_dim, psf_dim)
-    # coadd_bbox: is an lsst Box2I
+    # coadd_bbox: is an lsst Box2I, for use in coadding
     # bright_info: is a structured array with position and mask info for bright
     #   objects
 
