@@ -5,7 +5,7 @@ import lsst.afw.image as afw_image
 import lsst.afw.geom as afw_geom
 
 from descwl_shear_sims.galaxies import make_galaxy_catalog, DEFAULT_FIXED_GAL_CONFIG
-from descwl_shear_sims.stars import StarCatalog
+from descwl_shear_sims.stars import StarCatalog, make_star_catalog
 from descwl_shear_sims.psfs import make_fixed_psf, make_ps_psf
 
 from descwl_shear_sims.sim import make_sim, get_se_dim
@@ -344,42 +344,73 @@ def test_sim_wldeblend():
     "CATSIM_DIR" not in os.environ,
     reason='simulation input data is not present',
 )
-def test_sim_stars():
+@pytest.mark.parametrize('density,min_density,max_density', [
+    (None, 40, 100),
+    (20, None, None),
+])
+def test_sim_stars(density, min_density, max_density):
     seed = 7421
     coadd_dim = 201
     buff = 30
-    rng = np.random.RandomState(seed)
 
-    galaxy_catalog = make_galaxy_catalog(
-        rng=rng,
-        gal_type="wldeblend",
-        coadd_dim=coadd_dim,
-        buff=buff,
-    )
-    assert len(galaxy_catalog) == galaxy_catalog.shifts_array.size
+    config = {
+        'density': density,
+        'min_density': min_density,
+        'max_density': max_density,
+    }
+    for use_maker in (False, True):
+        rng = np.random.RandomState(seed)
 
-    star_catalog = StarCatalog(
-        rng=rng,
-        coadd_dim=coadd_dim,
-        buff=buff,
-        density=100,
-    )
-    assert len(star_catalog) == star_catalog.shifts_array.size
+        galaxy_catalog = make_galaxy_catalog(
+            rng=rng,
+            gal_type="wldeblend",
+            coadd_dim=coadd_dim,
+            buff=buff,
+        )
+        assert len(galaxy_catalog) == galaxy_catalog.shifts_array.size
 
-    psf = make_fixed_psf(psf_type="moffat")
+        if use_maker:
+            star_catalog = make_star_catalog(
+                rng=rng,
+                coadd_dim=coadd_dim,
+                buff=buff,
+                star_config=config,
+            )
 
-    # tests that we actually get bright objects set are in
-    # test_star_masks_and_bleeds
+        else:
+            star_catalog = StarCatalog(
+                rng=rng,
+                coadd_dim=coadd_dim,
+                buff=buff,
+                density=config['density'],
+                min_density=config['min_density'],
+                max_density=config['max_density'],
+            )
 
-    _ = make_sim(
-        rng=rng,
-        galaxy_catalog=galaxy_catalog,
-        star_catalog=star_catalog,
-        coadd_dim=coadd_dim,
-        g1=0.02,
-        g2=0.00,
-        psf=psf,
-    )
+        assert len(star_catalog) == star_catalog.shifts_array.size
+
+        psf = make_fixed_psf(psf_type="moffat")
+
+        # tests that we actually get bright objects set are in
+        # test_star_masks_and_bleeds
+
+        data = make_sim(
+            rng=rng,
+            galaxy_catalog=galaxy_catalog,
+            star_catalog=star_catalog,
+            coadd_dim=coadd_dim,
+            g1=0.02,
+            g2=0.00,
+            psf=psf,
+        )
+
+        if not use_maker:
+            data_nomaker = data
+        else:
+            assert np.all(
+                data['band_data']['i'][0].image.array ==
+                data_nomaker['band_data']['i'][0].image.array
+            )
 
 
 @pytest.mark.skipif(
