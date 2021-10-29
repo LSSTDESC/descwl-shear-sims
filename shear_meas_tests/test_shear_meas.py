@@ -120,7 +120,7 @@ def _boostrap_m_c(pres, mres):
 
 def _run_sim_one(*, seed, mdet_seed, g1, g2, **kwargs):
     sim_data = _make_lsst_sim(seed=seed, g1=g1, g2=g2, **kwargs)
-    coadd_obs = make_coadd_obs(
+    coadd_obs, exp_info = make_coadd_obs(
         exps=sim_data['band_data']['i'],
         coadd_wcs=sim_data['coadd_wcs'],
         coadd_bbox=sim_data['coadd_bbox'],
