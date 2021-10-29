@@ -98,7 +98,9 @@ class StarCatalog(object):
     """
     def __init__(
         self, *, rng, coadd_dim, buff,
-        min_density=2, max_density=100, density=None,
+        min_density=DEFAULT_MIN_STAR_DENSITY,
+        max_density=DEFAULT_MAX_STAR_DENSITY,
+        density=DEFAULT_DENSITY,
     ):
         self.rng = rng
 
