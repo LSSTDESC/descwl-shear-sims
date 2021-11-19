@@ -119,6 +119,9 @@ def test_sim_exp_mag(rotate, show=False):
     coadd_dim = 301
     rng = np.random.RandomState(seed)
 
+    # use fixed single epoch dim so we can look in the same spot for the object
+    se_dim = get_se_dim(coadd_dim=coadd_dim, dither=False, rotate=True)
+
     ok = False
     for i in range(ntrial):
         galaxy_catalog = make_galaxy_catalog(
@@ -134,6 +137,7 @@ def test_sim_exp_mag(rotate, show=False):
             rng=rng,
             galaxy_catalog=galaxy_catalog,
             coadd_dim=coadd_dim,
+            se_dim=se_dim,
             g1=0.02,
             g2=0.00,
             psf=psf,
@@ -175,6 +179,8 @@ def test_sim_psf_type(psf_type):
     seed = 431
     rng = np.random.RandomState(seed)
 
+    dither = True
+    rotate = True
     coadd_dim = 101
     galaxy_catalog = make_galaxy_catalog(
         rng=rng,
@@ -185,7 +191,7 @@ def test_sim_psf_type(psf_type):
     )
 
     if psf_type == "ps":
-        se_dim = get_se_dim(coadd_dim=coadd_dim)
+        se_dim = get_se_dim(coadd_dim=coadd_dim, dither=dither, rotate=rotate)
         psf = make_ps_psf(rng=rng, dim=se_dim)
     else:
         psf = make_fixed_psf(psf_type=psf_type)
@@ -197,8 +203,8 @@ def test_sim_psf_type(psf_type):
         g1=0.02,
         g2=0.00,
         psf=psf,
-        dither=True,
-        rotate=True,
+        dither=dither,
+        rotate=rotate,
     )
 
 
@@ -484,4 +490,5 @@ def test_sim_draw_method_smoke(draw_method):
 
 
 if __name__ == '__main__':
-    test_sim_exp_mag(True, show=True)
+    for rotate in (False, True):
+        test_sim_exp_mag(rotate, show=True)

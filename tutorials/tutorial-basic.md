@@ -172,13 +172,15 @@ from descwl_shear_sims.sim import (
 seed = 9137
 rng = np.random.RandomState(seed)
 
+dither = True
+rotate = True
 ntrial = 2
 coadd_dim = 351
 buff = 50
 
-# this is the single epoch image sized used by the sim, we need
+# this is the single epoch image size used by the sim, we need
 # it for the power spectrum psf
-se_dim = get_se_dim(coadd_dim=coadd_dim)
+se_dim = get_se_dim(coadd_dim=coadd_dim, rotate=rotate, dither=dither)
 
 for trial in range(ntrial):
     print('trial: %d/%d' % (trial+1, ntrial))
@@ -212,8 +214,8 @@ for trial in range(ntrial):
         g2=0.00,
         psf=psf,
         psf_dim=51,
-        dither=True,
-        rotate=True,
+        dither=dither,
+        rotate=rotate,
         bands=['r', 'i', 'z'],
         epochs_per_band=1,
         noise_factor=0.58,
