@@ -609,12 +609,10 @@ def get_se_dim(*, coadd_dim, dither, rotate):
     if rotate:
         # make sure to completely cover the coadd
         se_dim = int(np.ceil(coadd_dim * np.sqrt(2))) + 20
-    elif dither:
-        # we dither within a pixel, so add some padding
-        se_dim = coadd_dim + 2
     else:
-        # no dithering or rotation, set coadd and se dims equal
-        se_dim = coadd_dim
+        # make big enough to avoid boundary checks for downstream
+        # which are 3 pixels
+        se_dim = coadd_dim + 5 * 2
 
     return se_dim
 
