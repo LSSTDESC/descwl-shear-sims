@@ -12,7 +12,7 @@ def get_shifts(
     rng,
     layout,
     coadd_dim=None,
-    buff=None,
+    buff=0,
     nobj=None,
     sep=None,
 ):
@@ -23,8 +23,9 @@ def get_shifts(
         Numpy random state
     coadd_dim: int
         Dimensions of final coadd
-    buff: int
-        Buffer region where no objects will be drawn
+    buff: int, optional
+        Buffer region where no objects will be drawn.  Ignored
+        for layout 'grid'.  Default 0.
     layout: string
         'grid' or 'random'
     nobj: int, optional
@@ -45,8 +46,6 @@ def get_shifts(
 
         if coadd_dim is None:
             raise ValueError(f'send coadd_dim= for layout {layout}')
-        if buff is None:
-            raise ValueError(f'send buff= for layout {layout}')
 
         if layout == 'grid':
             shifts = get_grid_shifts(

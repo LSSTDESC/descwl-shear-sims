@@ -24,9 +24,9 @@ DEFAULT_SIM_CONFIG = {
     "gal_type": "fixed",  # note "exp" also means "fixed" for back compat
     "psf_type": "gauss",
     "psf_dim": 51,
-    "coadd_dim": 351,
+    "coadd_dim": 250,
     "se_dim": None,
-    "buff": 50,
+    "buff": 0,
     "layout": "grid",
     "sep": None,  # sep in arcsec for layout=pair
     "dither": False,
@@ -131,7 +131,7 @@ def make_sim(
     )
 
     if se_dim is None:
-        se_dim = get_se_dim(coadd_dim=coadd_dim)
+        se_dim = get_se_dim(coadd_dim=coadd_dim, dither=dither, rotate=rotate)
 
     band_data = {}
     bright_info = []
@@ -589,21 +589,32 @@ def get_sim_config(config=None):
     return out_config
 
 
-def get_se_dim(*, coadd_dim):
+def get_se_dim(*, coadd_dim, dither, rotate):
     """
-    get se dim given coadd dim.  The se dim is padded out as
-        int(np.ceil(coadd_dim * np.sqrt(2))) + 20
+    get single epoch (se) dimensions given coadd dim.
 
     Parameters
     ----------
     coadd_dim: int
         dimensions of coadd
+    dither: bool
+        Whether there is dithering or not
+    rotate: bool
+        Whether there are rotations or not
 
     Returns
     -------
     integer dimensions of SE image
     """
-    return int(np.ceil(coadd_dim * np.sqrt(2))) + 20
+    if rotate:
+        # make sure to completely cover the coadd
+        se_dim = int(np.ceil(coadd_dim * np.sqrt(2))) + 20
+    else:
+        # make big enough to avoid boundary checks for downstream
+        # which are 3 pixels
+        se_dim = coadd_dim + 5 * 2
+
+    return se_dim
 
 
 def get_coadd_center_gs_pos(coadd_wcs, coadd_bbox):

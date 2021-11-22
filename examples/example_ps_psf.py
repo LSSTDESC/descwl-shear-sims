@@ -14,6 +14,8 @@ def go():
     seed = 74321
     rng = np.random.RandomState(seed)
 
+    dither = False
+    rotate = False
     coadd_dim = 351
     psf_dim = 51
     bands = ['r', 'i']
@@ -30,7 +32,7 @@ def go():
     )
 
     # power spectrum psf
-    se_dim = get_se_dim(coadd_dim=coadd_dim)
+    se_dim = get_se_dim(coadd_dim=coadd_dim, rotate=rotate, dither=dither)
     psf = make_ps_psf(rng=rng, dim=se_dim)
 
     # generate simulated data, see below for whats in this dict

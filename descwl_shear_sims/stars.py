@@ -44,7 +44,7 @@ def get_star_config(config=None):
     return out_config
 
 
-def make_star_catalog(rng, coadd_dim, buff, star_config=None):
+def make_star_catalog(rng, coadd_dim, buff=0, star_config=None):
     """
     Creat a StarCatalog
 
@@ -54,8 +54,9 @@ def make_star_catalog(rng, coadd_dim, buff, star_config=None):
         The random number generator
     coadd_dim: int
         Dimensions of the coadd
-    buff: int
-        Buffer region with no objects, on all sides of image
+    buff: int, optional
+        Buffer around the edge where no objects are drawn.  Ignored for
+        layout 'grid'.  Default 0.
     star_config: dict
         Entries can be 'min_density', 'max_density' for sampling
         and 'density' to pick an exact density
@@ -86,8 +87,9 @@ class StarCatalog(object):
         The random number generator
     coadd_dim: int
         Dimensions of the coadd
-    buff: int
-        Buffer region with no objects, on all sides of image
+    buff: int, optional
+        Buffer around the edge where no objects are drawn.  Ignored for
+        layout 'grid'.  Default 0.
     min_density: int, optional
         Set the minimum density to sample (ignored if density= is sent)
     max_density: int, optional
@@ -97,7 +99,8 @@ class StarCatalog(object):
         drawn from the expected galactic density
     """
     def __init__(
-        self, *, rng, coadd_dim, buff,
+        self, *, rng, coadd_dim,
+        buff=0,
         min_density=DEFAULT_MIN_STAR_DENSITY,
         max_density=DEFAULT_MAX_STAR_DENSITY,
         density=DEFAULT_DENSITY,
@@ -115,7 +118,6 @@ class StarCatalog(object):
         else:
             density_mean = density
 
-        # one square degree catalog, convert to arcmin
         area = ((coadd_dim - 2*buff)*SCALE/60)**2
         nobj_mean = area * density_mean
         nobj = rng.poisson(nobj_mean)

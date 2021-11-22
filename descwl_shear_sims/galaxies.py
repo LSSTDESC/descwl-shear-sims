@@ -23,7 +23,7 @@ def make_galaxy_catalog(
     rng,
     gal_type,
     coadd_dim=None,
-    buff=None,
+    buff=0,
     layout=None,
     gal_config=None,
     sep=None,
@@ -35,8 +35,9 @@ def make_galaxy_catalog(
         'fixed', 'varying' or 'wldeblend'
     coadd_dim: int
         Dimensions of coadd
-    buff: int
-        Buffer around the edge where no objects are drawn
+    buff: int, optional
+        Buffer around the edge where no objects are drawn.  Ignored for
+        layout 'grid'.  Default 0.
     layout: string, optional
         'grid' or 'random'.  Ignored for gal_type "wldeblend", otherwise
         required.
@@ -70,10 +71,6 @@ def make_galaxy_catalog(
         if coadd_dim is None:
             raise ValueError(
                 f'send coadd_dim= for gal_type {gal_type} and layout {layout}'
-            )
-        if buff is None:
-            raise ValueError(
-                f'send buff= for gal_type {gal_type} and layout {layout}'
             )
 
         if gal_type == 'wldeblend':
@@ -144,8 +141,6 @@ class FixedGalaxyCatalog(object):
         The random number generator
     coadd_dim: int
         dimensions of the coadd
-    buff: int
-        Buffer region with no objects, on all sides of image
     layout: string
         The layout of objects, either 'grid' or 'random'
     mag: float
@@ -157,10 +152,13 @@ class FixedGalaxyCatalog(object):
         magnitude of 17 or fainter for this kind of galaxy.
     hlr: float
         Half light radius of all objects
+    buff: int, optional
+        Buffer region with no objects, on all sides of image.  Ingored
+        for layout 'grid'.  Default 0.
     morph: str
         Galaxy morphology, 'exp', 'dev' or 'bd', 'bdk'.  Default 'exp'
     """
-    def __init__(self, *, rng, coadd_dim, buff, layout, mag, hlr, morph='exp'):
+    def __init__(self, *, rng, coadd_dim, layout, mag, hlr, buff=0, morph='exp'):
         self.gal_type = 'fixed'
         self.morph = morph
         self.mag = mag
@@ -242,8 +240,6 @@ class GalaxyCatalog(FixedGalaxyCatalog):
         The random number generator
     coadd_dim: int
         dimensions of the coadd
-    buff: int
-        Buffer region with no objects, on all sides of image
     layout: string
         The layout of objects, either 'grid' or 'random'
     mag: float
@@ -255,10 +251,13 @@ class GalaxyCatalog(FixedGalaxyCatalog):
         magnitude of 17 or fainter for this kind of galaxy.
     hlr: float
         Half light radius of all objects
+    buff: int, optional
+        Buffer region with no objects, on all sides of image.  Ingored
+        for layout 'grid'.  Default 0.
     morph: str
         Galaxy morphology, 'exp', 'dev' or 'bd', 'bdk'.  Default 'exp'
     """
-    def __init__(self, *, rng, coadd_dim, buff, layout, mag, hlr, morph='exp'):
+    def __init__(self, *, rng, coadd_dim, layout, mag, hlr, buff=0, morph='exp'):
         super().__init__(
             rng=rng, coadd_dim=coadd_dim, buff=buff, layout=layout,
             mag=mag, hlr=hlr, morph=morph,
@@ -580,10 +579,11 @@ class WLDeblendGalaxyCatalog(object):
         The random number generator
     coadd_dim: int
         Dimensions of the coadd
-    buff: int
-        Buffer region with no objects, on all sides of image
+    buff: int, optional
+        Buffer region with no objects, on all sides of image.  Ingored
+        for layout 'grid'.  Default 0.
     """
-    def __init__(self, *, rng, coadd_dim, buff):
+    def __init__(self, *, rng, coadd_dim, buff=0):
         self.gal_type = 'wldeblend'
         self.rng = rng
 
