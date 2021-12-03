@@ -1,4 +1,4 @@
-import copy
+from copy import deepcopy
 import esutil as eu
 import galsim
 import numpy as np
@@ -578,14 +578,16 @@ def get_sim_config(config=None):
     -------
     config dict
     """
-    out_config = copy.deepcopy(DEFAULT_SIM_CONFIG)
+    out_config = deepcopy(DEFAULT_SIM_CONFIG)
     sub_configs = ['gal_config', 'star_config']
 
     if config is not None:
         for key in config:
             if key not in out_config and key not in sub_configs:
                 raise ValueError("bad key for sim: '%s'" % key)
-        out_config.update(config)
+
+        out_config.update(deepcopy(config))
+
     return out_config
 
 
