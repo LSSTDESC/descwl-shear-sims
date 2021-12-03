@@ -1,15 +1,13 @@
 import time
 import copy
 import numpy as np
-import ngmix
 import tqdm
 import joblib
 
 import pytest
 
-import metadetect.lsst.metadetect as lsst_metadetect
+from metadetect.lsst.metadetect import run_metadetect
 import descwl_shear_sims as sim
-from descwl_coadd.coadd import make_coadd_obs
 
 CONFIG = {
     "meas_type": "wmom",
@@ -31,8 +29,7 @@ CONFIG = {
 }
 
 
-def _make_lsst_sim(*, seed, g1, g2, layout):
-    rng = np.random.RandomState(seed=seed)
+def _make_lsst_sim(*, rng, g1, g2, layout):
 
     galaxy_catalog = sim.galaxies.make_galaxy_catalog(
         rng=rng,
@@ -75,18 +72,12 @@ def _meas_shear_data(res):
     g1_1m = np.mean(res['1m']['wmom_g'][msk, 0])
     R11 = (g1_1p - g1_1m) / 0.02
 
-    msk = _shear_cuts(res['2p'])
-    g2_2p = np.mean(res['2p']['wmom_g'][msk, 1])
-    msk = _shear_cuts(res['2m'])
-    g2_2m = np.mean(res['2m']['wmom_g'][msk, 1])
-    R22 = (g2_2p - g2_2m) / 0.02
-
     dt = [
         ('g1', 'f8'),
         ('g2', 'f8'),
         ('R11', 'f8'),
-        ('R22', 'f8')]
-    return np.array([(g1, g2, R11, R22)], dtype=dt)
+    ]
+    return np.array([(g1, g2, R11)], dtype=dt)
 
 
 def _bootstrap_stat(d1, d2, func, seed, nboot=500):
@@ -105,7 +96,7 @@ def _meas_m_c_cancel(pres, mres):
     m = x/y/0.02 - 1
 
     x = np.mean(pres['g2'] + mres['g2'])/2
-    y = np.mean(pres['R22'] + mres['R22'])/2
+    y = np.mean(pres['R11'] + mres['R11'])/2
     c = x/y
 
     return m, c
@@ -118,29 +109,61 @@ def _boostrap_m_c(pres, mres):
     return m, merr, c, cerr
 
 
+def _coadd_sim_data(rng, sim_data, nowarp, remove_poisson):
+    """
+    copied from mdet-lsst-sim
+    """
+    from descwl_coadd.coadd import make_coadd
+    from descwl_coadd.coadd_nowarp import make_coadd_nowarp
+    from metadetect.lsst.util import extract_multiband_coadd_data
+
+    bands = list(sim_data['band_data'].keys())
+
+    if nowarp:
+        exps = sim_data['band_data'][bands[0]]
+
+        if len(exps) > 1:
+            raise ValueError('only one epoch for nowarp')
+
+        coadd_data_list = [
+            make_coadd_nowarp(
+                exp=exps[0],
+                psf_dims=sim_data['psf_dims'],
+                rng=rng,
+                remove_poisson=remove_poisson,
+            )
+            for band in bands
+        ]
+    else:
+        coadd_data_list = [
+            make_coadd(
+                exps=sim_data['band_data'][band],
+                psf_dims=sim_data['psf_dims'],
+                rng=rng,
+                coadd_wcs=sim_data['coadd_wcs'],
+                coadd_bbox=sim_data['coadd_bbox'],
+                remove_poisson=remove_poisson,
+            )
+            for band in bands
+        ]
+    return extract_multiband_coadd_data(coadd_data_list)
+
+
 def _run_sim_one(*, seed, mdet_seed, g1, g2, **kwargs):
-    sim_data = _make_lsst_sim(seed=seed, g1=g1, g2=g2, **kwargs)
-    coadd_obs, exp_info = make_coadd_obs(
-        exps=sim_data['band_data']['i'],
-        coadd_wcs=sim_data['coadd_wcs'],
-        coadd_bbox=sim_data['coadd_bbox'],
-        psf_dims=sim_data['psf_dims'],
-        rng=np.random.RandomState(seed),
-        remove_poisson=False,  # no object poisson noise in sims
+    rng = np.random.RandomState(seed=seed)
+    sim_data = _make_lsst_sim(rng=rng, g1=g1, g2=g2, **kwargs)
+
+    coadd_data = _coadd_sim_data(
+        rng=rng, sim_data=sim_data, nowarp=True, remove_poisson=False,
     )
 
-    coadd_mbobs = ngmix.MultiBandObsList()
-    obslist = ngmix.ObsList()
-    obslist.append(coadd_obs)
-    coadd_mbobs.append(obslist)
-
-    rng = np.random.RandomState(seed=mdet_seed)
-
-    results = lsst_metadetect.run_metadetect(
-        mbobs=coadd_mbobs,
-        rng=rng,
+    mdet_rng = np.random.RandomState(seed=mdet_seed)
+    results = run_metadetect(
+        rng=mdet_rng,
         config=copy.deepcopy(CONFIG),
+        **coadd_data,
     )
+
     return results
 
 
