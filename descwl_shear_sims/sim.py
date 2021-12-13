@@ -36,6 +36,7 @@ DEFAULT_SIM_CONFIG = {
     "noise_factor": 1.0,
     "stars": False,
     "star_bleeds": False,
+    "draw_stars": True,
     "cosmic_rays": False,
     "bad_columns": False,
     "sky_n_sigma": None,
@@ -52,6 +53,7 @@ def make_sim(
     psf,
     se_dim=None,
     star_catalog=None,
+    draw_stars=True,
     psf_dim=51,
     dither=False,
     rotate=False,
@@ -169,6 +171,7 @@ def make_sim(
                 g1=g1, g2=g2,
                 star_objlist=lists['star_objlist'],
                 star_shifts=lists['star_shifts'],
+                draw_stars=draw_stars,
                 bright_objlist=lists['bright_objlist'],
                 bright_shifts=lists['bright_shifts'],
                 bright_mags=lists['bright_mags'],
@@ -229,6 +232,7 @@ def make_exp(
     g2,
     star_objlist=None,
     star_shifts=None,
+    draw_stars=True,
     bright_objlist=None,
     bright_shifts=None,
     bright_mags=None,
@@ -274,6 +278,8 @@ def make_exp(
         List of GSObj for stars
     star_shifts: array
         List of PositionD for stars representing offsets
+    draw_stars: bool, optional
+        Draw the stars, don't just mask bright ones.  Default True.
     bright_objlist: list, optional
         List of GSObj for bright objects
     bright_shifts: array, optional
@@ -340,7 +346,7 @@ def make_exp(
         rng,
         shear=shear,
     )
-    if star_objlist is not None:
+    if star_objlist is not None and draw_stars:
         assert star_shifts is not None, 'send star_shifts with star_objlist'
         _draw_objects(
             image,
@@ -377,6 +383,7 @@ def make_exp(
             mask_threshold=mask_threshold,
             rng=rng,
             star_bleeds=star_bleeds,
+            draw_stars=draw_stars,
         )
     else:
         bright_info = []
@@ -460,6 +467,7 @@ def _draw_bright_objects(
     mask_threshold,
     rng,
     star_bleeds,
+    draw_stars,
 ):
     """
     draw bright objects.
@@ -522,7 +530,8 @@ def _draw_bright_objects(
         )
         b = stamp.bounds & image.bounds
         if b.isDefined():
-            image[b] += stamp[b]
+            if draw_stars:
+                image[b] += stamp[b]
 
             # use smooth version for radius calculation
             stamp_fft = convolved_object.drawImage(
