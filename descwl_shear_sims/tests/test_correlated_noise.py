@@ -63,18 +63,17 @@ def test_correlated_noise():
             rotate=True,
         )
 
-        coadd_obs = coadd_mod.make_coadd_obs(
+        coadd_data = coadd_mod.make_coadd(
             exps=sim_data['band_data']['i'],
             coadd_wcs=sim_data['coadd_wcs'],
             coadd_bbox=sim_data['coadd_bbox'],
             psf_dims=sim_data['psf_dims'],
             rng=rng,
             remove_poisson=False,
-            loglevel="debug",
         )
 
-        image = coadd_obs.image
-        noise = coadd_obs.noise
+        image = coadd_data['coadd_exp'].image.array
+        noise = coadd_data['coadd_noise_exp'].image.array
 
         icov = get_cov(image)
         ncov = get_cov(noise)
