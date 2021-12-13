@@ -11,3 +11,6 @@
 
    - get_se_dim now takes in dither and rotation, adjusting the dims
        accordingly to just cover the coadd.
+   - added draw_stars bool keyword to make_sim and part of DEFAULT_SIM_CONFIG 
+     to isolate the effect of star masking from the presence of stars in the
+     image
