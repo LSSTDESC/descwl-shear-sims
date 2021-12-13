@@ -11,7 +11,7 @@ from descwl_shear_sims.psfs import make_fixed_psf
 from descwl_shear_sims.sim import make_sim
 
 
-@pytest.mark.parametrize('layout', ('pair', 'random'))
+@pytest.mark.parametrize('layout', ('pair', 'random', 'hex'))
 @pytest.mark.parametrize('gal_type', ('fixed', 'varying'))
 @pytest.mark.parametrize('morph', ('exp', 'dev', 'bd', 'bdk'))
 def test_galaxies_smoke(layout, gal_type, morph):

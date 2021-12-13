@@ -245,7 +245,7 @@ def test_sim_epochs(epochs_per_band):
         assert len(band_data[band]) == epochs_per_band
 
 
-@pytest.mark.parametrize("layout", ("grid", "random"))
+@pytest.mark.parametrize("layout", ("grid", "random", "hex"))
 def test_sim_layout(layout):
     seed = 7421
     coadd_dim = 201

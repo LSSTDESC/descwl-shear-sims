@@ -27,7 +27,7 @@ def get_shifts(
         Buffer region where no objects will be drawn.  Ignored
         for layout 'grid'.  Default 0.
     layout: string
-        'grid' or 'random'
+        'grid', 'pair', 'hex', or 'random'
     nobj: int, optional
         Optional number of objects to draw, defaults to None
         in which case a poission deviate is draw according
@@ -66,8 +66,75 @@ def get_shifts(
                 buff=buff,
                 size=nobj,
             )
+        elif layout == 'hex':
+            shifts = get_hex_shifts(
+                rng=rng,
+                dim=coadd_dim,
+                buff=buff,
+                n_on_side=GRID_N_ON_SIDE,
+            )
         else:
             raise ValueError("bad layout: '%s'" % layout)
+
+    return shifts
+
+
+def get_hex_shifts(*, rng, dim, buff, n_on_side):
+    """
+    get a set of hex grid shifts, with random shifts at the pixel scale
+
+    Parameters
+    ----------
+    rng: numpy.random.RandomState
+        The random number generator
+    dim: int
+        Dimensions of the final image
+    buff: int, optional
+        Buffer region where no objects will be drawn.
+    n_on_side: int
+        Number of objects on each side
+
+    Returns
+    -------
+    shifts: array
+        Array with dx, dy offset fields for each point, in
+        arcsec
+    """
+    from hexalattice.hexalattice import create_hex_grid
+
+    width = (dim - 2*buff) * SCALE
+    delta = width / (n_on_side+1)
+    nx = int(n_on_side * np.sqrt(2))
+    # the factor of 0.866 makes sure the grid is square-ish
+    ny = int(n_on_side * np.sqrt(2) / 0.8660254)
+
+    # here the spacing between grid centers is 1
+    hg, _ = create_hex_grid(nx=nx, ny=ny, rotate_deg=rng.uniform() * 360)
+
+    # convert the spacing to right number of pixels
+    # we also recenter the grid since it comes out centered at 0,0
+    hg *= delta
+    upos = hg[:, 0].ravel()
+    vpos = hg[:, 1].ravel()
+
+    # dither
+    upos += rng.uniform(low=-0.5, high=0.5, size=upos.shape[0])
+    vpos += rng.uniform(low=-0.5, high=0.5, size=vpos.shape[0])
+
+    pos_bounds = (-width/2, width/2)
+    msk = (
+        (upos >= pos_bounds[0])
+        & (upos <= pos_bounds[1])
+        & (vpos >= pos_bounds[0])
+        & (vpos <= pos_bounds[1])
+    )
+    upos = upos[msk]
+    vpos = vpos[msk]
+
+    ntot = upos.shape[0]
+    shifts = np.zeros(ntot, dtype=[('dx', 'f8'), ('dy', 'f8')])
+    shifts["dx"] = upos
+    shifts["dy"] = vpos
 
     return shifts
 
@@ -123,8 +190,10 @@ def get_random_shifts(*, rng, dim, buff, size):
         The random number generator
     dim: int
         Dimensions of the final image
-    n_on_side: int
-        Number of objects on each side
+    buff: int, optional
+        Buffer region where no objects will be drawn.
+    size: int
+        Number of objects to draw.
 
     Returns
     -------
