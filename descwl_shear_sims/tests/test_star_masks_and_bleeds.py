@@ -42,7 +42,8 @@ def test_bleed(band):
 @pytest.mark.skipif(
     "CATSIM_DIR" not in os.environ,
     reason='simulation input data is not present')
-def test_star_mask_in_sim():
+@pytest.mark.parametrize('draw_stars', (True, False))
+def test_star_mask_in_sim(draw_stars):
     """
     test star masking using the keyword to the sim
     """
@@ -74,6 +75,7 @@ def test_star_mask_in_sim():
             rng=rng,
             galaxy_catalog=galaxy_catalog,
             star_catalog=star_catalog,
+            draw_stars=draw_stars,
             coadd_dim=coadd_dim,
             bands=bands,
             psf=psf,
