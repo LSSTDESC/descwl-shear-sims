@@ -146,7 +146,7 @@ def test_sim_exp_mag(rotate, show=False):
         )
 
         image = sim_data["band_data"]["i"][0].image.array
-        sub_image = image[105:130, 100:125]
+        sub_image = image[93:93+25, 88:88+25]
         subim_sum = sub_image.sum()
 
         if show:

@@ -1,14 +1,24 @@
 import galsim
 
+# magnitude zero point for all images
 ZERO_POINT = 30.0
-SCALE = 0.2  # arcseconds/pixel
-RANDOM_DENSITY = 80  # per square arcmin
-GRID_N_ON_SIDE = 6  # grids are 6x6 on a side
 
-# fwhm if the special fixed psf
+# pixel scale for all images in arcseconds/pixel
+SCALE = 0.2
+
+# density of random layout (not wldeblend) per square arcmin
+RANDOM_DENSITY = 80
+
+# spacing of the square grid in arcsec
+GRID_SPACING = 9.5
+
+# spacing of the hex grid in arcsec
+HEX_SPACING = 9.5  # arcsec
+
+# fwhm of the special fixed psf
 FIXED_PSF_FWHM = 0.8
 
-# for fixed moffat psfs
+# beta for fixed moffat psfs
 FIXED_MOFFAT_BETA = 2.5
 
 WORLD_ORIGIN = galsim.CelestialCoord(
