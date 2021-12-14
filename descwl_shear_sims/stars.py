@@ -55,8 +55,7 @@ def make_star_catalog(rng, coadd_dim, buff=0, star_config=None):
     coadd_dim: int
         Dimensions of the coadd
     buff: int, optional
-        Buffer around the edge where no objects are drawn.  Ignored for
-        layout 'grid'.  Default 0.
+        Buffer around the edge where no objects are drawn. Default 0.
     star_config: dict
         Entries can be 'min_density', 'max_density' for sampling
         and 'density' to pick an exact density
@@ -88,8 +87,7 @@ class StarCatalog(object):
     coadd_dim: int
         Dimensions of the coadd
     buff: int, optional
-        Buffer around the edge where no objects are drawn.  Ignored for
-        layout 'grid'.  Default 0.
+        Buffer around the edge where no objects are drawn. Default 0.
     min_density: int, optional
         Set the minimum density to sample (ignored if density= is sent)
     max_density: int, optional

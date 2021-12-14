@@ -146,7 +146,7 @@ def test_sim_exp_mag(rotate, show=False):
         )
 
         image = sim_data["band_data"]["i"][0].image.array
-        sub_image = image[105:130, 100:125]
+        sub_image = image[93:93+25, 88:88+25]
         subim_sum = sub_image.sum()
 
         if show:
@@ -245,7 +245,7 @@ def test_sim_epochs(epochs_per_band):
         assert len(band_data[band]) == epochs_per_band
 
 
-@pytest.mark.parametrize("layout", ("grid", "random"))
+@pytest.mark.parametrize("layout", ("grid", "random", "hex"))
 def test_sim_layout(layout):
     seed = 7421
     coadd_dim = 201

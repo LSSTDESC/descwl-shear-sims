@@ -41,7 +41,8 @@ jobs:
             "numba!=0.54.0" \
             ngmix \
             lsstdesc-weaklensingdeblending \
-            fitsio
+            fitsio \
+            hexalattice
 
           pip install --no-deps -e .
 

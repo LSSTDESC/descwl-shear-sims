@@ -43,7 +43,9 @@ jobs:
             ngmix \
             lsstdesc-weaklensingdeblending \
             fitsio \
-            meds
+            meds \
+            hexalattice \
+            ngmix
 
           pip install --no-deps -e .
 
@@ -58,14 +60,6 @@ jobs:
           pushd ..
           git clone https://github.com/esheldon/metadetect.git
           pushd metadetect
-          pip install --no-deps -e .
-          popd
-          popd
-
-          # remove this one once ngmix 2.0 is on conda-forge
-          pushd ..
-          git clone https://github.com/esheldon/ngmix.git
-          pushd ngmix
           pip install --no-deps -e .
           popd
           popd
