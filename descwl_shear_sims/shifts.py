@@ -25,8 +25,7 @@ def get_shifts(
     coadd_dim: int
         Dimensions of final coadd
     buff: int, optional
-        Buffer region where no objects will be drawn.  Ignored
-        for layout 'grid'.  Default 0.
+        Buffer region where no objects will be drawn.  Default 0.
     layout: string
         'grid', 'pair', 'hex', or 'random'
     nobj: int, optional
@@ -93,8 +92,8 @@ def get_hex_shifts(*, rng, dim, buff, spacing):
         Dimensions of the final image
     buff: int, optional
         Buffer region where no objects will be drawn.
-    n_on_side: int
-        Number of objects on each side
+    spacing: float
+        Spacing of the hexagonal lattice
 
     Returns
     -------
@@ -152,8 +151,10 @@ def get_grid_shifts(*, rng, dim, buff, spacing):
         The random number generator
     dim: int
         Dimensions of the final image
-    n_on_side: int
-        Number of objects on each side
+    buff: int, optional
+        Buffer region where no objects will be drawn.
+    spacing: float
+        Spacing of the lattice
 
     Returns
     -------

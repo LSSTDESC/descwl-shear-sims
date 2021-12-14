@@ -13,7 +13,7 @@ RANDOM_DENSITY = 80
 GRID_SPACING = 9.5
 
 # spacing of the hex grid in arcsec
-HEX_SPACING = 9.5  # arcsec
+HEX_SPACING = 9.5
 
 # fwhm of the special fixed psf
 FIXED_PSF_FWHM = 0.8
