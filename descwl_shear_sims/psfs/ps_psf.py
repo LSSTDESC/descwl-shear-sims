@@ -10,7 +10,7 @@ import galsim.table
 import galsim.utilities
 
 
-def make_ps_psf(*, rng, dim):
+def make_ps_psf(*, rng, dim, variation_factor=1):
     """
     get a power spectrum psf
 
@@ -30,7 +30,7 @@ def make_ps_psf(*, rng, dim):
         im_width=dim,
         buff=dim/2,
         scale=SCALE,
-        variation_factor=1,
+        variation_factor=variation_factor,
     )
 
 
@@ -70,7 +70,7 @@ class PowerSpectrumPSF(object):
     """
     def __init__(self, *,
                  rng, im_width, buff, scale, trunc=1,
-                 noise_level=None, variation_factor=10,
+                 noise_level=None, variation_factor=1,
                  median_seeing=0.8):
         self._rng = rng
         self._im_cen = (im_width - 1)/2

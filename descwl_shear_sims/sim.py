@@ -24,6 +24,7 @@ DEFAULT_SIM_CONFIG = {
     "gal_type": "fixed",  # note "exp" also means "fixed" for back compat
     "psf_type": "gauss",
     "psf_dim": 51,
+    "psf_variation_factor": 1,  # for power spectrum psf
     "coadd_dim": 250,
     "se_dim": None,
     "buff": 0,
