@@ -25,6 +25,9 @@ DEFAULT_SIM_CONFIG = {
     "psf_type": "gauss",
     "psf_dim": 51,
     "psf_variation_factor": 1,  # for power spectrum psf
+    # randomize the psf fwhm and shape for each trial.  PSF is still same
+    # for all epochs/bands
+    "randomize_psf": False,
     "coadd_dim": 250,
     "se_dim": None,
     "buff": 0,
