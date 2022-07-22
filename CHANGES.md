@@ -1,4 +1,11 @@
-## 0.4.0  (unreleased)
+## 0.4.2
+
+### new features
+    - add randomized psf, fixed in an image but with random size and shape.
+      New function .psf.make_rand_psf
+
+
+## 0.4.0/0.4.1
 
 ### changes to defaults
 
