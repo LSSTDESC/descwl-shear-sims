@@ -26,12 +26,9 @@ the DM STack:
 ### A simple sim
 ```python
 import numpy as np
-from descwl_shear_sims.sim import (
-    FixedGalaxyCatalog,  # one of the galaxy catalog classes
-    make_sim,  # for making a simulation realization
-    make_psf,  # for making a simple PSF
-)
-
+from descwl_shear_sims.galaxies import FixedGalaxyCatalog
+from descwl_shear_sims.sim import make_sim
+from descwl_shear_sims.psfs import make_fixed_psf
 seed = 8312
 rng = np.random.RandomState(seed)
 
@@ -53,7 +50,7 @@ for trial in range(ntrial):
     )
 
     # make a constant gaussian psf
-    psf = make_psf(psf_type='gauss')
+    psf = make_fixed_psf(psf_type='gauss')
 
     # generate some simulation data, with a particular shear
 
@@ -65,29 +62,17 @@ for trial in range(ntrial):
         g2=0.00,
         psf=psf,
     )
-
-    # the sim_data has keys
-    #    band_data: a dict keyed by band with a list of single-epoch
-    #      observations objects, one for each epoch.  The class is
-    #      SEObs, defined in descwl_shear_sims.se_obs.py and has attributes
-    #      for the image, weight map, wcs, noise image, bmask and a psf
-    #      image generating method get_psf(x, y)
-    #    coadd_wcs:  the wcs for the coadd
-    #    psf_dims:  dimensions of the psf
-    #    coadd_dims: dimensions of the coadd
 ```
 
 ### A sim with lots of features turned on
 
 ```python
 import numpy as np
-from descwl_shear_sims.sim import (
-    WLDeblendGalaxyCatalog,  # one of the galaxy catalog classes
-    StarCatalog,  # star catalog class
-    make_sim,  # for making a simulation realization
-    make_ps_psf,  # for making a power spectrum PSF
-    get_se_dim,  # convert coadd dims to SE dims
-)
+from descwl_shear_sims.galaxies import WLDeblendGalaxyCatalog  # one of the galaxy catalog classes
+from descwl_shear_sims.stars import StarCatalog  # star catalog class
+from descwl_shear_sims.sim import make_sim
+from descwl_shear_sims.psfs import make_ps_psf  # for making a power spectrum PSF
+from descwl_shear_sims.sim import get_se_dim  # convert coadd dims to SE dims
 
 seed = 8312
 rng = np.random.RandomState(seed)
