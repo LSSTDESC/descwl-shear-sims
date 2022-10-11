@@ -95,6 +95,8 @@ class StarCatalog(object):
     density: float, optional
         Optional density for catalog, if not sent the density is variable and
         drawn from the expected galactic density
+    layout: string
+        'random' or 'random_circle'
     """
     def __init__(
         self, *, rng, coadd_dim,
@@ -102,6 +104,7 @@ class StarCatalog(object):
         min_density=DEFAULT_MIN_STAR_DENSITY,
         max_density=DEFAULT_MAX_STAR_DENSITY,
         density=DEFAULT_DENSITY,
+        layout='random',
     ):
         self.rng = rng
 
@@ -116,17 +119,27 @@ class StarCatalog(object):
         else:
             density_mean = density
 
+        if layout=='random':
+            # this layout is random in a square
+            area = ((coadd_dim - 2*buff)*SCALE/60)**2
+        elif layout=='random_circle':
+            # this layout is random in a circle
+            radius=(coadd_dim/2. - buff)*SCALE/60
+            area = np.pi*radius**2
+            del radius
+        else:
+            raise ValueError("layout can only be 'random' or 'random_circle' for wldeblend")
+
         area = ((coadd_dim - 2*buff)*SCALE/60)**2
         nobj_mean = area * density_mean
         nobj = rng.poisson(nobj_mean)
-
         self.density = nobj/area
 
         self.shifts_array = get_shifts(
             rng=rng,
             coadd_dim=coadd_dim,
             buff=buff,
-            layout="random",
+            layout=layout,
             nobj=nobj,
         )
 

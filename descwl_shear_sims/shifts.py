@@ -67,6 +67,21 @@ def get_shifts(
                 buff=buff,
                 size=nobj,
             )
+        elif layout == 'random_circle':
+            # randomly distributed in a circle
+            # area covered by objects
+            if nobj is None:
+                radius=(coadd_dim/2. - buff)*SCALE/60.
+                area = np.pi*radius**2
+                nobj_mean = area * RANDOM_DENSITY
+                nobj = rng.poisson(nobj_mean)
+
+            shifts = get_random_circle_shifts(
+                rng=rng,
+                dim=coadd_dim,
+                buff=buff,
+                size=nobj,
+            )
         elif layout == 'hex':
             shifts = get_hex_shifts(
                 rng=rng,
@@ -197,7 +212,7 @@ def get_grid_shifts(*, rng, dim, buff, spacing):
 
 def get_random_shifts(*, rng, dim, buff, size):
     """
-    get a set of gridded shifts, with random shifts at the pixel scale
+    get a set of gridded shifts in a square, with random shifts at the pixel scale
 
     Parameters
     ----------
@@ -227,6 +242,40 @@ def get_random_shifts(*, rng, dim, buff, size):
     shifts['dx'] = rng.uniform(low=low, high=high, size=size)
     shifts['dy'] = rng.uniform(low=low, high=high, size=size)
 
+    return shifts
+
+def get_random_circle_shifts(*, rng, dim, buff, size):
+    """
+    get a set of gridded shifts in a circle, with random shifts at the pixel scale
+
+    Parameters
+    ----------
+    rng: numpy.random.RandomState
+        The random number generator
+    dim: int
+        Dimensions of the final image
+    buff: int, optional
+        Buffer region where no objects will be drawn.
+    size: int
+        Number of objects to draw.
+
+    Returns
+    -------
+    shifts: array
+        Array with dx, dy offset fields for each point, in
+        arcsec
+    """
+
+    radius = (dim - 2*buff)/2.0*SCALE
+    radius_square=radius**2.
+
+    # evenly distributed within a radius, min(nx,ny)*rfrac
+    rarray  =   np.sqrt(radius_square*rng.rand(size))   # radius
+    tarray  =   rng.uniform(0.,2*np.pi,size)   # theta (0,pi/nrot)
+
+    shifts = np.zeros(size, dtype=[('dx', 'f8'), ('dy', 'f8')])
+    shifts['dx'] = rarray*np.cos(tarray)
+    shifts['dy'] = rarray*np.sin(tarray)
     return shifts
 
 

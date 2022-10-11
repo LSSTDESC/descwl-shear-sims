@@ -49,7 +49,8 @@ elif itest==1:
         rng=rng,
         coadd_dim=coadd_dim,
         buff=buff,
-        density=(ifield%1000)/10+1
+        density=(ifield%1000)/10+1,
+        layout='random_circle',
     )
 elif itest==2:
     args={
@@ -62,6 +63,7 @@ elif itest==2:
         coadd_dim=coadd_dim,
         buff=buff,
         density=(ifield%1000)/10+1,
+        layout='random_circle',
     )
 else:
     raise ValueError('itest must be 0, 1 or 2 !!!')
@@ -74,6 +76,7 @@ galaxy_catalog = WLDeblendGalaxyCatalog(
     rng=rng,
     coadd_dim=coadd_dim,
     buff=buff,
+    layout='random_circle',
 )
 psf = make_ps_psf(rng=rng, dim=se_dim)
 

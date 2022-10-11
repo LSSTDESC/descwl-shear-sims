@@ -582,8 +582,10 @@ class WLDeblendGalaxyCatalog(object):
     buff: int, optional
         Buffer region with no objects, on all sides of image.  Ingored
         for layout 'grid'.  Default 0.
+    layout: str, optional
+
     """
-    def __init__(self, *, rng, coadd_dim, buff=0):
+    def __init__(self, *, rng, coadd_dim, buff=0,layout='random'):
         self.gal_type = 'wldeblend'
         self.rng = rng
 
@@ -591,7 +593,18 @@ class WLDeblendGalaxyCatalog(object):
 
         # one square degree catalog, convert to arcmin
         gal_dens = self._wldeblend_cat.size / (60 * 60)
-        area = ((coadd_dim - 2*buff)*SCALE/60)**2
+        if layout=='random':
+            # this layout is random in a square
+            area = ((coadd_dim - 2*buff)*SCALE/60)**2
+        elif layout=='random_circle':
+            # this layout is random in a circle
+            radius=(coadd_dim/2. - buff)*SCALE/60
+            area = np.pi*radius**2
+            del radius
+        else:
+            raise ValueError("layout can only be 'random' or 'random_circle' for wldeblend")
+        print(area)
+
         nobj_mean = area * gal_dens
         nobj = rng.poisson(nobj_mean)
 
@@ -599,9 +612,11 @@ class WLDeblendGalaxyCatalog(object):
             rng=rng,
             coadd_dim=coadd_dim,
             buff=buff,
-            layout="random",
+            layout=layout,
             nobj=nobj,
         )
+        print(np.min(self.shifts_array['dx'])/SCALE,np.max(self.shifts_array['dx'])/SCALE)
+        print(np.min(self.shifts_array['dy'])/SCALE,np.max(self.shifts_array['dy'])/SCALE)
 
         num = len(self)
         self.indices = self.rng.randint(
