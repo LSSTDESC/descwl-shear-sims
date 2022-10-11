@@ -603,7 +603,7 @@ class WLDeblendGalaxyCatalog(object):
             del radius
         else:
             raise ValueError("layout can only be 'random' or 'random_circle' for wldeblend")
-        print(area)
+        # print(area)
 
         nobj_mean = area * gal_dens
         nobj = rng.poisson(nobj_mean)
@@ -615,8 +615,8 @@ class WLDeblendGalaxyCatalog(object):
             layout=layout,
             nobj=nobj,
         )
-        print(np.min(self.shifts_array['dx'])/SCALE,np.max(self.shifts_array['dx'])/SCALE)
-        print(np.min(self.shifts_array['dy'])/SCALE,np.max(self.shifts_array['dy'])/SCALE)
+        # print(np.min(self.shifts_array['dx'])/SCALE,np.max(self.shifts_array['dx'])/SCALE)
+        # print(np.min(self.shifts_array['dy'])/SCALE,np.max(self.shifts_array['dy'])/SCALE)
 
         num = len(self)
         self.indices = self.rng.randint(

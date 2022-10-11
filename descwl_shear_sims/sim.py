@@ -416,7 +416,7 @@ def make_exp(
     exp = afw_image.ExposureF(masked_image)
 
     filter_label = afw_image.FilterLabel(band=band, physical=band)
-    exp.setFilterLabel(filter_label)
+    exp.setFilter(filter_label)
 
     exp.setPsf(dm_psf)
 

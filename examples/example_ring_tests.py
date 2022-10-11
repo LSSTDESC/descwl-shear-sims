@@ -4,10 +4,10 @@ simple example with ring test (rotating intrinsic galaxies)
 import os
 import numpy as np
 from descwl_shear_sims.sim import make_sim
-from descwl_shear_sims.galaxies import WLDeblendGalaxyCatalog  # one of the galaxy catalog classes
-from descwl_shear_sims.stars import StarCatalog  # star catalog class
-from descwl_shear_sims.psfs import make_ps_psf  # for making a power spectrum PSF
-from descwl_shear_sims.sim import get_se_dim  # convert coadd dims to SE dims
+from descwl_shear_sims.galaxies import WLDeblendGalaxyCatalog   # one of the galaxy catalog classes
+from descwl_shear_sims.stars import StarCatalog                 # star catalog class
+from descwl_shear_sims.psfs import make_ps_psf,make_fixed_psf   # for making a power spectrum PSF
+from descwl_shear_sims.sim import get_se_dim                    # convert coadd dims to SE dims
 
 
 ifield=0
@@ -19,10 +19,8 @@ coadd_dim = 400
 buff   = 50
 rotate = False
 dither = False
+psf_vary=False
 
-# this is the single epoch image sized used by the sim, we need
-# it for the power spectrum psf
-se_dim = get_se_dim(coadd_dim=coadd_dim, rotate=rotate, dither=dither)
 
 
 nrot= 4
@@ -78,7 +76,16 @@ galaxy_catalog = WLDeblendGalaxyCatalog(
     buff=buff,
     layout='random_circle',
 )
-psf = make_ps_psf(rng=rng, dim=se_dim)
+
+
+if psf_vary:
+    # this is the single epoch image sized used by the sim, we need
+    # it for the power spectrum psf
+    se_dim = get_se_dim(coadd_dim=coadd_dim, rotate=rotate, dither=dither)
+    psf = make_ps_psf(rng=rng, dim=se_dim)
+else:
+    psf = make_fixed_psf(psf_type='moffat')
+
 
 for irot in range(nrot):
     for ishear in range(nshear):
