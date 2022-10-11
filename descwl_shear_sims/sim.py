@@ -69,6 +69,7 @@ def make_sim(
     star_bleeds=False,
     sky_n_sigma=None,
     draw_method='auto',
+    theta0=0.,
 ):
     """
     Make simulation data
@@ -98,7 +99,8 @@ def make_sim(
     dither: bool, optional
         Whether to dither the images at the pixel level, default False
     rotate: bool, optional
-        Whether to rotate the images randomly, default False
+        Whether to randomly rotate the image exposures randomly [not the
+        rotation of intrinsic galaxies], default False
     bands: list, optional
         Default ['i']
     epochs_per_band: int, optional
@@ -115,6 +117,8 @@ def make_sim(
     draw_method: string
         Draw method for galsim objects, default 'auto'.  Set to
         'phot' to get poisson noise.  Note this is much slower.
+    theta0: float
+        The rotation angle of the exposure, in units of radians
 
     Returns
     -------
@@ -188,6 +192,7 @@ def make_sim(
                 star_bleeds=star_bleeds,
                 sky_n_sigma=sky_n_sigma,
                 draw_method=draw_method,
+                theta0=theta0,
             )
             if epoch == 0:
                 bright_info += this_bright_info
@@ -249,6 +254,7 @@ def make_exp(
     star_bleeds=False,
     sky_n_sigma=None,
     draw_method='auto',
+    theta0=0.
 ):
     """
     Make an SEObs
@@ -277,7 +283,8 @@ def make_exp(
     dither: bool
         If set to True, dither randomly by a pixel width
     rotate: bool
-        If set to True, rotate the image randomly
+        If set to True, rotate the image exposure randomly, note, this is not
+        the rotation of intrinsic galaxies in ring test
     star_objlist: list
         List of GSObj for stars
     star_shifts: array
@@ -305,7 +312,9 @@ def make_exp(
     draw_method: string
         Draw method for galsim objects, default 'auto'.  Set to
         'phot' to get poisson noise.  Note this is much slower.
-
+    theta0: float
+        rotation angle of intrinsic galaxies and positions [for ring test],
+        default 0, in units of radians
     Returns
     -------
     exp: lsst.afw.image.ExposureF
@@ -349,6 +358,7 @@ def make_exp(
         coadd_bbox_cen_gs_skypos,
         rng,
         shear=shear,
+        theta0=theta0,
     )
     if star_objlist is not None and draw_stars:
         assert star_shifts is not None, 'send star_shifts with star_objlist'
@@ -423,6 +433,7 @@ def _draw_objects(
     coadd_bbox_cen_gs_skypos,
     rng,
     shear=None,
+    theta0=None,
 ):
 
     wcs = image.wcs
@@ -432,6 +443,12 @@ def _draw_objects(
         kw['rng'] = galsim.BaseDeviate(seed=rng.randint(low=0, high=2**30))
 
     for obj, shift in zip(objlist, shifts):
+
+        if theta0 is not None:
+            ang     =   theta0*galsim.radians
+            # rotation on intrinsic galaxies comes before shear distortion
+            obj     =   obj.rotate(ang)
+            shift   =   _roate_pos(shift,theta0)
 
         if shear is not None:
             obj = obj.shear(shear)
@@ -615,7 +632,7 @@ def get_se_dim(*, coadd_dim, dither, rotate):
     dither: bool
         Whether there is dithering or not
     rotate: bool
-        Whether there are rotations or not
+        Whether there are random rotations of image exposure or not
 
     Returns
     -------
@@ -696,3 +713,18 @@ def get_bright_info_struct():
         ('has_bleed', bool),
     ]
     return np.zeros(1, dtype=dt)
+
+def _roate_pos(pos,theta):
+    '''Rotates coordinates by an angle theta
+    Args:
+        pos (PositionD):a galsim position
+        theta (float):  rotation angle [rads]
+    Returns:
+        x2 (ndarray):   rotated coordiantes [x]
+        y2 (ndarray):   rotated coordiantes [y]
+    '''
+    x   =   pos.x
+    y   =   pos.y
+    x2  =   np.cos(theta)*x-np.sin(theta)*y
+    y2  =   np.sin(theta)*x+np.cos(theta)*y
+    return galsim.PositionD(x=x2, y=y2)
