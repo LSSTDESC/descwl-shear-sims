@@ -21,6 +21,17 @@ the DM STack:
 
 [Full Installation with Dependencies](https://github.com/beckermr/mdet-lsst-sim-runs)
 
+
+## Getting the Simulation Input Data
+
+To use galaxy models from WeakLensingDeblending, and to use realistic star masks, get this
+tar ball, untar it and set the $CATSIM_DIR environment variable to that location
+```shell
+wget https://www.cosmo.bnl.gov/www/esheldon/data/catsim.tar.gz
+tar xvfz catsim.tar.gz
+export CATSIM_DIR=/path/to/catsim
+```
+
 ## Example Usage
 
 ### A simple sim
@@ -131,13 +142,3 @@ for trial in range(ntrial):
 ## Documentation
 
 The doc strings for the main public APIs are complete. See them for more details.
-
-## Getting the Simulation Input Data
-
-To use galaxy models from WeakLensingDeblending, and to use realistic star masks, get this
-tar ball, untar it and set the $CATSIM_DIR environment variable to that location
-```shell
-wget https://www.cosmo.bnl.gov/www/esheldon/data/catsim.tar.gz
-tar xvfz catsim.tar.gz
-export CATSIM_DIR=/path/to/catsim
-```
