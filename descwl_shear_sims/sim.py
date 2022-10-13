@@ -9,7 +9,7 @@ from lsst.afw.cameraGeom.testUtils import DetectorWrapper
 from .lsst_bits import get_flagval
 from .saturation import saturate_image_and_mask, BAND_SAT_VALS
 from .surveys import get_survey, rescale_wldeblend_exp
-from .constants import SCALE
+from .constants import SCALE, ZERO_POINT
 from .artifacts import add_bleed, get_max_mag_with_bleed
 from .masking import (
     get_bmask_and_set_image,
@@ -145,6 +145,7 @@ def make_sim(
 
     band_data = {}
     bright_info = []
+    se_wcs  =   []
     for band in bands:
 
         survey = get_survey(gal_type=galaxy_catalog.gal_type, band=band)
@@ -167,7 +168,7 @@ def make_sim(
 
         bdata_list = []
         for epoch in range(epochs_per_band):
-            exp, this_bright_info = make_exp(
+            exp, this_bright_info, this_se_wcs = make_exp(
                 rng=rng,
                 band=band,
                 noise=noise_per_epoch,
@@ -196,6 +197,8 @@ def make_sim(
             )
             if epoch == 0:
                 bright_info += this_bright_info
+                se_wcs.append(this_se_wcs)
+
 
             if galaxy_catalog.gal_type == 'wldeblend':
                 rescale_wldeblend_exp(
@@ -224,6 +227,7 @@ def make_sim(
         'coadd_dims': (coadd_dim, )*2,
         'coadd_bbox': coadd_bbox,
         'bright_info': bright_info,
+        'se_wcs':   se_wcs,
     }
 
 
@@ -415,6 +419,11 @@ def make_exp(
 
     exp = afw_image.ExposureF(masked_image)
 
+    # Prepare the frc
+    zero_flux=10.**(0.4*ZERO_POINT)
+    photoCalib = afw_image.makePhotoCalibFromCalibZeroPoint(zero_flux)
+    exp.setPhotoCalib(photoCalib)
+
     filter_label = afw_image.FilterLabel(band=band, physical=band)
     exp.setFilter(filter_label)
 
@@ -425,7 +434,7 @@ def make_exp(
     detector = DetectorWrapper().detector
     exp.setDetector(detector)
 
-    return exp, bright_info
+    return exp, bright_info, se_wcs
 
 
 def _draw_objects(

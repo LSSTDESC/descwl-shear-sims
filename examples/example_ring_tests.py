@@ -22,7 +22,6 @@ dither = False
 psf_vary=False
 
 
-
 nrot= 4
 g1_list=[0.02,-0.02]
 band_list=['r', 'i', 'z']
