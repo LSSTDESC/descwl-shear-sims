@@ -273,16 +273,16 @@ def get_random_circle_shifts(*, rng, dim, buff, size):
         arcsec
     """
 
-    radius = (dim - 2*buff)/2.0*SCALE
-    if radius<2:
+    radius = (dim - 2*buff) / 2.0*SCALE
+    if radius < 2:
         # prevent it from being unrealisticly small
         warnings.warn("dim - 2*buff <= 2, force it to 2.")
-        radius=2.
-    radius_square=radius**2.
+        radius = 2.
+    radius_square = radius**2.
 
-    # evenly distributed within a radius, min(nx,ny)*rfrac
-    rarray  =   np.sqrt(radius_square*rng.rand(size))   # radius
-    tarray  =   rng.uniform(0.,2*np.pi,size)   # theta (0,pi/nrot)
+    # evenly distributed within a radius, min(nx, ny)*rfrac
+    rarray = np.sqrt(radius_square*rng.rand(size))   # radius
+    tarray = rng.uniform(0., 2*np.pi, size)   # theta (0, pi/nrot)
 
     shifts = np.zeros(size, dtype=[('dx', 'f8'), ('dy', 'f8')])
     shifts['dx'] = rarray*np.cos(tarray)

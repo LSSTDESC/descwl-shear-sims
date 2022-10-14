@@ -119,16 +119,17 @@ class StarCatalog(object):
         else:
             density_mean = density
 
-        if layout=='random':
+        if layout == 'random':
             # this layout is random in a square
             area = ((coadd_dim - 2*buff)*SCALE/60)**2
-        elif layout=='random_circle':
+        elif layout == 'random_circle':
             # this layout is random in a circle
-            radius=(coadd_dim/2. - buff)*SCALE/60
+            radius = (coadd_dim/2. - buff)*SCALE/60
             area = np.pi*radius**2
             del radius
         else:
-            raise ValueError("layout can only be 'random' or 'random_circle' for wldeblend")
+            raise ValueError("layout can only be 'random' or 'random_circle' \
+                    for wldeblend")
 
         area = ((coadd_dim - 2*buff)*SCALE/60)**2
         nobj_mean = area * density_mean

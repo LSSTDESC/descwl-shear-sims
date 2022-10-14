@@ -586,7 +586,7 @@ class WLDeblendGalaxyCatalog(object):
     layout: str, optional
 
     """
-    def __init__(self, *, rng, coadd_dim, buff=0,layout='random'):
+    def __init__(self, *, rng, coadd_dim, buff=0, layout='random'):
         self.gal_type = 'wldeblend'
         self.rng = rng
 
@@ -594,28 +594,30 @@ class WLDeblendGalaxyCatalog(object):
 
         # one square degree catalog, convert to arcmin
         gal_dens = self._wldeblend_cat.size / (60 * 60)
-        if layout=='random':
+        if layout == 'random':
             # this layout is random in a square
-            if (coadd_dim - 2*buff)<2:
+            if (coadd_dim - 2*buff) < 2:
                 warnings.warn("dim - 2*buff <= 2, force it to 2.")
-                area    =   (2**SCALE/60)**2.
+                area = (2**SCALE/60)**2.
             else:
-                area    =   ((coadd_dim - 2*buff)*SCALE/60)**2
+                area = ((coadd_dim - 2*buff)*SCALE/60)**2
 
         elif layout=='random_circle':
             # this layout is random in a circle
-            if (coadd_dim - 2*buff)<2:
+            if (coadd_dim - 2*buff) < 2:
                 warnings.warn("dim - 2*buff <= 2, force it to 2.")
-                radius  =   2.*SCALE/60
-                area    =   np.pi*radius**2
+                radius = 2.*SCALE/60
+                area = np.pi*radius**2
             else:
-                radius=(coadd_dim/2. - buff)*SCALE/60
+                radius = (coadd_dim/2. - buff)*SCALE/60
                 area = np.pi*radius**2
             del radius
         else:
-            raise ValueError("layout can only be 'random' or 'random_circle' for wldeblend")
+            raise ValueError("layout can only be 'random' or 'random_circle' \
+                    for wldeblend")
 
-        nobj_mean = max(area * gal_dens,1) # a least 1 expected galaxy (used for simple tests)
+        # a least 1 expected galaxy (used for simple tests)
+        nobj_mean = area * gal_dens
 
         nobj = rng.poisson(nobj_mean)
 
