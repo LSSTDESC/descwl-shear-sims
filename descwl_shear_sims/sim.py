@@ -145,7 +145,7 @@ def make_sim(
 
     band_data = {}
     bright_info = []
-    se_wcs  =   []
+    se_wcs = []
     for band in bands:
 
         survey = get_survey(gal_type=galaxy_catalog.gal_type, band=band)
@@ -199,7 +199,6 @@ def make_sim(
                 bright_info += this_bright_info
                 se_wcs.append(this_se_wcs)
 
-
             if galaxy_catalog.gal_type == 'wldeblend':
                 rescale_wldeblend_exp(
                     survey=survey.descwl_survey,
@@ -227,7 +226,7 @@ def make_sim(
         'coadd_dims': (coadd_dim, )*2,
         'coadd_bbox': coadd_bbox,
         'bright_info': bright_info,
-        'se_wcs':   se_wcs,
+        'se_wcs': se_wcs,
     }
 
 
@@ -422,7 +421,7 @@ def make_exp(
     exp = afw_image.ExposureF(masked_image)
 
     # Prepare the frc
-    zero_flux=10.**(0.4*ZERO_POINT)
+    zero_flux = 10.**(0.4*ZERO_POINT)
     photoCalib = afw_image.makePhotoCalibFromCalibZeroPoint(zero_flux)
     exp.setPhotoCalib(photoCalib)
 
@@ -456,16 +455,16 @@ def _draw_objects(
     for obj, shift in zip(objlist, shifts):
 
         if theta0 is not None:
-            ang     =   theta0*galsim.radians
+            ang = theta0*galsim.radians
             # rotation on intrinsic galaxies comes before shear distortion
-            obj     =   obj.rotate(ang)
-            shift   =   _roate_pos(shift,theta0)
+            obj = obj.rotate(ang)
+            shift = _roate_pos(shift, theta0)
 
         if shear is not None:
             obj = obj.shear(shear)
             shift = shift.shear(shear)
 
-        # Deproject from u,v onto sphere.  Then use wcs to get to image pos.
+        # Deproject from u,v onto sphere. Then use wcs to get to image pos.
         world_pos = coadd_bbox_cen_gs_skypos.deproject(
             shift.x * galsim.arcsec,
             shift.y * galsim.arcsec,
@@ -725,8 +724,10 @@ def get_bright_info_struct():
     ]
     return np.zeros(1, dtype=dt)
 
-def _roate_pos(pos,theta):
+
+def _roate_pos(pos, theta):
     '''Rotates coordinates by an angle theta
+
     Args:
         pos (PositionD):a galsim position
         theta (float):  rotation angle [rads]

@@ -73,7 +73,7 @@ def get_shifts(
             # randomly distributed in a circle
             # area covered by objects
             if nobj is None:
-                radius=(coadd_dim/2. - buff)*SCALE/60.
+                radius = (coadd_dim/2. - buff)*SCALE/60.
                 area = np.pi*radius**2
                 nobj_mean = area * RANDOM_DENSITY
                 nobj = rng.poisson(nobj_mean)
@@ -235,10 +235,10 @@ def get_random_shifts(*, rng, dim, buff, size):
     """
 
     halfwidth = (dim - 2*buff)/2.0
-    if halfwidth<2:
+    if halfwidth < 2:
         # prevent it from being unrealisticly small
         warnings.warn("dim - 2*buff < 2, force it to 2")
-        halfwidth=2.
+        halfwidth = 2.
 
     low = -halfwidth*SCALE
     high = halfwidth*SCALE
@@ -250,9 +250,10 @@ def get_random_shifts(*, rng, dim, buff, size):
 
     return shifts
 
+
 def get_random_circle_shifts(*, rng, dim, buff, size):
-    """
-    get a set of gridded shifts in a circle, with random shifts at the pixel scale
+    """Gets a set of gridded shifts in a circle, with random shifts at the
+    pixel scale
 
     Parameters
     ----------
