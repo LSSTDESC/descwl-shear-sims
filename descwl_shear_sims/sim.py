@@ -426,7 +426,7 @@ def make_exp(
     exp.setPhotoCalib(photoCalib)
 
     filter_label = afw_image.FilterLabel(band=band, physical=band)
-    exp.setFilter(filter_label)
+    exp.setFilterLabel(filter_label)
 
     exp.setPsf(dm_psf)
 
