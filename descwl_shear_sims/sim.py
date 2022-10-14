@@ -332,7 +332,9 @@ def make_exp(
 
     shear = galsim.Shear(g1=g1, g2=g2)
     dims = [dim]*2
-    cen = (np.array(dims)-1)/2
+    # I think Galsim uses 1 offset. An array with length=dim=5
+    # The center is at 3=(5+1)/2
+    cen = (np.array(dims)+1)/2
 
     se_origin = galsim.PositionD(x=cen[1], y=cen[0])
     if dither:
