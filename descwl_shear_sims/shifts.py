@@ -7,6 +7,7 @@ from .constants import (
     GRID_SPACING,
     HEX_SPACING,
     SCALE,
+    MIN_R_SHIFT,
 )
 
 
@@ -235,10 +236,11 @@ def get_random_shifts(*, rng, dim, buff, size):
     """
 
     halfwidth = (dim - 2*buff)/2.0
-    if halfwidth < 2:
+    if halfwidth < MIN_R_SHIFT:
         # prevent it from being unrealisticly small
-        warnings.warn("dim - 2*buff < 2, force it to 2")
-        halfwidth = 2.
+        warnings.warn("dim - 2*buff < %s, force halfwidth to %s" \
+                %(MIN_R_SHIFT, MIN_R_SHIFT))
+        halfwidth = MIN_R_SHIFT
 
     low = -halfwidth*SCALE
     high = halfwidth*SCALE
@@ -274,10 +276,11 @@ def get_random_circle_shifts(*, rng, dim, buff, size):
     """
 
     radius = (dim - 2*buff) / 2.0*SCALE
-    if radius < 2:
+    if radius < MIN_R_SHIFT:
         # prevent it from being unrealisticly small
-        warnings.warn("dim - 2*buff <= 2, force it to 2.")
-        radius = 2.
+        warnings.warn("dim - 2*buff <= %s, force radius to %s."\
+                %(MIN_R_SHIFT,MIN_R_SHIFT))
+        radius = MIN_R_SHIFT
     radius_square = radius**2.
 
     # evenly distributed within a radius, min(nx, ny)*rfrac
