@@ -7,9 +7,7 @@ import pytest
 import galsim
 import numpy as np
 from descwl_shear_sims.sim import make_sim
-from descwl_shear_sims.galaxies import (
-    WLDeblendGalaxyCatalog,
-)  # one of the galaxy catalog classes
+from descwl_shear_sims.galaxies import make_galaxy_catalog
 from descwl_shear_sims.psfs import make_fixed_psf  # for making a power spectrum PSF
 
 
@@ -34,8 +32,9 @@ def test_sim_center(ran_seed):
     psf = make_fixed_psf(psf_type="moffat")
 
     # galaxy catalog; you can make your own
-    galaxy_catalog = WLDeblendGalaxyCatalog(
+    galaxy_catalog = make_galaxy_catalog(
         rng=rng,
+        gal_type="fixed",
         coadd_dim=coadd_dim,
         buff=buff,
         layout="random_circle",

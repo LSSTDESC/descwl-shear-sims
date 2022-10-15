@@ -61,7 +61,7 @@ def get_shifts(
             # area covered by objects
             if nobj is None:
                 area = ((coadd_dim - 2 * buff) * SCALE / 60) ** 2
-                nobj_mean = area * RANDOM_DENSITY
+                nobj_mean = max(area * RANDOM_DENSITY, 1)  # at least 1 gal
                 nobj = rng.poisson(nobj_mean)
 
             shifts = get_random_shifts(
@@ -76,7 +76,7 @@ def get_shifts(
             if nobj is None:
                 radius = (coadd_dim / 2.0 - buff) * SCALE / 60.0
                 area = np.pi * radius**2
-                nobj_mean = area * RANDOM_DENSITY
+                nobj_mean = max(area * RANDOM_DENSITY, 1)  # at least 1 gal
                 nobj = rng.poisson(nobj_mean)
 
             shifts = get_random_circle_shifts(
