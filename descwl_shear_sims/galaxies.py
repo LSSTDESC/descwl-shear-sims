@@ -617,7 +617,7 @@ class WLDeblendGalaxyCatalog(object):
                     for wldeblend")
 
         # a least 1 expected galaxy (used for simple tests)
-        nobj_mean = max(area * gal_dens,1)
+        nobj_mean = max(area * gal_dens, 1)
 
         nobj = rng.poisson(nobj_mean)
 
