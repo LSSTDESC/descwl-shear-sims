@@ -39,29 +39,29 @@ def get_shifts(
         The separation in arcseconds for layout='pair'
     """
 
-    if layout == "pair":
+    if layout == 'pair':
 
         if sep is None:
-            raise ValueError(f"send sep= for layout {layout}")
+            raise ValueError(f'send sep= for layout {layout}')
 
         shifts = get_pair_shifts(rng=rng, sep=sep)
     else:
 
         if coadd_dim is None:
-            raise ValueError(f"send coadd_dim= for layout {layout}")
+            raise ValueError(f'send coadd_dim= for layout {layout}')
 
-        if layout == "grid":
+        if layout == 'grid':
             shifts = get_grid_shifts(
                 rng=rng,
                 dim=coadd_dim,
                 buff=buff,
                 spacing=GRID_SPACING,
             )
-        elif layout == "random":
+        elif layout == 'random':
             # area covered by objects
             if nobj is None:
-                area = ((coadd_dim - 2 * buff) * SCALE / 60) ** 2
-                nobj_mean = max(area * RANDOM_DENSITY, 1)  # at least 1 gal
+                area = ((coadd_dim - 2*buff)*SCALE/60)**2
+                nobj_mean = max(area * RANDOM_DENSITY, 1)
                 nobj = rng.poisson(nobj_mean)
 
             shifts = get_random_shifts(
@@ -70,13 +70,13 @@ def get_shifts(
                 buff=buff,
                 size=nobj,
             )
-        elif layout == "random_circle":
+        elif layout == 'random_circle':
             # randomly distributed in a circle
             # area covered by objects
             if nobj is None:
-                radius = (coadd_dim / 2.0 - buff) * SCALE / 60.0
-                area = np.pi * radius**2
-                nobj_mean = max(area * RANDOM_DENSITY, 1)  # at least 1 gal
+                radius = (coadd_dim/2. - buff)*SCALE/60.
+                area = np.pi*radius**2
+                nobj_mean = max(area * RANDOM_DENSITY, 1)
                 nobj = rng.poisson(nobj_mean)
 
             shifts = get_random_circle_shifts(
@@ -85,7 +85,7 @@ def get_shifts(
                 buff=buff,
                 size=nobj,
             )
-        elif layout == "hex":
+        elif layout == 'hex':
             shifts = get_hex_shifts(
                 rng=rng,
                 dim=coadd_dim,
@@ -121,7 +121,7 @@ def get_hex_shifts(*, rng, dim, buff, spacing):
     """
     from hexalattice.hexalattice import create_hex_grid
 
-    width = (dim - 2 * buff) * SCALE
+    width = (dim - 2*buff) * SCALE
     n_on_side = int(width / spacing) + 1
 
     nx = int(n_on_side * np.sqrt(2))
@@ -141,7 +141,7 @@ def get_hex_shifts(*, rng, dim, buff, spacing):
     upos += SCALE * rng.uniform(low=-0.5, high=0.5, size=upos.shape[0])
     vpos += SCALE * rng.uniform(low=-0.5, high=0.5, size=vpos.shape[0])
 
-    pos_bounds = (-width / 2, width / 2)
+    pos_bounds = (-width/2, width/2)
     msk = (
         (upos >= pos_bounds[0])
         & (upos <= pos_bounds[1])
@@ -152,7 +152,7 @@ def get_hex_shifts(*, rng, dim, buff, spacing):
     vpos = vpos[msk]
 
     ntot = upos.shape[0]
-    shifts = np.zeros(ntot, dtype=[("dx", "f8"), ("dy", "f8")])
+    shifts = np.zeros(ntot, dtype=[('dx', 'f8'), ('dy', 'f8')])
     shifts["dx"] = upos
     shifts["dy"] = vpos
 
@@ -181,32 +181,32 @@ def get_grid_shifts(*, rng, dim, buff, spacing):
         arcsec
     """
 
-    width = (dim - 2 * buff) * SCALE
+    width = (dim - 2*buff) * SCALE
     n_on_side = int(dim / spacing * SCALE)
 
     ntot = n_on_side**2
 
     # ix/iy are really on the sky
-    grid = spacing * (np.arange(n_on_side) - (n_on_side - 1) / 2)
+    grid = spacing*(np.arange(n_on_side) - (n_on_side-1)/2)
 
-    shifts = np.zeros(ntot, dtype=[("dx", "f8"), ("dy", "f8")])
+    shifts = np.zeros(ntot, dtype=[('dx', 'f8'), ('dy', 'f8')])
 
     i = 0
     for ix in range(n_on_side):
         for iy in range(n_on_side):
-            dx = grid[ix] + SCALE * rng.uniform(low=-0.5, high=0.5)
-            dy = grid[iy] + SCALE * rng.uniform(low=-0.5, high=0.5)
+            dx = grid[ix] + SCALE*rng.uniform(low=-0.5, high=0.5)
+            dy = grid[iy] + SCALE*rng.uniform(low=-0.5, high=0.5)
 
-            shifts["dx"][i] = dx
-            shifts["dy"][i] = dy
+            shifts['dx'][i] = dx
+            shifts['dy'][i] = dy
             i += 1
 
-    pos_bounds = (-width / 2, width / 2)
+    pos_bounds = (-width/2, width/2)
     msk = (
-        (shifts["dx"] >= pos_bounds[0])
-        & (shifts["dx"] <= pos_bounds[1])
-        & (shifts["dy"] >= pos_bounds[0])
-        & (shifts["dy"] <= pos_bounds[1])
+        (shifts['dx'] >= pos_bounds[0])
+        & (shifts['dx'] <= pos_bounds[1])
+        & (shifts['dy'] >= pos_bounds[0])
+        & (shifts['dy'] <= pos_bounds[1])
     )
     shifts = shifts[msk]
 
@@ -235,21 +235,20 @@ def get_random_shifts(*, rng, dim, buff, size):
         arcsec
     """
 
-    halfwidth = (dim - 2 * buff) / 2.0
+    halfwidth = (dim - 2*buff)/2.0
     if halfwidth < MIN_R_SHIFT:
         # prevent it from being unrealisticly small
-        warnings.warn(
-            "dim - 2*buff < %s, force halfwidth to %s" % (MIN_R_SHIFT, MIN_R_SHIFT)
-        )
+        warnings.warn("dim - 2*buff < %s, force halfwidth to %s" \
+                %(MIN_R_SHIFT, MIN_R_SHIFT))
         halfwidth = MIN_R_SHIFT
 
-    low = -halfwidth * SCALE
-    high = halfwidth * SCALE
+    low = -halfwidth*SCALE
+    high = halfwidth*SCALE
 
-    shifts = np.zeros(size, dtype=[("dx", "f8"), ("dy", "f8")])
+    shifts = np.zeros(size, dtype=[('dx', 'f8'), ('dy', 'f8')])
 
-    shifts["dx"] = rng.uniform(low=low, high=high, size=size)
-    shifts["dy"] = rng.uniform(low=low, high=high, size=size)
+    shifts['dx'] = rng.uniform(low=low, high=high, size=size)
+    shifts['dy'] = rng.uniform(low=low, high=high, size=size)
 
     return shifts
 
@@ -276,22 +275,21 @@ def get_random_circle_shifts(*, rng, dim, buff, size):
         arcsec
     """
 
-    radius = (dim - 2 * buff) / 2.0 * SCALE
+    radius = (dim - 2*buff) / 2.0*SCALE
     if radius < MIN_R_SHIFT:
         # prevent it from being unrealisticly small
-        warnings.warn(
-            "dim - 2*buff <= %s, force radius to %s." % (MIN_R_SHIFT, MIN_R_SHIFT)
-        )
+        warnings.warn("dim - 2*buff <= %s, force radius to %s."\
+                %(MIN_R_SHIFT,MIN_R_SHIFT))
         radius = MIN_R_SHIFT
-    radius_square = radius**2.0
+    radius_square = radius**2.
 
     # evenly distributed within a radius, min(nx, ny)*rfrac
-    rarray = np.sqrt(radius_square * rng.rand(size))  # radius
-    tarray = rng.uniform(0.0, 2 * np.pi, size)  # theta (0, pi/nrot)
+    rarray = np.sqrt(radius_square*rng.rand(size))   # radius
+    tarray = rng.uniform(0., 2*np.pi, size)   # theta (0, pi/nrot)
 
-    shifts = np.zeros(size, dtype=[("dx", "f8"), ("dy", "f8")])
-    shifts["dx"] = rarray * np.cos(tarray)
-    shifts["dy"] = rarray * np.sin(tarray)
+    shifts = np.zeros(size, dtype=[('dx', 'f8'), ('dy', 'f8')])
+    shifts['dx'] = rarray*np.cos(tarray)
+    shifts['dy'] = rarray*np.sin(tarray)
     return shifts
 
 
@@ -313,15 +311,15 @@ def get_pair_shifts(*, rng, sep):
         arcsec
     """
 
-    shifts = np.zeros(2, dtype=[("dx", "f8"), ("dy", "f8")])
+    shifts = np.zeros(2, dtype=[('dx', 'f8'), ('dy', 'f8')])
 
     angle = rng.uniform(low=0, high=np.pi)
     shift_radius = sep / 2
 
-    xdither, ydither = SCALE * rng.uniform(low=-0.5, high=0.5, size=2)
+    xdither, ydither = SCALE*rng.uniform(low=-0.5, high=0.5, size=2)
 
-    dx1 = np.cos(angle) * shift_radius
-    dy1 = np.sin(angle) * shift_radius
+    dx1 = np.cos(angle)*shift_radius
+    dy1 = np.sin(angle)*shift_radius
     dx2 = -dx1
     dy2 = -dy1
 
@@ -331,10 +329,10 @@ def get_pair_shifts(*, rng, sep):
     dx2 += xdither
     dy2 += ydither
 
-    shifts["dx"][0] = dx1
-    shifts["dy"][0] = dy1
+    shifts['dx'][0] = dx1
+    shifts['dy'][0] = dy1
 
-    shifts["dx"][1] = dx2
-    shifts["dy"][1] = dy2
+    shifts['dx'][1] = dx2
+    shifts['dy'][1] = dy2
 
     return shifts
