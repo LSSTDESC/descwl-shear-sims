@@ -46,7 +46,8 @@ def make_desc_sim(ran_seed, psf):
         "star_catalog": None,
     }
     band_list = ["i"]
-    # make simulation that has zero offset since buff > (coadd_dim+10) / 2.
+    # make simulations, the galaxies have 0~1.5 pixel offsets
+    # (53-25*2) / 2. = 1.5
     coadd_dim = 53
     buff = 25
 
