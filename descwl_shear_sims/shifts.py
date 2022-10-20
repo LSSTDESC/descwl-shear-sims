@@ -1,13 +1,10 @@
 import numpy as np
-import warnings
-
 
 from .constants import (
     RANDOM_DENSITY,
     GRID_SPACING,
     HEX_SPACING,
     SCALE,
-    MIN_R_SHIFT,
 )
 
 
@@ -70,7 +67,7 @@ def get_shifts(
                 buff=buff,
                 size=nobj,
             )
-        elif layout == 'random_circle':
+        elif layout == 'random_disk':
             # randomly distributed in a circle
             # area covered by objects
             if nobj is None:
@@ -79,7 +76,7 @@ def get_shifts(
                 nobj_mean = max(area * RANDOM_DENSITY, 1)
                 nobj = rng.poisson(nobj_mean)
 
-            shifts = get_random_circle_shifts(
+            shifts = get_random_disk_shifts(
                 rng=rng,
                 dim=coadd_dim,
                 buff=buff,
@@ -215,7 +212,8 @@ def get_grid_shifts(*, rng, dim, buff, spacing):
 
 def get_random_shifts(*, rng, dim, buff, size):
     """
-    get a set of gridded shifts in a square, with random shifts at the pixel scale
+    get a set of random shifts in a square, with random shifts at the pixel
+    scale
 
     Parameters
     ----------
@@ -236,11 +234,10 @@ def get_random_shifts(*, rng, dim, buff, size):
     """
 
     halfwidth = (dim - 2*buff)/2.0
-    if halfwidth < MIN_R_SHIFT:
-        # prevent it from being unrealisticly small
-        warnings.warn("dim - 2*buff < %s, force halfwidth to\
-                %s" % (MIN_R_SHIFT, MIN_R_SHIFT))
-        halfwidth = MIN_R_SHIFT
+    if halfwidth < 0:
+        print(dim, buff, halfwidth)
+        # prevent user using a buffer that is too large
+        raise ValueError("dim - 2*buff < 0")
 
     low = -halfwidth*SCALE
     high = halfwidth*SCALE
@@ -253,8 +250,8 @@ def get_random_shifts(*, rng, dim, buff, size):
     return shifts
 
 
-def get_random_circle_shifts(*, rng, dim, buff, size):
-    """Gets a set of gridded shifts in a circle, with random shifts at the
+def get_random_disk_shifts(*, rng, dim, buff, size):
+    """Gets a set of random shifts on a disk, with random shifts at the
     pixel scale
 
     Parameters
@@ -276,11 +273,10 @@ def get_random_circle_shifts(*, rng, dim, buff, size):
     """
 
     radius = (dim - 2*buff) / 2.0*SCALE
-    if radius < MIN_R_SHIFT:
-        # prevent it from being unrealisticly small
-        warnings.warn("dim - 2*buff <= %s, force radius to \
-                %s." % (MIN_R_SHIFT, MIN_R_SHIFT))
-        radius = MIN_R_SHIFT
+    if radius < 0:
+        print(dim, buff, radius)
+        # prevent user using a buffer that is too large
+        raise ValueError("dim - 2*buff < 0")
     radius_square = radius**2.
 
     # evenly distributed within a radius, min(nx, ny)*rfrac

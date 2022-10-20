@@ -602,7 +602,7 @@ class WLDeblendGalaxyCatalog(object):
             else:
                 area = ((coadd_dim - 2*buff)*SCALE/60)**2
 
-        elif layout == 'random_circle':
+        elif layout == 'random_disk':
             # this layout is random in a circle
             if (coadd_dim - 2*buff) < 2:
                 warnings.warn("dim - 2*buff <= 2, force it to 2.")
@@ -613,7 +613,7 @@ class WLDeblendGalaxyCatalog(object):
                 area = np.pi*radius**2
             del radius
         else:
-            raise ValueError("layout can only be 'random' or 'random_circle' \
+            raise ValueError("layout can only be 'random' or 'random_disk' \
                     for wldeblend")
 
         # a least 1 expected galaxy (used for simple tests)

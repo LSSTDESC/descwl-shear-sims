@@ -96,7 +96,7 @@ class StarCatalog(object):
         Optional density for catalog, if not sent the density is variable and
         drawn from the expected galactic density
     layout: string
-        'random' or 'random_circle'
+        'random' or 'random_disk'
     """
     def __init__(
         self, *, rng, coadd_dim,
@@ -122,13 +122,13 @@ class StarCatalog(object):
         if layout == 'random':
             # this layout is random in a square
             area = ((coadd_dim - 2*buff)*SCALE/60)**2
-        elif layout == 'random_circle':
+        elif layout == 'random_disk':
             # this layout is random in a circle
             radius = (coadd_dim/2. - buff)*SCALE/60
             area = np.pi*radius**2
             del radius
         else:
-            raise ValueError("layout can only be 'random' or 'random_circle' \
+            raise ValueError("layout can only be 'random' or 'random_disk' \
                     for wldeblend")
 
         area = ((coadd_dim - 2*buff)*SCALE/60)**2

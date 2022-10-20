@@ -118,7 +118,8 @@ def make_sim(
         Draw method for galsim objects, default 'auto'.  Set to
         'phot' to get poisson noise.  Note this is much slower.
     theta0: float
-        The rotation angle of the exposure, in units of radians
+        rotation angle of intrinsic galaxies and positions [for ring test],
+        default 0, in units of radians
 
     Returns
     -------

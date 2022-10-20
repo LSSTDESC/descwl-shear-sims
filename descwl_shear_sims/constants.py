@@ -32,6 +32,3 @@ WORLD_ORIGIN = galsim.CelestialCoord(
     ra=200 * galsim.degrees,
     dec=0 * galsim.degrees,
 )
-
-# minimal radius for random shift
-MIN_R_SHIFT = 0.

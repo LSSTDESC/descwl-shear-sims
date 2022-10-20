@@ -57,7 +57,7 @@ def make_desc_sim(ran_seed, psf):
         gal_type="fixed",
         coadd_dim=coadd_dim,
         buff=buff,
-        layout="random_circle",
+        layout="random_disk",
     )
 
     nrot = 4

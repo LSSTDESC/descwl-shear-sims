@@ -47,7 +47,7 @@ elif itest==1:
         coadd_dim=coadd_dim,
         buff=buff,
         density=(ifield%1000)/10+1,
-        layout='random_circle',
+        layout='random_disk',
     )
 elif itest==2:
     args={
@@ -60,7 +60,7 @@ elif itest==2:
         coadd_dim=coadd_dim,
         buff=buff,
         density=(ifield%1000)/10+1,
-        layout='random_circle',
+        layout='random_disk',
     )
 else:
     raise ValueError('itest must be 0, 1 or 2 !!!')
@@ -73,7 +73,7 @@ galaxy_catalog = WLDeblendGalaxyCatalog(
     rng=rng,
     coadd_dim=coadd_dim,
     buff=buff,
-    layout='random_circle',
+    layout='random_disk',
 )
 
 

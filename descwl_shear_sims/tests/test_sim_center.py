@@ -26,9 +26,9 @@ def test_sim_center(ran_seed):
         "star_catalog": None,
     }
     band_list = ["i"]
-    # make simulation that has zero offset since buff>(coadd_dim+10)/2.
-    coadd_dim = 53
-    buff = 40
+    # make simulation that has zero offset since buff = coadd_dim / 2
+    coadd_dim = 60
+    buff = 30
     psf = make_fixed_psf(psf_type="moffat")
 
     # galaxy catalog; you can make your own
@@ -37,7 +37,7 @@ def test_sim_center(ran_seed):
         gal_type="fixed",
         coadd_dim=coadd_dim,
         buff=buff,
-        layout="random_circle",
+        layout="random_disk",
     )
 
     sim_data = make_sim(
@@ -62,7 +62,7 @@ def test_sim_center(ran_seed):
     )
     img = galsim.ImageF(img_array)
     moments = galsim.hsm.FindAdaptiveMom(img)
-    offset = moments.image_bounds.center - moments.moments_centroid
+    offset = galsim.BoundsD(moments.image_bounds).center - moments.moments_centroid
     np.testing.assert_almost_equal(offset.x, 0.0, 5)
     np.testing.assert_almost_equal(offset.y, 0.0, 5)
 
