@@ -421,7 +421,10 @@ def make_exp(
 
     exp = afw_image.ExposureF(masked_image)
 
-    # Prepare the frc
+    # Prepare the frc, and save it to the DM exposure
+    # It can be retrieved as follow
+    # zero_flux=  exposure.getPhotoCalib().getInstFluxAtZeroMagnitude()
+    # magz    =   np.log10(zero_flux)*2.5 # magnitude zero point
     zero_flux = 10.**(0.4*ZERO_POINT)
     photoCalib = afw_image.makePhotoCalibFromCalibZeroPoint(zero_flux)
     exp.setPhotoCalib(photoCalib)
