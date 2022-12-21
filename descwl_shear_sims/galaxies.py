@@ -76,8 +76,8 @@ def make_galaxy_catalog(
 
         if gal_type == 'wldeblend':
             assert layout is not None, \
-                    "Cannot make wldebend catalog with layout=None, please use \
-                    layout='random' or 'random_disk'."
+                "Cannot make wldebend catalog with layout=None, please use \
+                layout='random' or 'random_disk'."
 
             galaxy_catalog = WLDeblendGalaxyCatalog(
                 rng=rng,
