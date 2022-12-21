@@ -75,10 +75,15 @@ def make_galaxy_catalog(
             )
 
         if gal_type == 'wldeblend':
+            assert layout is not None, \
+                    "Cannot make wldebend catalog with layout=None, please use \
+                    layout='random' or 'random_disk'."
+
             galaxy_catalog = WLDeblendGalaxyCatalog(
                 rng=rng,
                 coadd_dim=coadd_dim,
                 buff=buff,
+                layout=layout,
             )
         elif gal_type in ['fixed', 'varying', 'exp']:  # TODO remove exp
             if layout is None:

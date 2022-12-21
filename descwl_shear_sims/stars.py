@@ -44,7 +44,7 @@ def get_star_config(config=None):
     return out_config
 
 
-def make_star_catalog(rng, coadd_dim, buff=0, star_config=None):
+def make_star_catalog(rng, coadd_dim, buff=0, star_config=None, layout='random'):
     """
     Creat a StarCatalog
 
@@ -73,6 +73,7 @@ def make_star_catalog(rng, coadd_dim, buff=0, star_config=None):
         density=star_config['density'],
         min_density=star_config['min_density'],
         max_density=star_config['max_density'],
+        layout=layout,
     )
 
 
