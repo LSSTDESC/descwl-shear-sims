@@ -245,7 +245,7 @@ def test_sim_epochs(epochs_per_band):
         assert len(band_data[band]) == epochs_per_band
 
 
-@pytest.mark.parametrize("layout", ("grid", "random", "hex"))
+@pytest.mark.parametrize("layout", ("grid", "random", "random_disk", "hex"))
 def test_sim_layout(layout):
     seed = 7421
     coadd_dim = 201
@@ -333,6 +333,7 @@ def test_sim_wldeblend():
         gal_type="wldeblend",
         coadd_dim=coadd_dim,
         buff=30,
+        layout="random",
     )
 
     psf = make_fixed_psf(psf_type="moffat")
@@ -372,6 +373,7 @@ def test_sim_stars(density, min_density, max_density):
             gal_type="wldeblend",
             coadd_dim=coadd_dim,
             buff=buff,
+            layout="random",
         )
         assert len(galaxy_catalog) == galaxy_catalog.shifts_array.size
 
@@ -434,6 +436,7 @@ def test_sim_star_bleeds():
         gal_type="wldeblend",
         coadd_dim=coadd_dim,
         buff=buff,
+        layout="random",
     )
 
     star_catalog = StarCatalog(

@@ -37,6 +37,7 @@ def go():
         gal_type='wldeblend',
         coadd_dim=coadd_dim,
         buff=buff,
+        layout="random",
     )
 
     # stars with the high density so we get some

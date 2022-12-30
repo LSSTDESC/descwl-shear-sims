@@ -58,10 +58,25 @@ def get_shifts(
             # area covered by objects
             if nobj is None:
                 area = ((coadd_dim - 2*buff)*SCALE/60)**2
-                nobj_mean = area * RANDOM_DENSITY
+                nobj_mean = max(area * RANDOM_DENSITY, 1)
                 nobj = rng.poisson(nobj_mean)
 
             shifts = get_random_shifts(
+                rng=rng,
+                dim=coadd_dim,
+                buff=buff,
+                size=nobj,
+            )
+        elif layout == 'random_disk':
+            # randomly distributed in a circle
+            # area covered by objects
+            if nobj is None:
+                radius = (coadd_dim/2. - buff)*SCALE/60.
+                area = np.pi*radius**2
+                nobj_mean = max(area * RANDOM_DENSITY, 1)
+                nobj = rng.poisson(nobj_mean)
+
+            shifts = get_random_disk_shifts(
                 rng=rng,
                 dim=coadd_dim,
                 buff=buff,
@@ -197,7 +212,8 @@ def get_grid_shifts(*, rng, dim, buff, spacing):
 
 def get_random_shifts(*, rng, dim, buff, size):
     """
-    get a set of gridded shifts, with random shifts at the pixel scale
+    get a set of random shifts in a square, with random shifts at the pixel
+    scale
 
     Parameters
     ----------
@@ -218,6 +234,10 @@ def get_random_shifts(*, rng, dim, buff, size):
     """
 
     halfwidth = (dim - 2*buff)/2.0
+    if halfwidth < 0:
+        print(dim, buff, halfwidth)
+        # prevent user using a buffer that is too large
+        raise ValueError("dim - 2*buff < 0")
 
     low = -halfwidth*SCALE
     high = halfwidth*SCALE
@@ -227,6 +247,45 @@ def get_random_shifts(*, rng, dim, buff, size):
     shifts['dx'] = rng.uniform(low=low, high=high, size=size)
     shifts['dy'] = rng.uniform(low=low, high=high, size=size)
 
+    return shifts
+
+
+def get_random_disk_shifts(*, rng, dim, buff, size):
+    """Gets a set of random shifts on a disk, with random shifts at the
+    pixel scale
+
+    Parameters
+    ----------
+    rng: numpy.random.RandomState
+        The random number generator
+    dim: int
+        Dimensions of the final image
+    buff: int, optional
+        Buffer region where no objects will be drawn.
+    size: int
+        Number of objects to draw.
+
+    Returns
+    -------
+    shifts: array
+        Array with dx, dy offset fields for each point, in
+        arcsec
+    """
+
+    radius = (dim - 2*buff) / 2.0*SCALE
+    if radius < 0:
+        print(dim, buff, radius)
+        # prevent user using a buffer that is too large
+        raise ValueError("dim - 2*buff < 0")
+    radius_square = radius**2.
+
+    # evenly distributed within a radius, min(nx, ny)*rfrac
+    rarray = np.sqrt(radius_square*rng.rand(size))   # radius
+    tarray = rng.uniform(0., 2*np.pi, size)   # theta (0, pi/nrot)
+
+    shifts = np.zeros(size, dtype=[('dx', 'f8'), ('dy', 'f8')])
+    shifts['dx'] = rarray*np.cos(tarray)
+    shifts['dy'] = rarray*np.sin(tarray)
     return shifts
 
 

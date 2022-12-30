@@ -1,3 +1,4 @@
+import warnings
 import numpy as np
 import os
 import copy
@@ -74,10 +75,14 @@ def make_galaxy_catalog(
             )
 
         if gal_type == 'wldeblend':
+            if layout is None:
+                layout = "random"
+
             galaxy_catalog = WLDeblendGalaxyCatalog(
                 rng=rng,
                 coadd_dim=coadd_dim,
                 buff=buff,
+                layout=layout,
             )
         elif gal_type in ['fixed', 'varying', 'exp']:  # TODO remove exp
             if layout is None:
@@ -582,8 +587,10 @@ class WLDeblendGalaxyCatalog(object):
     buff: int, optional
         Buffer region with no objects, on all sides of image.  Ingored
         for layout 'grid'.  Default 0.
+    layout: str, optional
+
     """
-    def __init__(self, *, rng, coadd_dim, buff=0):
+    def __init__(self, *, rng, coadd_dim, buff=0, layout='random'):
         self.gal_type = 'wldeblend'
         self.rng = rng
 
@@ -591,15 +598,38 @@ class WLDeblendGalaxyCatalog(object):
 
         # one square degree catalog, convert to arcmin
         gal_dens = self._wldeblend_cat.size / (60 * 60)
-        area = ((coadd_dim - 2*buff)*SCALE/60)**2
-        nobj_mean = area * gal_dens
+        if layout == 'random':
+            # this layout is random in a square
+            if (coadd_dim - 2*buff) < 2:
+                warnings.warn("dim - 2*buff <= 2, force it to 2.")
+                area = (2**SCALE/60)**2.
+            else:
+                area = ((coadd_dim - 2*buff)*SCALE/60)**2
+
+        elif layout == 'random_disk':
+            # this layout is random in a circle
+            if (coadd_dim - 2*buff) < 2:
+                warnings.warn("dim - 2*buff <= 2, force it to 2.")
+                radius = 2.*SCALE/60
+                area = np.pi*radius**2
+            else:
+                radius = (coadd_dim/2. - buff)*SCALE/60
+                area = np.pi*radius**2
+            del radius
+        else:
+            raise ValueError("layout can only be 'random' or 'random_disk' \
+                    for wldeblend")
+
+        # a least 1 expected galaxy (used for simple tests)
+        nobj_mean = max(area * gal_dens, 1)
+
         nobj = rng.poisson(nobj_mean)
 
         self.shifts_array = get_shifts(
             rng=rng,
             coadd_dim=coadd_dim,
             buff=buff,
-            layout="random",
+            layout=layout,
             nobj=nobj,
         )
 
