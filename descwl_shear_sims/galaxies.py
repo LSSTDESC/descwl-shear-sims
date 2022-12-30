@@ -76,7 +76,11 @@ def make_galaxy_catalog(
 
         if gal_type == 'wldeblend':
             if layout is None:
-                raise ValueError("send layout= for gal_type '%s'" % gal_type)
+                warnings.warn(
+                    "The input layout is None! Force layout to 'random' for \
+                    galaxy_type=wldeblend"
+                )
+                layout = "random"
 
             galaxy_catalog = WLDeblendGalaxyCatalog(
                 rng=rng,
