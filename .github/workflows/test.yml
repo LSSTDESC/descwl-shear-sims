@@ -46,6 +46,12 @@ jobs:
 
           pip install --no-deps -e .
 
+      - name: env and package versions
+        shell: bash -l {0}
+        run: |
+          conda info
+          conda list
+
       - name: lint
         shell: bash -l {0}
         run: |
