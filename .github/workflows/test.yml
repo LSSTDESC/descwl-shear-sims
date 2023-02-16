@@ -11,7 +11,7 @@ jobs:
     name: tests
     strategy:
       matrix:
-        pyver: [3.8]
+        pyver: ["3.10"]
 
     runs-on: "ubuntu-latest"
 
@@ -45,6 +45,12 @@ jobs:
             hexalattice
 
           pip install --no-deps -e .
+
+      - name: env and package versions
+        shell: bash -l {0}
+        run: |
+          conda info
+          conda list
 
       - name: lint
         shell: bash -l {0}
