@@ -12,7 +12,7 @@ jobs:
     name: shear-meas-tests
     strategy:
       matrix:
-        pyver: [3.8]
+        pyver: ["3.10"]
 
     runs-on: "ubuntu-latest"
 
