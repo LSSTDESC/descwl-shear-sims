@@ -606,6 +606,7 @@ class WLDeblendGalaxyCatalog(object):
                 area = (2**SCALE/60)**2.
             else:
                 area = ((coadd_dim - 2*buff)*SCALE/60)**2
+            print("The area is of the simulation is %.2f arcmin2" % area)
             # a least 1 expected galaxy (used for simple tests)
             nobj_mean = max(area * gal_dens, 1)
             nobj = rng.poisson(nobj_mean)
@@ -620,6 +621,7 @@ class WLDeblendGalaxyCatalog(object):
                 radius = (coadd_dim/2. - buff)*SCALE/60
                 area = np.pi*radius**2
             del radius
+            print("The area is of the simulation is %.2f arcmin2" % area)
             # a least 1 expected galaxy (used for simple tests)
             nobj_mean = max(area * gal_dens, 1)
             nobj = rng.poisson(nobj_mean)
@@ -640,7 +642,6 @@ class WLDeblendGalaxyCatalog(object):
         )
 
         num = len(self)
-        print(num)
         self.indices = self.rng.randint(
             0,
             self._wldeblend_cat.size,
