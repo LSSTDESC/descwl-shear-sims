@@ -599,14 +599,18 @@ class WLDeblendGalaxyCatalog(object):
         # one square degree catalog, convert to arcmin
         gal_dens = self._wldeblend_cat.size / (60 * 60)
         if layout == 'random':
+            # need to calculate number of objects first
             # this layout is random in a square
             if (coadd_dim - 2*buff) < 2:
                 warnings.warn("dim - 2*buff <= 2, force it to 2.")
                 area = (2**SCALE/60)**2.
             else:
                 area = ((coadd_dim - 2*buff)*SCALE/60)**2
-
+            # a least 1 expected galaxy (used for simple tests)
+            nobj_mean = max(area * gal_dens, 1)
+            nobj = rng.poisson(nobj_mean)
         elif layout == 'random_disk':
+            # need to calculate number of objects first
             # this layout is random in a circle
             if (coadd_dim - 2*buff) < 2:
                 warnings.warn("dim - 2*buff <= 2, force it to 2.")
@@ -616,14 +620,16 @@ class WLDeblendGalaxyCatalog(object):
                 radius = (coadd_dim/2. - buff)*SCALE/60
                 area = np.pi*radius**2
             del radius
+            # a least 1 expected galaxy (used for simple tests)
+            nobj_mean = max(area * gal_dens, 1)
+            nobj = rng.poisson(nobj_mean)
+        elif layout == "hex":
+            nobj = None
+        elif layout == "grid":
+            nobj = None
         else:
-            raise ValueError("layout can only be 'random' or 'random_disk' \
-                    for wldeblend")
-
-        # a least 1 expected galaxy (used for simple tests)
-        nobj_mean = max(area * gal_dens, 1)
-
-        nobj = rng.poisson(nobj_mean)
+            raise ValueError("layout can only be 'random', 'random_disk' \
+                    'hex' or 'grid 'for wldeblend")
 
         self.shifts_array = get_shifts(
             rng=rng,
@@ -634,6 +640,7 @@ class WLDeblendGalaxyCatalog(object):
         )
 
         num = len(self)
+        print(num)
         self.indices = self.rng.randint(
             0,
             self._wldeblend_cat.size,
