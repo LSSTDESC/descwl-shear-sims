@@ -1,36 +1,7 @@
 # descwl-shear-sims
 [![Build Status](https://travis-ci.com/LSSTDESC/descwl-shear-sims.svg?branch=master)](https://travis-ci.com/LSSTDESC/descwl-shear-sims) [![shear-meas-tests](https://github.com/LSSTDESC/descwl-shear-sims/actions/workflows/shear_meas_tests.yml/badge.svg)](https://github.com/LSSTDESC/descwl-shear-sims/actions/workflows/shear_meas_tests.yml)
 
-simple simulations for testing weak lensing shear measurement
-
-## Installation
-
-It is best to use `pip` to install
-
-```bash
-pip install .
-```
-
-If you are installing into a `conda` environment, you should add `--no-deps` to the
-command above and make sure to install the dependencies with `conda`.
-
-## Installing with all the dependencies
-
-Matt Becker has put up examples to install the full dependencies, including
-the DM STack:
-
-[Full Installation with Dependencies](https://github.com/beckermr/mdet-lsst-sim-runs)
-
-
-## Getting the Simulation Input Data
-
-To use galaxy models from WeakLensingDeblending, and to use realistic star masks, get this
-tar ball, untar it and set the $CATSIM_DIR environment variable to that location
-```shell
-wget https://www.cosmo.bnl.gov/www/esheldon/data/catsim.tar.gz
-tar xvfz catsim.tar.gz
-export CATSIM_DIR=/path/to/catsim
-```
+Simulations for testing weak lensing shear measurement
 
 ## Example Usage
 
@@ -139,6 +110,45 @@ for trial in range(ntrial):
     )
 ```
 
-## Documentation
+## Installation
+
+See the requirements.txt for a list of dependencies.  Note hexalattice is
+optional for the hex grid layout
+
+This code uses data structures from the LSST science pipelines.  If you need to
+install that code, it is best to use the `stackvana` package in conda forge, as
+listed in the requirements.txt.  If you already have that code installed, you
+can remove it from the requirements.
+
+```bash
+conda create -n sims
+conda install --file requirements.txt
+pip install .
+```
+
+## Getting the Simulation Input Data
+
+We have packaged some optional but useful data that can be used
+with descwl-shear-sims.
+- Galaxy models from WeakLensingDeblending
+- Realistic star fluxes
+- Realistic galctic star spatial density distribution
+- use realistic star bleed trail masks
+
+Do the following to make that data available to descwl-shear-sims
+```shell
+wget https://www.cosmo.bnl.gov/www/esheldon/data/catsim.tar.gz
+tar xvfz catsim.tar.gz
+export CATSIM_DIR=/path/to/catsim
+
+# or for tcsh
+# setenv CATSIM_DIR /path/to/catsim
+```
+
+## more examples
+
+More examples are given in the examples/ sub directory
+
+## Further Documentation
 
 The doc strings for the main public APIs are complete. See them for more details.
