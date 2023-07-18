@@ -5,12 +5,21 @@ Simulations for testing weak lensing shear measurement
 
 ## Example Usage
 
+In the following examples, we use galaxy and star classes
+provided by descwl-shear-sims but note you can make your own
+
 ### A simple sim
 ```python
 import numpy as np
+
+# Galaxies with fixed size and flux
 from descwl_shear_sims.galaxies import FixedGalaxyCatalog
+
 from descwl_shear_sims.sim import make_sim
+
+# convenience function to make a PSF
 from descwl_shear_sims.psfs import make_fixed_psf
+
 seed = 8312
 rng = np.random.RandomState(seed)
 
@@ -50,11 +59,20 @@ for trial in range(ntrial):
 
 ```python
 import numpy as np
-from descwl_shear_sims.galaxies import WLDeblendGalaxyCatalog  # one of the galaxy catalog classes
-from descwl_shear_sims.stars import StarCatalog  # star catalog class
+
+# use galaxy models from WeakLensingDeblending.  Note you need
+# to get the data for this, see below for downloading instructions
+from descwl_shear_sims.galaxies import WLDeblendGalaxyCatalog
+
+# The star catalog class
+from descwl_shear_sims.stars import StarCatalog
 from descwl_shear_sims.sim import make_sim
-from descwl_shear_sims.psfs import make_ps_psf  # for making a power spectrum PSF
-from descwl_shear_sims.sim import get_se_dim  # convert coadd dims to SE dims
+
+# for making a power spectrum PSF
+from descwl_shear_sims.psfs import make_ps_psf
+
+# convert coadd dims to SE dims, need for this PSF
+from descwl_shear_sims.sim import get_se_dim
 
 seed = 8312
 rng = np.random.RandomState(seed)
@@ -116,9 +134,9 @@ See the requirements.txt for a list of dependencies.  Note hexalattice is
 optional for the hex grid layout
 
 This code uses data structures from the LSST science pipelines.  If you need to
-install that code, it is best to use the `stackvana` package in conda forge, as
-listed in the requirements.txt.  If you already have that code installed, you
-can remove it from the requirements.
+install that code, it is probably easiest to use the `stackvana` package in
+conda forge, as listed in the requirements.txt.  If you already have that code
+installed, you can remove it from the requirements.
 
 ```bash
 # create a conda environment with stackvana in it

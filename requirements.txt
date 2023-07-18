@@ -1,4 +1,5 @@
 stackvana
+pip
 lsstdesc.weaklensingdeblending
 numba
 galsim
