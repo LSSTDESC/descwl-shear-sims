@@ -25,14 +25,14 @@ def go():
 
     galaxy_catalog = make_galaxy_catalog(
         rng=rng,
-        gal_type="fixed",
+        gal_type='fixed',
         coadd_dim=coadd_dim,
         buff=30,
-        layout="grid",
+        layout='grid',
     )
 
     # gaussian psf
-    psf = make_fixed_psf(psf_type="gauss")
+    psf = make_fixed_psf(psf_type='gauss')
 
     # generate simulated data, see below for whats in this dict
     data = make_sim(
@@ -53,9 +53,11 @@ def go():
     #   exps
     # coadd_wcs: is a DM wcs for use in coadding
     # psf_dims: is the psf dim we sent in (psf_dim, psf_dim)
+    # coadd_dims: shape of the coadd image (dim, dim)
     # coadd_bbox: is an lsst Box2I, for use in coadding
     # bright_info: is a structured array with position and mask info for bright
     #   objects
+    # se_wcs: list of WCS for each single epoch image
 
     for key in ['band_data', 'coadd_wcs', 'psf_dims', 'coadd_bbox', 'bright_info']:
         assert key in data
