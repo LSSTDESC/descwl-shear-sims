@@ -121,8 +121,14 @@ listed in the requirements.txt.  If you already have that code installed, you
 can remove it from the requirements.
 
 ```bash
-conda create -n sims
+# create a conda environment with stackvana in it
+conda create -n sims stackvana
+source activate sims  # or conda activate sims
+
+# install dependencies.  Make sure that conda-forge is first in your channels
 conda install --file requirements.txt
+
+# install descwl-shear-sims
 pip install .
 ```
 
@@ -133,7 +139,7 @@ with descwl-shear-sims.
 - Galaxy models from WeakLensingDeblending
 - Realistic star fluxes
 - Realistic galctic star spatial density distribution
-- use realistic star bleed trail masks
+- Realistic star bleed trail masks
 
 Do the following to make that data available to descwl-shear-sims
 ```shell
