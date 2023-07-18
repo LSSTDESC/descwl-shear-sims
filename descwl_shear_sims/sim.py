@@ -139,6 +139,7 @@ def make_sim(
             ra, dec: sky position of bright stars
             radius_pixels: radius of mask in pixels
             has_bleed: bool, True if there is a bleed trail
+        se_wcs: list of WCS
     """
 
     coadd_wcs, coadd_bbox = make_coadd_dm_wcs(coadd_dim)
