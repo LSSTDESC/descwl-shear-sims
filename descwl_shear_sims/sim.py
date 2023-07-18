@@ -81,7 +81,9 @@ def make_sim(
     galaxy_catalog: catalog
         E.g. WLDeblendGalaxyCatalog or FixedGalaxyCatalog
     coadd_dim: int
-        Default 351
+        Dimensions for planned final coadd.  This is used for generating
+        the final coadd WCS and deteremines some properties of
+        the single epoch images.
     g1: float
         Shear g1 for galaxies
     g2: float
