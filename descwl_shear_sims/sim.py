@@ -94,8 +94,8 @@ def make_sim(
         Force the single epoch images to have this dimension.  If not
         sent it is calculated to be large enough to encompass the coadd
         with rotations and small dithers.
-    star_catalog: catalog
-        e.g. StarCatalog
+    star_catalog: catalog, optional
+        A catalog to generate star locations and fluxes.  See the psfs module
     psf_dim: int, optional
         Dimensions of psf image.  Default 51
     dither: bool, optional
@@ -106,20 +106,23 @@ def make_sim(
     bands: list, optional
         Default ['i']
     epochs_per_band: int, optional
-        Number of epochs per band
+        Number of epochs per band, default 1
     noise_factor: float, optional
         Factor by which to multiply the noise, default 1
-    cosmic_rays: bool
-        If True, add cosmic rays
-    bad_columns: bool
-        If True, add bad columns
-    sky_n_sigma: float
+    cosmic_rays: bool, optional
+        If set to True, add cosmic rays.  Default False.
+    bad_columns: bool, optional
+        If set to True, add bad columns.  Default False.
+    star_bleeds: bool, optional
+        If set to True, draw simulated bleed trails for saturated stars.
+        Default False
+    sky_n_sigma: float, optional
         Number of sigma to set the sky value.  Can be negative to
         mock up a sky oversubtraction.  Default None.
-    draw_method: string
-        Draw method for galsim objects, default 'auto'.  Set to
+    draw_method: string, optional
+        Draw method for galaxy galsim objects, default 'auto'.  Set to
         'phot' to get poisson noise.  Note this is much slower.
-    theta0: float
+    theta0: float, optional
         rotation angle of intrinsic galaxies and positions [for ring test],
         default 0, in units of radians
 
