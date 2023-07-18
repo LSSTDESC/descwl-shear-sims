@@ -53,6 +53,24 @@ for trial in range(ntrial):
         g2=0.00,
         psf=psf,
     )
+
+    # get the first i band exposure
+    sim_data['band_data']['i'][0]
+
+    # full list of outputs in the dictionary
+    # sim_data: dict
+    #     band_data: a dict keyed by band name, holding a list of Exposure
+    #        objects
+    #     coadd_wcs: lsst.afw.geom.makeSkyWcs
+    #     psf_dims: (int, int)
+    #     coadd_dims: (int, int)
+    #     coadd_bbox: lsst.geom.Box2I
+    #     bright_info: structured array
+    #         fields are
+    #         ra, dec: sky position of bright stars
+    #         radius_pixels: radius of mask in pixels
+    #         has_bleed: bool, True if there is a bleed trail
+    #     se_wcs: list of WCS
 ```
 
 ### A sim with lots of features turned on
@@ -126,23 +144,6 @@ for trial in range(ntrial):
         bad_columns=True,
         star_bleeds=True,
     )
-
-    # get the first r band exposure
-    sim_data['band_data']['r'][0]
-
-    # sim_data: dict
-    #     band_data: a dict keyed by band name, holding a list of Exposure
-    #        objects
-    #     coadd_wcs: lsst.afw.geom.makeSkyWcs
-    #     psf_dims: (int, int)
-    #     coadd_dims: (int, int)
-    #     coadd_bbox: lsst.geom.Box2I
-    #     bright_info: structured array
-    #         fields are
-    #         ra, dec: sky position of bright stars
-    #         radius_pixels: radius of mask in pixels
-    #         has_bleed: bool, True if there is a bleed trail
-    #     se_wcs: list of WCS
 
 ```
 
