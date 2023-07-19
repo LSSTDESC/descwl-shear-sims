@@ -53,8 +53,9 @@ def _make_lsst_sim(*, rng, g1, g2, layout):
 
 
 def _shear_cuts(arr):
+    assert arr is not None
     msk = (
-        (arr['flags'] == 0)
+        (arr['wmom_flags'] == 0)
         & (arr['wmom_s2n'] > 10)
         & (arr['wmom_T_ratio'] > 1.2)
     )
