@@ -12,7 +12,7 @@ from descwl_shear_sims.sim import make_sim, get_se_dim
 
 
 def go():
-    if "CATSIM_DIR" not in os.environ:
+    if 'CATSIM_DIR' not in os.environ:
         # this contains the galaxy and star catalogs for generatig
         # WeakLensingDeblending galaxies and stars
         print('you need CATSIM_DIR defined to run this example')
@@ -58,9 +58,11 @@ def go():
     #   exps
     # coadd_wcs: is a DM wcs for use in coadding
     # psf_dims: is the psf dim we sent in (psf_dim, psf_dim)
+    # coadd_dims: shape of the coadd image (dim, dim)
     # coadd_bbox: is an lsst Box2I, for use in coadding
     # bright_info: is a structured array with position and mask info for bright
     #   objects
+    # se_wcs: list of WCS for each single epoch image
 
     for key in ['band_data', 'coadd_wcs', 'psf_dims', 'coadd_bbox', 'bright_info']:
         assert key in data
