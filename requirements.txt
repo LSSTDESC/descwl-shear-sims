@@ -1,0 +1,8 @@
+stackvana
+pip
+lsstdesc.weaklensingdeblending
+numba
+galsim
+
+# optional, but needed for tests to pass
+hexalattice
