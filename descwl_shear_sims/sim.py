@@ -70,6 +70,7 @@ def make_sim(
     sky_n_sigma=None,
     draw_method='auto',
     theta0=0.,
+    shear_obj=None,
 ):
     """
     Make simulation data
@@ -201,6 +202,7 @@ def make_sim(
                 sky_n_sigma=sky_n_sigma,
                 draw_method=draw_method,
                 theta0=theta0,
+                shear_obj=None,
             )
             if epoch == 0:
                 bright_info += this_bright_info
@@ -264,7 +266,8 @@ def make_exp(
     star_bleeds=False,
     sky_n_sigma=None,
     draw_method='auto',
-    theta0=0.
+    theta0=0.,
+    shear_obj=None,
 ):
     """
     Make an SEObs
@@ -335,8 +338,10 @@ def make_exp(
         radius_pixels: radius of mask in pixels
         has_bleed: bool, True if there is a bleed trail
     """
-
-    shear = galsim.Shear(g1=g1, g2=g2)
+    if shear_obj is None:
+        shear = galsim.Shear(g1=g1, g2=g2)
+    else:
+        shear = shear_obj
     dims = [dim]*2
     # I think Galsim uses 1 offset. An array with length=dim=5
     # The center is at 3=(5+1)/2
