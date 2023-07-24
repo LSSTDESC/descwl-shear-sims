@@ -14,6 +14,7 @@ from . import galaxies
 from . import objlists
 from . import surveys
 from . import shifts
+from . import shear
 from . import constants
 from . import artifacts
 from . import masking

@@ -56,23 +56,21 @@ class ShearNFW(object):
 
 
     def get_shear(self, z_gals, shifts):
-
         z_cl = self.z_cl
         # Create the SkyCoord objects
         coord_cl = SkyCoord(self.ra_cl, self.dec_cl, unit="arcsec")
         coord_gals = SkyCoord(shifts["dx"], shifts["dy"], unit="arcsec")
         # Calculate the separation
-        sep = coord_cl.separation(coord_gals).rads
+        sep = coord_cl.separation(coord_gals).radian
         r3d = self.cosmo.rad2mpc(sep, self.z_cl)
-        phi = coord_cl.position_angle(coord_gals).rads
+        phi = coord_cl.position_angle(coord_gals).radian
 
         # TODO: confirm whether the units is Mpc/h or Mpc?
-
         DeltaSigma = self.cobj.eval_excess_surface_density(r3d, z_cl)
         gammat = self.cobj.eval_tangential_shear(r3d, z_cl, z_gals)
         kappa = self.cobj.eval_convergence(r3d, z_cl, z_gals)
-        gamma1 = gammat * -np.cos(2. * phi)
-        gamma2 = gammat * -np.sin(2. * phi)
+        gamma1 = gammat * np.cos(2. * phi)
+        gamma2 = -gammat * np.sin(2. * phi)
         return gamma1/(1-kappa), gamma2/(1-kappa)
 
 
