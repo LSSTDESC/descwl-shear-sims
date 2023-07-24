@@ -1,8 +1,4 @@
-import clmm
-import galsim
 import numpy as np
-from astropy.coordinates import SkyCoord
-
 # maximum kappa allowed
 # values greater than it will be clipped
 kappa_max = 0.6
@@ -56,6 +52,7 @@ class ShearNFW(object):
 
 
     def get_shear(self, z_gals, shifts):
+        from astropy.coordinates import SkyCoord
         z_cl = self.z_cl
         # Create the SkyCoord objects
         coord_cl = SkyCoord(self.ra_cl, self.dec_cl, unit="arcsec")
