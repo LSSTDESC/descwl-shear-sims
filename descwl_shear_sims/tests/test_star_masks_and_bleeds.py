@@ -10,6 +10,10 @@ from descwl_shear_sims.stars import StarCatalog
 from descwl_shear_sims.galaxies import make_galaxy_catalog
 from descwl_shear_sims.psfs import make_fixed_psf
 from descwl_shear_sims.sim import make_sim
+from descwl_shear_sims.shear import ShearConstant
+
+
+shear_obj = ShearConstant(g1=0., g2=0.)
 
 
 @pytest.mark.skipif(
@@ -79,7 +83,7 @@ def test_star_mask_in_sim(draw_stars):
             coadd_dim=coadd_dim,
             bands=bands,
             psf=psf,
-            g1=0, g2=0,
+            shear_obj=shear_obj,
             star_bleeds=True,
         )
 
@@ -153,7 +157,7 @@ def test_star_mask_in_sim_repeatable():
                 coadd_dim=coadd_dim,
                 bands=bands,
                 psf=psf,
-                g1=0, g2=0,
+                shear_obj=shear_obj,
                 star_bleeds=True,
             )
 

@@ -11,6 +11,10 @@ from descwl_shear_sims.psfs import make_fixed_psf, make_ps_psf
 from descwl_shear_sims.sim import make_sim, get_se_dim
 from descwl_shear_sims.constants import ZERO_POINT
 
+from descwl_shear_sims.shear import ShearConstant
+
+shear_obj = ShearConstant(g1=0.02, g2=0.)
+
 
 @pytest.mark.parametrize('dither,rotate', [
     (False, False),
@@ -43,8 +47,7 @@ def test_sim_smoke(dither, rotate):
         coadd_dim=coadd_dim,
         psf_dim=psf_dim,
         bands=bands,
-        g1=0.02,
-        g2=0.00,
+        shear_obj=shear_obj,
         psf=psf,
         dither=dither,
         rotate=rotate,
@@ -94,8 +97,7 @@ def test_sim_se_dim():
         se_dim=se_dim,
         psf_dim=psf_dim,
         bands=bands,
-        g1=0.02,
-        g2=0.00,
+        shear_obj=shear_obj,
         psf=psf,
     )
 
@@ -138,8 +140,7 @@ def test_sim_exp_mag(rotate, show=False):
             galaxy_catalog=galaxy_catalog,
             coadd_dim=coadd_dim,
             se_dim=se_dim,
-            g1=0.02,
-            g2=0.00,
+            shear_obj=shear_obj,
             psf=psf,
             bands=bands,
             rotate=rotate,
@@ -200,8 +201,7 @@ def test_sim_psf_type(psf_type):
         rng=rng,
         galaxy_catalog=galaxy_catalog,
         coadd_dim=coadd_dim,
-        g1=0.02,
-        g2=0.00,
+        shear_obj=shear_obj,
         psf=psf,
         dither=dither,
         rotate=rotate,
@@ -232,8 +232,7 @@ def test_sim_epochs(epochs_per_band):
         galaxy_catalog=galaxy_catalog,
         coadd_dim=coadd_dim,
         psf_dim=psf_dim,
-        g1=0.02,
-        g2=0.00,
+        shear_obj=shear_obj,
         psf=psf,
         bands=bands,
         epochs_per_band=epochs_per_band,
@@ -264,8 +263,7 @@ def test_sim_layout(layout):
         rng=rng,
         galaxy_catalog=galaxy_catalog,
         coadd_dim=coadd_dim,
-        g1=0.02,
-        g2=0.00,
+        shear_obj=shear_obj,
         psf=psf,
     )
 
@@ -299,8 +297,7 @@ def test_sim_defects(cosmic_rays, bad_columns):
             rng=rng,
             galaxy_catalog=galaxy_catalog,
             coadd_dim=coadd_dim,
-            g1=0.02,
-            g2=0.00,
+            shear_obj=shear_obj,
             psf=psf,
             cosmic_rays=cosmic_rays,
             bad_columns=bad_columns,
@@ -341,8 +338,7 @@ def test_sim_wldeblend():
         rng=rng,
         galaxy_catalog=galaxy_catalog,
         coadd_dim=coadd_dim,
-        g1=0.02,
-        g2=0.00,
+        shear_obj=shear_obj,
         psf=psf,
     )
 
@@ -407,8 +403,7 @@ def test_sim_stars(density, min_density, max_density):
             galaxy_catalog=galaxy_catalog,
             star_catalog=star_catalog,
             coadd_dim=coadd_dim,
-            g1=0.02,
-            g2=0.00,
+            shear_obj=shear_obj,
             psf=psf,
         )
 
@@ -455,8 +450,7 @@ def test_sim_star_bleeds():
         galaxy_catalog=galaxy_catalog,
         star_catalog=star_catalog,
         coadd_dim=coadd_dim,
-        g1=0.02,
-        g2=0.00,
+        shear_obj=shear_obj,
         psf=psf,
         star_bleeds=True,
     )
@@ -485,8 +479,7 @@ def test_sim_draw_method_smoke(draw_method):
         rng=rng,
         galaxy_catalog=galaxy_catalog,
         coadd_dim=coadd_dim,
-        g1=0.02,
-        g2=0.00,
+        shear_obj=shear_obj,
         psf=psf,
         **kw
     )

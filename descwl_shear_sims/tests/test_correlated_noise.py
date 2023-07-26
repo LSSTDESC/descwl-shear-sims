@@ -5,6 +5,10 @@ from ..psfs import make_fixed_psf
 from ..galaxies import make_galaxy_catalog
 from numba import njit
 
+from descwl_shear_sims.shear import ShearConstant
+
+shear_obj = ShearConstant(g1=0.02, g2=0.)
+
 
 @njit
 def get_cov(image):
@@ -56,8 +60,7 @@ def test_correlated_noise():
             rng=rng,
             galaxy_catalog=galaxy_catalog,
             coadd_dim=coadd_dim,
-            g1=0.02,
-            g2=0.00,
+            shear_obj=shear_obj,
             psf=psf,
             dither=True,
             rotate=True,

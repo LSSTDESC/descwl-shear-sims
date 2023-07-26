@@ -52,8 +52,7 @@ def make_sim(
     rng,
     galaxy_catalog,
     coadd_dim,
-    g1,
-    g2,
+    shear_obj,
     psf,
     se_dim=None,
     star_catalog=None,
@@ -70,7 +69,6 @@ def make_sim(
     sky_n_sigma=None,
     draw_method='auto',
     theta0=0.,
-    shear_obj=None,
 ):
     """
     Make simulation data
@@ -85,10 +83,8 @@ def make_sim(
         Dimensions for planned final coadd.  This is used for generating
         the final coadd WCS and deteremines some properties of
         the single epoch images.
-    g1: float
-        Shear g1 for galaxies
-    g2: float
-        Shear g2 for galaxies
+    shear_obj:
+        shear distortion object
     psf: GSObject or PowerSpectrumPSF
         The psf object or power spectrum psf
     se_dim: int, optional
@@ -182,10 +178,11 @@ def make_sim(
                 noise=noise_per_epoch,
                 objlist=lists['objlist'],
                 shifts=lists['shifts'],
+                redshifts=lists['redshifts'],
                 dim=se_dim,
                 psf=psf,
                 psf_dim=psf_dim,
-                g1=g1, g2=g2,
+                shear_obj=shear_obj,
                 star_objlist=lists['star_objlist'],
                 star_shifts=lists['star_shifts'],
                 draw_stars=draw_stars,
@@ -202,7 +199,6 @@ def make_sim(
                 sky_n_sigma=sky_n_sigma,
                 draw_method=draw_method,
                 theta0=theta0,
-                shear_obj=None,
             )
             if epoch == 0:
                 bright_info += this_bright_info
@@ -246,11 +242,11 @@ def make_exp(
     noise,
     objlist,
     shifts,
+    redshifts,
     dim,
     psf,
     psf_dim,
-    g1,
-    g2,
+    shear_obj,
     star_objlist=None,
     star_shifts=None,
     draw_stars=True,
@@ -267,7 +263,6 @@ def make_exp(
     sky_n_sigma=None,
     draw_method='auto',
     theta0=0.,
-    shear_obj=None,
 ):
     """
     Make an SEObs
@@ -338,10 +333,6 @@ def make_exp(
         radius_pixels: radius of mask in pixels
         has_bleed: bool, True if there is a bleed trail
     """
-    if shear_obj is None:
-        shear = galsim.Shear(g1=g1, g2=g2)
-    else:
-        shear = shear_obj
     dims = [dim]*2
     # I think Galsim uses 1 offset. An array with length=dim=5
     # The center is at 3=(5+1)/2
@@ -371,17 +362,17 @@ def make_exp(
 
     _draw_objects(
         image,
-        objlist, shifts, psf, draw_method,
+        objlist, shifts, redshifts, psf, draw_method,
         coadd_bbox_cen_gs_skypos,
         rng,
-        shear=shear,
+        shear_obj=shear_obj,
         theta0=theta0,
     )
     if star_objlist is not None and draw_stars:
         assert star_shifts is not None, 'send star_shifts with star_objlist'
         _draw_objects(
             image,
-            star_objlist, star_shifts, psf, draw_method,
+            star_objlist, star_shifts, None, psf, draw_method,
             coadd_bbox_cen_gs_skypos,
             rng,
         )
@@ -454,10 +445,10 @@ def make_exp(
 
 
 def _draw_objects(
-    image, objlist, shifts, psf, draw_method,
+    image, objlist, shifts, redshifts, psf, draw_method,
     coadd_bbox_cen_gs_skypos,
     rng,
-    shear=None,
+    shear_obj=None,
     theta0=None,
 ):
 
@@ -467,7 +458,10 @@ def _draw_objects(
         kw['maxN'] = 1_000_000
         kw['rng'] = galsim.BaseDeviate(seed=rng.randint(low=0, high=2**30))
 
-    for obj, shift in zip(objlist, shifts):
+    if redshifts is None:
+        redshifts = np.zeros(len(objlist))
+
+    for obj, shift, z in zip(objlist, shifts, redshifts):
 
         if theta0 is not None:
             ang = theta0*galsim.radians
@@ -475,7 +469,8 @@ def _draw_objects(
             obj = obj.rotate(ang)
             shift = _roate_pos(shift, theta0)
 
-        if shear is not None:
+        if shear_obj is not None:
+            shear = shear_obj.get_shear(z, shift)
             obj = obj.shear(shear)
             shift = shift.shear(shear)
 

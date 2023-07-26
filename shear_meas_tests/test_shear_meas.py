@@ -8,6 +8,10 @@ import pytest
 
 from metadetect.lsst.metadetect import run_metadetect
 import descwl_shear_sims as sim
+from descwl_shear_sims.shear import ShearConstant
+
+shear_obj_p = ShearConstant(g1=0.02, g2=0.)
+shear_obj_m = ShearConstant(g1=-0.02, g2=0.)
 
 CONFIG = {
     "meas_type": "wmom",
@@ -29,7 +33,7 @@ CONFIG = {
 }
 
 
-def _make_lsst_sim(*, rng, g1, g2, layout):
+def _make_lsst_sim(*, rng, shear_obj, layout):
 
     galaxy_catalog = sim.galaxies.make_galaxy_catalog(
         rng=rng,
@@ -45,8 +49,7 @@ def _make_lsst_sim(*, rng, g1, g2, layout):
         rng=rng,
         galaxy_catalog=galaxy_catalog,
         coadd_dim=sim.sim.DEFAULT_SIM_CONFIG["coadd_dim"],
-        g1=g1,
-        g2=g2,
+        shear_obj=shear_obj,
         psf=psf,
     )
     return sim_data
@@ -150,9 +153,9 @@ def _coadd_sim_data(rng, sim_data, nowarp, remove_poisson):
     return extract_multiband_coadd_data(coadd_data_list)
 
 
-def _run_sim_one(*, seed, mdet_seed, g1, g2, **kwargs):
+def _run_sim_one(*, seed, mdet_seed, shear_obj, **kwargs):
     rng = np.random.RandomState(seed=seed)
-    sim_data = _make_lsst_sim(rng=rng, g1=g1, g2=g2, **kwargs)
+    sim_data = _make_lsst_sim(rng=rng, shear_obj=shear_obj, **kwargs)
 
     coadd_data = _coadd_sim_data(
         rng=rng, sim_data=sim_data, nowarp=True, remove_poisson=False,
@@ -170,12 +173,18 @@ def _run_sim_one(*, seed, mdet_seed, g1, g2, **kwargs):
 
 def run_sim(seed, mdet_seed, **kwargs):
     # positive shear
-    _pres = _run_sim_one(seed=seed, mdet_seed=mdet_seed, g1=0.02, g2=0, **kwargs)
+    _pres = _run_sim_one(
+        seed=seed, mdet_seed=mdet_seed,
+        shear_obj=shear_obj_p, **kwargs,
+    )
     if _pres is None:
         return None
 
     # negative shear
-    _mres = _run_sim_one(seed=seed, mdet_seed=mdet_seed, g1=-0.02, g2=0, **kwargs)
+    _mres = _run_sim_one(
+        seed=seed, mdet_seed=mdet_seed,
+        shear_obj=shear_obj_m, **kwargs,
+    )
     if _mres is None:
         return None
 

@@ -9,6 +9,9 @@ import numpy as np
 from descwl_shear_sims.sim import make_sim
 from descwl_shear_sims.galaxies import make_galaxy_catalog
 from descwl_shear_sims.psfs import make_fixed_psf  # for making a power spectrum PSF
+from descwl_shear_sims.shear import ShearConstant
+
+shear_obj = ShearConstant(g1=0.02, g2=0.)
 
 
 @pytest.mark.parametrize("ran_seed", [0, 1, 2])
@@ -44,8 +47,7 @@ def test_sim_center(ran_seed):
         rng=rng,
         galaxy_catalog=galaxy_catalog,
         coadd_dim=coadd_dim,
-        g1=0.02,
-        g2=0.00,
+        shear_obj=shear_obj,
         psf=psf,
         bands=band_list,
         noise_factor=0.0,

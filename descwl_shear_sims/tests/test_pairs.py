@@ -6,6 +6,10 @@ from ..psfs import make_fixed_psf
 from ..sim import make_sim
 from ..constants import ZERO_POINT
 
+from descwl_shear_sims.shear import ShearConstant
+
+shear_obj = ShearConstant(g1=0.02, g2=0.)
+
 
 @pytest.mark.parametrize('dither,rotate', [
     (False, False),
@@ -38,8 +42,7 @@ def test_pairs_smoke(dither, rotate):
         galaxy_catalog=galaxy_catalog,
         coadd_dim=coadd_dim,
         bands=bands,
-        g1=0.02,
-        g2=0.00,
+        shear_obj=shear_obj,
         psf=psf,
         dither=dither,
         rotate=rotate,
