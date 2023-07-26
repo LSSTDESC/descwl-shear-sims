@@ -68,7 +68,8 @@ class ShearNFW(object):
             g1 = gamma1 / (1-kappa)
             g2 = gamma2 / (1-kappa)
         else:
-            g1 = 0.; g2 = 0.
+            g1 = 0.
+            g2 = 0.
         shear = galsim.Shear(g1=g1, g2=g2)
         return shear
 
