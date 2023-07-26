@@ -3,6 +3,7 @@ pip
 lsstdesc.weaklensingdeblending
 numba
 galsim
+pydantic<=1.10.11
 
 # optional, but needed for tests to pass
 hexalattice
