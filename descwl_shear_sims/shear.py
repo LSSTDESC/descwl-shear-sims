@@ -2,7 +2,7 @@ import galsim
 import numpy as np
 # maximum kappa allowed
 # values greater than it will be clipped
-kappa_max = 0.6
+g_max = 0.6
 """
 shear_obj = ShearConstant(cluster_obj, z_cl, ra_cl, dec_cl)
 shear_obj = ShearRedshift(g1=0.02, g2=0.00)
@@ -58,15 +58,17 @@ class ShearNFW(object):
 
             # TODO: confirm whether the units is Mpc/h or Mpc?
             gammat = self.cobj.eval_tangential_shear(r3d, z_cl, redshift)
-            kappa0 = self.cobj.eval_convergence(r3d, z_cl, redshift)
-            # we are forcing kappa to be less than kappa_max
-            # and scale gamma by the same ratio
-            kappa = min(kappa0, kappa_max)
-            ratio = kappa / kappa0
-            gamma1 = gammat * np.cos(2. * phi) * ratio
-            gamma2 = -gammat * np.sin(2. * phi) * ratio
-            g1 = gamma1 / (1-kappa)
-            g2 = gamma2 / (1-kappa)
+            kappa = self.cobj.eval_convergence(r3d, z_cl, redshift)
+            gamma1 = gammat * np.cos(2. * phi)
+            gamma2 = -gammat * np.sin(2. * phi)
+            g1 = gamma1 #/ (1-kappa)
+            g2 = gamma2 #/ (1-kappa)
+            # we are forcing g to be less than g_max
+            g = np.sqrt(g1 ** 2. + g2 ** 2.)
+            ratio = min(g_max / g, 1.0)
+            # and rescale g1 and g2 if g > g_max
+            g1 = g1 * ratio
+            g2 = g2 * ratio
         else:
             g1 = 0.
             g2 = 0.
