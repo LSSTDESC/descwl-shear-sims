@@ -11,6 +11,18 @@ shear_obj = ShearNFW(mode="0000", g_dist="g1")
 """
 
 
+def _ternary(n, n_bins):
+    """CREDIT: https://stackoverflow.com/questions/34559663/\
+        convert-decimal-to-ternarybase3-in-python"""
+    if n == 0:
+        return '0'
+    nums = []
+    while n:
+        n, r = divmod(n, 3)
+        nums.append(str(r))
+    return ''.join(reversed(nums)).zfill(n_bins)
+
+
 class ShearNFW(object):
     """
     Shear object from NFW halos
@@ -104,26 +116,26 @@ class ShearRedshift(object):
     """
     Constant shear along every redshift slice
     """
-    def __init__(self, mode="0000", g_dist="g1"):
+    def __init__(self, mode="0-0", g_dist="g1"):
         # note that there are three options in each redshift bin
         # 0: g=0.00; 1: g=-0.02; 2: g=0.02
-        # "0000" means that we divide into 4 redshift bins, and every bin
-        # is distorted by -0.02
-        assert set(mode).issubset(set("012"))
-        nz_bins = len(mode)
-        self.nz_bins = nz_bins
-        # number of possible modes
-        self.n_modes = 3 ** nz_bins
-        self.mode = mode
+        # "4-7" means that we divide into 4 redshift bins, and "7" in ternary
+        # is "0021", which means that the shear is (0.0, 0.0, 0.02, -0.02) in each bin.
+        assert '-' in mode, "mode must be in the form of 'nz_bins-code'"
+        nz_bins, code = mode.split("-")
+        assert nz_bins.isdigit() and code.isdigit()
+        self.nz_bins = int(nz_bins)
+        self.code = _ternary(code, self.nz_bins)
+        assert 0 <= int(code) < 3 ** self.nz_bins, "mode code is too large"
         self.z_bounds = np.linspace(0, 4, nz_bins+1)
         self.dz_bin = self.z_bounds[1]-self.z_bounds[0]
         self.g_dist = g_dist
-        self.shear_list = self.determine_shear_list(mode)
+        self.shear_list = self.determine_shear_list(self.code)
         return
 
-    def determine_shear_list(self, mode):
-        values = [-0.02, 0.00, 0.02]
-        shear_list = [values[int(i)] for i in mode]
+    def determine_shear_list(self, code):
+        values = [0.00, -0.02, 0.02]
+        shear_list = [values[int(i)] for i in code]
         return shear_list
 
     def get_bin(self, redshift):
