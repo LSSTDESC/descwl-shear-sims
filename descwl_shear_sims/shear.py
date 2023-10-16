@@ -1,5 +1,6 @@
 import galsim
 import numpy as np
+
 # maximum kappa allowed
 # values greater than it will be clipped
 g_max = 0.6
@@ -46,6 +47,7 @@ class ShearNFW(object):
         z_cl = self.z_cl
         if redshift > z_cl:
             from astropy.coordinates import SkyCoord
+
             # Create the SkyCoord objects
             coord_cl = SkyCoord(self.ra_cl, self.dec_cl, unit="arcsec")
             coord_gals = SkyCoord(shift.x, shift.y, unit="arcsec")
@@ -107,6 +109,7 @@ class ShearRedshift(object):
         # 0: g=0.00; 1: g=-0.02; 2: g=0.02
         # "0000" means that we divide into 4 redshift bins, and every bin
         # is distorted by -0.02
+        assert set(mode).issubset(set("012"))
         nz_bins = len(mode)
         self.nz_bins = nz_bins
         # number of possible modes
@@ -119,17 +122,24 @@ class ShearRedshift(object):
         return
 
     def determine_shear_list(self, mode):
-        shear_list = []
+        values = [-0.02, 0.00, 0.02]
+        shear_list = [values[int(i)] for i in mode]
         return shear_list
 
-    def get_bin(self, refshift):
-        bin_num = 0
+    def get_bin(self, redshift):
+        bin_num = redshift // self.dz_bin
         return bin_num
 
     def get_shear(self, redshift, shift=None):
-        # z_gal_bins = redshift // self.dz_bin
-        gamma1, gamma2 = (None, None)
-        # TODO: Finish implementing the z-dependent shear
         bin_number = self.get_bin(redshift)
+        shear = self.shear_list[bin_number]
+
+        if self.g_dist == 'g1':
+            gamma1, gamma2 = (shear, 0.)
+        elif self.g_dist == 'g2':
+            gamma1, gamma2 = (0., shear)
+        else:
+            raise ValueError("g_dist must be either 'g1' or 'g2'")
+
         shear = galsim.Shear(g1=gamma1, g2=gamma2)
         return shear
