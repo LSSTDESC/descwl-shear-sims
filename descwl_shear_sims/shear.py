@@ -115,11 +115,21 @@ class ShearRedshift(object):
         self.z_bounds = np.linspace(0, 4, nz_bins+1)
         self.dz_bin = self.z_bounds[1]-self.z_bounds[0]
         self.g_dist = g_dist
+        self.shear_list = self.determine_shear_list(mode)
         return
+
+    def determine_shear_list(self, mode):
+        shear_list = []
+        return shear_list
+
+    def get_bin(self, refshift):
+        bin_num = 0
+        return bin_num
 
     def get_shear(self, redshift, shift=None):
         # z_gal_bins = redshift // self.dz_bin
         gamma1, gamma2 = (None, None)
         # TODO: Finish implementing the z-dependent shear
+        bin_number = self.get_bin(redshift)
         shear = galsim.Shear(g1=gamma1, g2=gamma2)
         return shear
