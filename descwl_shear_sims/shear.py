@@ -117,6 +117,7 @@ class ShearRedshift(object):
     Constant shear along every redshift slice
     """
     def __init__(self, mode, z_bounds, g_dist="g1"):
+        assert isinstance(mode, int), "mode must be an integer"
         nz_bins = len(z_bounds) - 1
         # nz_bins is the number of redshift bins
         # note that there are three options in each redshift bin
