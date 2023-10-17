@@ -14,28 +14,25 @@
 # GNU General Public License for more details.
 #
 import gc
-import os
-import json
-import fpfs
-import fitsio
-import pickle
 import glob
-import schwimmbad
-import numpy as np
+import json
+import os
+import pickle
 from argparse import ArgumentParser
 from configparser import ConfigParser, ExtendedInterpolation
-from descwl_shear_sims.sim import make_sim
-from descwl_shear_sims.galaxies import (
-    WLDeblendGalaxyCatalog,
-)  # one of the galaxy catalog classes
-from descwl_shear_sims.psfs import (
-    make_ps_psf,
-    make_fixed_psf,
-)  # for making a power spectrum PSF
 
-# convert coadd dims to SE dims
-from descwl_shear_sims.sim import get_se_dim
+import fitsio
+import fpfs
+import numpy as np
+import schwimmbad
+
+from descwl_shear_sims.galaxies import \
+    WLDeblendGalaxyCatalog  # one of the galaxy catalog classes
+from descwl_shear_sims.psfs import (  # for making a power spectrum PSF
+    make_fixed_psf, make_ps_psf)
 from descwl_shear_sims.shear import ShearRedshift
+# convert coadd dims to SE dims
+from descwl_shear_sims.sim import get_se_dim, make_sim
 
 band_list = ["g", "r", "i", "z"]
 nband = len(band_list)
@@ -71,7 +68,6 @@ class Worker:
         self.z_bounds = json.loads(
             cparser.get("simulation", "z_bounds")
         )
-        print(self.shear_mode_list)
         self.nshear = len(self.shear_mode_list)
         return
 
