@@ -116,19 +116,21 @@ class ShearRedshift(object):
     """
     Constant shear along every redshift slice
     """
-    def __init__(self, mode="0-0", g_dist="g1"):
+    def __init__(self, mode, z_bounds, g_dist="g1"):
+        nz_bins = len(z_bounds) - 1
+        # nz_bins is the number of redshift bins
         # note that there are three options in each redshift bin
         # 0: g=0.00; 1: g=-0.02; 2: g=0.02
-        # "4-7" means that we divide into 4 redshift bins, and "7" in ternary
-        # is "0021", which means that the shear is (0.0, 0.0, 0.02, -0.02) in each bin.
-        assert '-' in mode, "mode must be in the form of 'nz_bins-code'"
-        nz_bins, code = mode.split("-")
-        assert nz_bins.isdigit() and code.isdigit()
+        # for example, if number of redshift bins is 4, if mode = 7 which in
+        # ternary is "0021" --- meaning that the shear is (0.0, 0.0, 0.02,
+        # -0.02) in each bin.
         self.nz_bins = int(nz_bins)
-        self.code = _ternary(code, self.nz_bins)
-        assert 0 <= int(code) < 3 ** self.nz_bins, "mode code is too large"
-        self.z_bounds = np.linspace(0, 4, nz_bins+1)
-        self.dz_bin = self.z_bounds[1]-self.z_bounds[0]
+        self.code = _ternary(int(mode), self.nz_bins)
+        assert 0 <= int(mode) < 3 ** self.nz_bins, "mode code is too large"
+        # maybe we need it to be more flexible in the future
+        # but now we keep the linear spacing
+        self.z_bounds = z_bounds
+        print(self.nz_bins)
         self.g_dist = g_dist
         self.shear_list = self.determine_shear_list(self.code)
         return
@@ -139,7 +141,7 @@ class ShearRedshift(object):
         return shear_list
 
     def get_bin(self, redshift):
-        bin_num = redshift // self.dz_bin
+        bin_num = np.searchsorted(self.z_bounds, redshift, side="left") - 1
         return bin_num
 
     def get_shear(self, redshift, shift=None):

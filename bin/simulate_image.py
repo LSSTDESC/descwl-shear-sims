@@ -15,6 +15,7 @@
 #
 import gc
 import os
+import json
 import fpfs
 import fitsio
 import pickle
@@ -22,7 +23,7 @@ import glob
 import schwimmbad
 import numpy as np
 from argparse import ArgumentParser
-from configparser import ConfigParser
+from configparser import ConfigParser, ExtendedInterpolation
 from descwl_shear_sims.sim import make_sim
 from descwl_shear_sims.galaxies import (
     WLDeblendGalaxyCatalog,
@@ -34,17 +35,15 @@ from descwl_shear_sims.psfs import (
 
 # convert coadd dims to SE dims
 from descwl_shear_sims.sim import get_se_dim
-from descwl_shear_sims.shear import ShearConstant
+from descwl_shear_sims.shear import ShearRedshift
 
-g1_list = [-0.02, 0.02]
-nshear = len(g1_list)
 band_list = ["g", "r", "i", "z"]
 nband = len(band_list)
 
 
 class Worker:
     def __init__(self, config_name):
-        cparser = ConfigParser()
+        cparser = ConfigParser(interpolation=ExtendedInterpolation())
         cparser.read(config_name)
         # layout of the simulation (random, random_disk, or hex)
         # see details in descwl-shear-sims
@@ -66,6 +65,14 @@ class Worker:
         self.nzbin = cparser.getint("simulation", "nzbin")
         self.rot_list = [np.pi / self.nrot * i for i in range(self.nrot)]
         self.test_name = cparser.get("simulation", "test_name")
+        self.shear_mode_list = json.loads(
+            cparser.get("simulation", "shear_mode_list")
+        )
+        self.z_bounds = json.loads(
+            cparser.get("simulation", "z_bounds")
+        )
+        print(self.shear_mode_list)
+        self.nshear = len(self.shear_mode_list)
         return
 
     def run(self, ifield=0):
@@ -121,7 +128,7 @@ class Worker:
         nfiles = len(glob.glob(
             "%s/image-%05d_g1-*" % (img_dir, ifield)
         ))
-        if nfiles == self.nrot * nshear * nband:
+        if nfiles == self.nrot * self.nshear * nband:
             print("We aleady have all the images for this subfield.")
             return
 
@@ -133,10 +140,14 @@ class Worker:
             layout=self.layout,
         )
         print("Simulation has galaxies: %d" % len(galaxy_catalog))
-        for ishear in range(nshear):
+        for shear_mode in self.shear_mode_list:
             for irot in range(self.nrot):
 
-                shear_obj = ShearConstant(g1_list[ishear], g2=0.)
+                shear_obj = ShearRedshift(
+                    mode=shear_mode,
+                    z_bounds=self.z_bounds,
+                    g_dist="g1", # need to enable users to set this value
+                )
                 sim_data = make_sim(
                     rng=rng,
                     galaxy_catalog=galaxy_catalog,
@@ -156,7 +167,7 @@ class Worker:
                     gal_fname = "%s/image-%05d_g1-%d_rot%d_%s.fits" % (
                         img_dir,
                         ifield,
-                        ishear,
+                        shear_mode,
                         irot,
                         band_name,
                     )
