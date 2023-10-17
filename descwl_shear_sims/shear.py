@@ -130,7 +130,6 @@ class ShearRedshift(object):
         # maybe we need it to be more flexible in the future
         # but now we keep the linear spacing
         self.z_bounds = z_bounds
-        print(self.nz_bins)
         self.g_dist = g_dist
         self.shear_list = self.determine_shear_list(self.code)
         return
