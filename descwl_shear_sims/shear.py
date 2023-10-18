@@ -1,5 +1,6 @@
 import galsim
 import numpy as np
+
 # maximum kappa allowed
 # values greater than it will be clipped
 g_max = 0.6
@@ -8,6 +9,18 @@ shear_obj = ShearConstant(cluster_obj, z_cl, ra_cl, dec_cl)
 shear_obj = ShearRedshift(g1=0.02, g2=0.00)
 shear_obj = ShearNFW(mode="0000", g_dist="g1")
 """
+
+
+def _ternary(n, n_bins):
+    """CREDIT: https://stackoverflow.com/questions/34559663/\
+        convert-decimal-to-ternarybase3-in-python"""
+    if n == 0:
+        return '0'
+    nums = []
+    while n:
+        n, r = divmod(n, 3)
+        nums.append(str(r))
+    return ''.join(reversed(nums)).zfill(n_bins)
 
 
 class ShearNFW(object):
@@ -46,6 +59,7 @@ class ShearNFW(object):
         z_cl = self.z_cl
         if redshift > z_cl:
             from astropy.coordinates import SkyCoord
+
             # Create the SkyCoord objects
             coord_cl = SkyCoord(self.ra_cl, self.dec_cl, unit="arcsec")
             coord_gals = SkyCoord(shift.x, shift.y, unit="arcsec")
@@ -78,7 +92,7 @@ class ShearNFW(object):
 
 class ShearConstant(object):
     """
-    Constant shear along every redshift slice
+    Constant shear in the full exposure
     Parameters
     ----------
     g1, g2:    Constant shear distortion
@@ -100,36 +114,47 @@ class ShearConstant(object):
 
 class ShearRedshift(object):
     """
-    Constant shear along every redshift slice
+    Constant shear in each redshift slice
     """
-    def __init__(self, mode="0000", g_dist="g1"):
+    def __init__(self, z_bounds, mode, g_dist="g1", shear_value=0.02):
+        assert isinstance(mode, int), "mode must be an integer"
+        nz_bins = len(z_bounds) - 1
+        # nz_bins is the number of redshift bins
         # note that there are three options in each redshift bin
         # 0: g=0.00; 1: g=-0.02; 2: g=0.02
-        # "0000" means that we divide into 4 redshift bins, and every bin
-        # is distorted by -0.02
-        nz_bins = len(mode)
-        self.nz_bins = nz_bins
-        # number of possible modes
-        self.n_modes = 3 ** nz_bins
-        self.mode = mode
-        self.z_bounds = np.linspace(0, 4, nz_bins+1)
-        self.dz_bin = self.z_bounds[1]-self.z_bounds[0]
+        # for example, number of redshift bins is 4, if mode = 7 which in
+        # ternary is "0021" --- meaning that the shear is (0.0, 0.0, 0.02,
+        # -0.02) in each bin.
+        self.nz_bins = int(nz_bins)
+        self.code = _ternary(int(mode), self.nz_bins)
+        assert 0 <= int(mode) < 3 ** self.nz_bins, "mode code is too large"
+        # maybe we need it to be more flexible in the future
+        # but now we keep the linear spacing
+        self.z_bounds = z_bounds
         self.g_dist = g_dist
-        self.shear_list = self.determine_shear_list(mode)
+        self.shear_list = self.determine_shear_list(self.code)
+        self.shear_value = shear_value
         return
 
-    def determine_shear_list(self, mode):
-        shear_list = []
+    def determine_shear_list(self, code):
+        values = [0.00, -self.shear_value, self.shear_value]
+        shear_list = [values[int(i)] for i in code]
         return shear_list
 
-    def get_bin(self, refshift):
-        bin_num = 0
+    def get_bin(self, redshift):
+        bin_num = np.searchsorted(self.z_bounds, redshift, side="left") - 1
         return bin_num
 
     def get_shear(self, redshift, shift=None):
-        # z_gal_bins = redshift // self.dz_bin
-        gamma1, gamma2 = (None, None)
-        # TODO: Finish implementing the z-dependent shear
         bin_number = self.get_bin(redshift)
+        shear = self.shear_list[bin_number]
+
+        if self.g_dist == 'g1':
+            gamma1, gamma2 = (shear, 0.)
+        elif self.g_dist == 'g2':
+            gamma1, gamma2 = (0., shear)
+        else:
+            raise ValueError("g_dist must be either 'g1' or 'g2'")
+
         shear = galsim.Shear(g1=gamma1, g2=gamma2)
         return shear
