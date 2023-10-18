@@ -59,7 +59,6 @@ class Worker:
         # number of rotations for ring test
         self.nrot = cparser.getint("simulation", "nrot")
         # number of redshiftbins
-        self.nzbin = cparser.getint("simulation", "nzbin")
         self.rot_list = [np.pi / self.nrot * i for i in range(self.nrot)]
         self.test_name = cparser.get("simulation", "test_name")
         self.shear_mode_list = json.loads(
@@ -69,6 +68,7 @@ class Worker:
             cparser.get("simulation", "z_bounds")
         )
         self.nshear = len(self.shear_mode_list)
+        self.shear_value = cparser.getfloat("simulation", "shear_value")
         return
 
     def run(self, ifield=0):
@@ -140,9 +140,10 @@ class Worker:
             for irot in range(self.nrot):
 
                 shear_obj = ShearRedshift(
-                    mode=shear_mode,
                     z_bounds=self.z_bounds,
+                    mode=shear_mode,        # mode tells z bin is + / - distorted
                     g_dist="g1", # need to enable users to set this value
+                    shear_value=self.shear_value
                 )
                 sim_data = make_sim(
                     rng=rng,

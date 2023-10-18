@@ -92,7 +92,7 @@ class ShearNFW(object):
 
 class ShearConstant(object):
     """
-    Constant shear along every redshift slice
+    Constant shear in the full exposure
     Parameters
     ----------
     g1, g2:    Constant shear distortion
@@ -114,15 +114,15 @@ class ShearConstant(object):
 
 class ShearRedshift(object):
     """
-    Constant shear along every redshift slice
+    Constant shear in each redshift slice
     """
-    def __init__(self, mode, z_bounds, g_dist="g1"):
+    def __init__(self, z_bounds, mode, g_dist="g1", shear_value=0.02):
         assert isinstance(mode, int), "mode must be an integer"
         nz_bins = len(z_bounds) - 1
         # nz_bins is the number of redshift bins
         # note that there are three options in each redshift bin
         # 0: g=0.00; 1: g=-0.02; 2: g=0.02
-        # for example, if number of redshift bins is 4, if mode = 7 which in
+        # for example, number of redshift bins is 4, if mode = 7 which in
         # ternary is "0021" --- meaning that the shear is (0.0, 0.0, 0.02,
         # -0.02) in each bin.
         self.nz_bins = int(nz_bins)
@@ -133,10 +133,11 @@ class ShearRedshift(object):
         self.z_bounds = z_bounds
         self.g_dist = g_dist
         self.shear_list = self.determine_shear_list(self.code)
+        self.shear_value = shear_value
         return
 
     def determine_shear_list(self, code):
-        values = [0.00, -0.02, 0.02]
+        values = [0.00, -self.shear_value, self.shear_value]
         shear_list = [values[int(i)] for i in code]
         return shear_list
 
