@@ -19,4 +19,3 @@ from . import constants
 from . import artifacts
 from . import masking
 from . import wcs
-from . import shear
