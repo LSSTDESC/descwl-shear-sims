@@ -55,8 +55,10 @@ def make_sim(
     shear_obj,
     psf,
     se_dim=None,
+    draw_gals=True,
     star_catalog=None,
     draw_stars=True,
+    draw_bright=True,
     psf_dim=51,
     dither=False,
     rotate=False,
@@ -183,9 +185,11 @@ def make_sim(
                 psf=psf,
                 psf_dim=psf_dim,
                 shear_obj=shear_obj,
+                draw_gals=draw_gals,
                 star_objlist=lists['star_objlist'],
                 star_shifts=lists['star_shifts'],
                 draw_stars=draw_stars,
+                draw_bright=draw_bright,
                 bright_objlist=lists['bright_objlist'],
                 bright_shifts=lists['bright_shifts'],
                 bright_mags=lists['bright_mags'],
@@ -247,9 +251,11 @@ def make_exp(
     psf,
     psf_dim,
     shear_obj,
+    draw_gals=True,
     star_objlist=None,
     star_shifts=None,
     draw_stars=True,
+    draw_bright=True,
     bright_objlist=None,
     bright_shifts=None,
     bright_mags=None,
@@ -360,14 +366,17 @@ def make_exp(
 
     image = galsim.Image(dim, dim, wcs=se_wcs)
 
-    _draw_objects(
-        image,
-        objlist, shifts, redshifts, psf, draw_method,
-        coadd_bbox_cen_gs_skypos,
-        rng,
-        shear_obj=shear_obj,
-        theta0=theta0,
-    )
+    if objlist is not None and draw_gals:
+        assert shifts is not None
+        _draw_objects(
+            image,
+            objlist, shifts, redshifts, psf, draw_method,
+            coadd_bbox_cen_gs_skypos,
+            rng,
+            shear_obj=shear_obj,
+            theta0=theta0,
+        )
+
     if star_objlist is not None and draw_stars:
         assert star_shifts is not None, 'send star_shifts with star_objlist'
         _draw_objects(
@@ -390,7 +399,7 @@ def make_exp(
         bad_columns=bad_columns,
     )
 
-    if bright_objlist is not None:
+    if bright_objlist is not None and draw_bright:
         bright_info = _draw_bright_objects(
             image=image,
             noise=noise,
@@ -459,6 +468,7 @@ def _draw_objects(
         kw['rng'] = galsim.BaseDeviate(seed=rng.randint(low=0, high=2**30))
 
     if redshifts is None:
+        # set redshifts to -1 if not sepcified
         redshifts = np.ones(len(objlist)) * -1.0
 
     for obj, shift, z in zip(objlist, shifts, redshifts):

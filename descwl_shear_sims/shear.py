@@ -73,7 +73,7 @@ class ShearRedshift(object):
             shear = self.shear_list[bin_num]
         else:
             # if not, we set shear to 0 and leave the galaxy image undistorted
-            shear = 0
+            shear = 0.0
         return shear
 
     def get_shear(self, redshift, shift=None):
@@ -86,5 +86,5 @@ class ShearRedshift(object):
         else:
             raise ValueError("g_dist must be either 'g1' or 'g2'")
 
-        shear = galsim.Shear(g1=gamma1, g2=gamma2)
-        return shear
+        shear_obj = galsim.Shear(g1=gamma1, g2=gamma2)
+        return shear_obj

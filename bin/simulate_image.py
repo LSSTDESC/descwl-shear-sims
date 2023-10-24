@@ -72,7 +72,7 @@ class Worker:
         self.shear_value = cparser.getfloat("simulation", "shear_value")
         self.stellar_density = cparser.getfloat(
             "simulation",
-            "stellar_densit",
+            "stellar_density",
             fallback=0.0,
         )
         return
@@ -96,6 +96,7 @@ class Worker:
                 0.5 * scale
             ).drawImage(nx=64, ny=64, scale=scale).array
             fitsio.write(psf_fname, psf_data)
+        print(self.stellar_density)
         if self.stellar_density > 0.0:
             star_catalog = StarCatalog(
                 rng=rng,
@@ -104,6 +105,7 @@ class Worker:
                 density=self.stellar_density,
                 layout=self.layout,
             )
+            print(len(star_catalog))
         else:
             star_catalog = None
 
@@ -140,6 +142,9 @@ class Worker:
                     coadd_dim=self.coadd_dim,
                     shear_obj=shear_obj,
                     psf=psf,
+                    draw_gals=False,
+                    draw_stars=True,
+                    draw_bright=False,
                     dither=self.dither,
                     rotate=self.rotate,
                     bands=band_list,

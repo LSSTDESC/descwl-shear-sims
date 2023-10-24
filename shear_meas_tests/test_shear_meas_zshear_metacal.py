@@ -11,7 +11,8 @@ import descwl_shear_sims as sim
 from descwl_shear_sims.shear import ShearRedshift
 
 
-z_bounds = np.array([0.0, 20.0])
+# Use a large z boundaries so that very galaxyies is in this bin
+z_bounds = np.array([-20.0, 20.0])
 shear_obj_p = ShearRedshift(
     z_bounds=z_bounds,
     mode=1,             # mode tells z bin is + / - distorted
