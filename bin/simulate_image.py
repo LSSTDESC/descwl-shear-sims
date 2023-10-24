@@ -19,6 +19,7 @@ import json
 import os
 import pickle
 from argparse import ArgumentParser
+from descwl_shear_sims.stars import StarCatalog  # star catalog class
 from configparser import ConfigParser, ExtendedInterpolation
 
 import fitsio
@@ -69,6 +70,11 @@ class Worker:
         )
         self.nshear = len(self.shear_mode_list)
         self.shear_value = cparser.getfloat("simulation", "shear_value")
+        self.stellar_density = cparser.getfloat(
+            "simulation",
+            "stellar_densit",
+            fallback=0.0,
+        )
         return
 
     def run(self, ifield=0):
@@ -76,48 +82,30 @@ class Worker:
         rng = np.random.RandomState(ifield)
         scale = 0.2
 
-        if self.psf_version == 0:
-            # basic test
-            kargs = {
-                "cosmic_rays": False,
-                "bad_columns": False,
-                "star_bleeds": False,
-                "draw_method": "auto",
-            }
-            star_catalog = None
-            psf = make_fixed_psf(psf_type="moffat")  # .shear(e1=0.02, e2=-0.02)
-            psf_fname = "%s/PSF_%s_32.fits" % (self.img_root, self.test_name)
-            if not os.path.isfile(psf_fname):
-                psf_data = psf.shift(
-                    0.5 * scale,
-                    0.5 * scale
-                ).drawImage(nx=64, ny=64, scale=scale).array
-                fitsio.write(psf_fname, psf_data)
-
-        elif self.psf_version == 1:
-            # spatial varying PSF
-            kargs = {
-                "cosmic_rays": False,
-                "bad_columns": False,
-                "star_bleeds": False,
-                "draw_method": "auto",
-            }
-            star_catalog = None
-            # this is the single epoch image sized used by the sim, we need
-            # it for the power spectrum psf
-            se_dim = get_se_dim(
-                coadd_dim=self.coadd_dim, rotate=self.rotate, dither=self.dither
+        kargs = {
+            "cosmic_rays": False,
+            "bad_columns": False,
+            "star_bleeds": False,
+            "draw_method": "auto",
+        }
+        psf = make_fixed_psf(psf_type="moffat")  # .shear(e1=0.02, e2=-0.02)
+        psf_fname = "%s/PSF_%s_32.fits" % (self.img_root, self.test_name)
+        if not os.path.isfile(psf_fname):
+            psf_data = psf.shift(
+                0.5 * scale,
+                0.5 * scale
+            ).drawImage(nx=64, ny=64, scale=scale).array
+            fitsio.write(psf_fname, psf_data)
+        if self.stellar_density > 0.0:
+            star_catalog = StarCatalog(
+                rng=rng,
+                coadd_dim=self.coadd_dim,
+                buff=self.buff,
+                density=self.stellar_density,
+                layout=self.layout,
             )
-            psf = make_ps_psf(rng=rng, dim=se_dim)
-            psf_fname = "%s/PSF_%s.pkl" % (self.img_root, self.test_name)
-            if not os.path.isfile(psf_fname):
-                with open(psf_fname, "wb") as f:
-                    pickle.dump(
-                        {"psf": psf},
-                        f,
-                    )
         else:
-            raise ValueError("psf_version must be 0 or 1")
+            star_catalog = None
 
         img_dir = "%s/%s" % (self.img_root, self.test_name)
         os.makedirs(img_dir, exist_ok=True)

@@ -64,13 +64,20 @@ class ShearRedshift(object):
         shear_list = [values[int(i)] for i in code]
         return shear_list
 
-    def get_bin(self, redshift):
+    def _get_zshear(self, redshift):
         bin_num = np.searchsorted(self.z_bounds, redshift, side="left") - 1
-        return bin_num
+        nz = len(self.z_bounds) - 1
+        if bin_num < nz and bin_num >= 0:
+            # if the redshift is within the boundaries of lower and uper limits
+            # we add shear
+            shear = self.shear_list[bin_num]
+        else:
+            # if not, we set shear to 0 and leave the galaxy image undistorted
+            shear = 0
+        return shear
 
     def get_shear(self, redshift, shift=None):
-        bin_number = self.get_bin(redshift)
-        shear = self.shear_list[bin_number]
+        shear =  self._get_zshear(redshift)
 
         if self.g_dist == 'g1':
             gamma1, gamma2 = (shear, 0.)

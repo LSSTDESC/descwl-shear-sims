@@ -459,7 +459,7 @@ def _draw_objects(
         kw['rng'] = galsim.BaseDeviate(seed=rng.randint(low=0, high=2**30))
 
     if redshifts is None:
-        redshifts = np.zeros(len(objlist))
+        redshifts = np.ones(len(objlist)) * -1.0
 
     for obj, shift, z in zip(objlist, shifts, redshifts):
 
