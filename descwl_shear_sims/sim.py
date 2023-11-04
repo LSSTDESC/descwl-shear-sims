@@ -18,6 +18,7 @@ from .masking import (
 from .objlists import get_objlist
 from .psfs import make_dm_psf
 from .wcs import make_wcs, make_dm_wcs, make_coadd_dm_wcs
+from .shear import ShearConstant
 
 
 DEFAULT_SIM_CONFIG = {
@@ -52,8 +53,8 @@ def make_sim(
     rng,
     galaxy_catalog,
     coadd_dim,
-    shear_obj,
     psf,
+    shear_obj=None,
     se_dim=None,
     draw_gals=True,
     star_catalog=None,
@@ -71,6 +72,8 @@ def make_sim(
     sky_n_sigma=None,
     draw_method='auto',
     theta0=0.,
+    g1=None,
+    g2=None,
 ):
     """
     Make simulation data
@@ -148,6 +151,11 @@ def make_sim(
 
     if se_dim is None:
         se_dim = get_se_dim(coadd_dim=coadd_dim, dither=dither, rotate=rotate)
+    if shear_obj is None:
+        assert isinstance(g1, float) & isinstance(g2, float), \
+            "The input shear_obj is None. Please input g1 and g2"\
+            "for constant shear simulation"
+        shear_obj = ShearConstant(g1=g1, g2=g2)
 
     band_data = {}
     bright_info = []
