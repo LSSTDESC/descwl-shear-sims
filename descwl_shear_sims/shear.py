@@ -77,8 +77,7 @@ class ShearRedshift(object):
         return shear
 
     def get_shear(self, redshift, shift=None):
-        shear =  self._get_zshear(redshift)
-
+        shear = self._get_zshear(redshift)
         if self.g_dist == 'g1':
             gamma1, gamma2 = (shear, 0.)
         elif self.g_dist == 'g2':
