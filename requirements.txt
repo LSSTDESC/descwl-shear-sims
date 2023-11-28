@@ -1,4 +1,4 @@
-stackvana<=0.2023.28
+stackvana
 pip
 lsstdesc.weaklensingdeblending
 numba
