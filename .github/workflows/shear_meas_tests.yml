@@ -31,8 +31,10 @@ jobs:
         run: |
           conda config --set always_yes yes
 
-          conda install -q --file requirements.txt
-          conda install -q \
+          conda install -q mamba==1.5.1
+
+          mamba install -q --file requirements.txt
+          mamba install -q \
             flake8 \
             pytest \
             fitsio \
