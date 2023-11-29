@@ -203,7 +203,7 @@ class FixedGalaxyCatalog(object):
             objlist.append(self._get_galaxy(flux))
             shifts.append(galsim.PositionD(sarray['dx'][i], sarray['dy'][i]))
 
-        return objlist, shifts
+        return objlist, shifts, None
 
     def _get_galaxy(self, flux):
         """
@@ -633,6 +633,7 @@ class WLDeblendGalaxyCatalog(object):
             nobj=nobj,
         )
 
+        # randomly sample from the catalog
         num = len(self)
         self.indices = self.rng.randint(
             0,
@@ -640,6 +641,7 @@ class WLDeblendGalaxyCatalog(object):
             size=num,
         )
 
+        # do a random rotation for each galaxy
         self.angles = self.rng.uniform(low=0, high=360, size=num)
 
     def __len__(self):
@@ -672,11 +674,14 @@ class WLDeblendGalaxyCatalog(object):
         sarray = self.shifts_array
         objlist = []
         shifts = []
+        redshifts = []
         for i in range(len(self)):
             objlist.append(self._get_galaxy(builder, band, i))
             shifts.append(galsim.PositionD(sarray['dx'][i], sarray['dy'][i]))
+            index = self.indices[i]
+            redshifts.append(self._wldeblend_cat[index]["redshift"])
 
-        return objlist, shifts
+        return objlist, shifts, redshifts
 
     def _get_galaxy(self, builder, band, i):
         """

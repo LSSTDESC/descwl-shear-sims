@@ -57,6 +57,7 @@ def get_shifts(
         elif layout == 'random':
             # area covered by objects
             if nobj is None:
+                # in units of square arcmin
                 area = ((coadd_dim - 2*buff)*SCALE/60)**2
                 nobj_mean = max(area * RANDOM_DENSITY, 1)
                 nobj = rng.poisson(nobj_mean)
