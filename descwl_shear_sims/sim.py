@@ -152,10 +152,7 @@ def make_sim(
     if se_dim is None:
         se_dim = get_se_dim(coadd_dim=coadd_dim, dither=dither, rotate=rotate)
     if shear_obj is None:
-        assert isinstance(g1, float) & isinstance(g2, float), \
-            "The input shear_obj is None. Please input g1 and g2"\
-            "for constant shear simulation"
-        shear_obj = ShearConstant(g1=g1, g2=g2)
+        shear_obj = ShearConstant(g1=float(g1), g2=float(g2))
 
     band_data = {}
     bright_info = []
