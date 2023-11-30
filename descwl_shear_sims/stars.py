@@ -9,7 +9,7 @@ from .constants import SCALE
 from .cache_tools import cached_catalog_read
 from .shifts import get_shifts
 
-DEFAULT_MIN_STAR_DENSITY = 2
+DEFAULT_MIN_STAR_DENSITY = 2    # unit: per square arcmin
 DEFAULT_MAX_STAR_DENSITY = 100
 DEFAULT_DENSITY = None
 
@@ -125,14 +125,13 @@ class StarCatalog(object):
             area = ((coadd_dim - 2*buff)*SCALE/60)**2
         elif layout == 'random_disk':
             # this layout is random in a circle
-            radius = (coadd_dim/2. - buff)*SCALE/60
+            radius = (coadd_dim/2. - buff)*SCALE/60  # unit: arcmin
             area = np.pi*radius**2
             del radius
         else:
             raise ValueError("layout can only be 'random' or 'random_disk' \
                     for wldeblend")
 
-        area = ((coadd_dim - 2*buff)*SCALE/60)**2
         nobj_mean = area * density_mean
         nobj = rng.poisson(nobj_mean)
         self.density = nobj/area

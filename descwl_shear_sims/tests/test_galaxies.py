@@ -9,6 +9,9 @@ from descwl_shear_sims.galaxies import (
 )
 from descwl_shear_sims.psfs import make_fixed_psf
 from descwl_shear_sims.sim import make_sim
+from descwl_shear_sims.shear import ShearConstant
+
+shear_obj = ShearConstant(g1=0.02, g2=0.)
 
 
 @pytest.mark.parametrize('layout', ('pair', 'random', 'hex'))
@@ -62,8 +65,7 @@ def test_galaxies_smoke(layout, gal_type, morph):
             galaxy_catalog=galaxy_catalog,
             coadd_dim=coadd_dim,
             bands=bands,
-            g1=0.02,
-            g2=0.00,
+            shear_obj=shear_obj,
             psf=psf,
         )
 

@@ -20,7 +20,7 @@ def get_objlist(*, galaxy_catalog, survey, star_catalog=None, noise=None):
         objlist is a list of galsim GSObject with transformations applied. Shifts
         is an array with fields dx and dy for each object
     """
-    objlist, shifts = galaxy_catalog.get_objlist(survey=survey)
+    objlist, shifts, redshifts = galaxy_catalog.get_objlist(survey=survey)
 
     if star_catalog is not None:
         assert noise is not None
@@ -39,6 +39,7 @@ def get_objlist(*, galaxy_catalog, survey, star_catalog=None, noise=None):
     return {
         'objlist': objlist,
         'shifts': shifts,
+        'redshifts': redshifts,
         'star_objlist': sobjlist,
         'star_shifts': sshifts,
         'bright_objlist': bright_objlist,

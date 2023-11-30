@@ -105,3 +105,4 @@ venv.bak/
 .mypy_cache/
 pytest_session.txt
 outputs
+.virtual_documents/

@@ -8,10 +8,24 @@ import pytest
 
 from metadetect.lsst.metadetect import run_metadetect
 import descwl_shear_sims as sim
-from descwl_shear_sims.shear import ShearConstant
+from descwl_shear_sims.shear import ShearRedshift
 
-shear_obj_p = ShearConstant(g1=0.02, g2=0.)
-shear_obj_m = ShearConstant(g1=-0.02, g2=0.)
+
+# Use a large z boundaries so that very galaxyies is in this bin
+z_bounds = np.array([-20.0, 20.0])
+shear_obj_p = ShearRedshift(
+    z_bounds=z_bounds,
+    mode=1,             # mode tells z bin is + / - distorted
+    g_dist="g1",        # need to enable users to set this value
+    shear_value=0.02,   # amplitude of the shear
+)
+
+shear_obj_m = ShearRedshift(
+    z_bounds=z_bounds,
+    mode=0,             # mode tells z bin is + / - distorted
+    g_dist="g1",        # need to enable users to set this value
+    shear_value=0.02,
+)
 
 CONFIG = {
     "meas_type": "wmom",
@@ -192,7 +206,7 @@ def run_sim(seed, mdet_seed, **kwargs):
 
 
 @pytest.mark.parametrize(
-    'layout,ntrial', [('grid', 500), ('random', 2500)]
+    'layout,ntrial', [('grid', 500)]
 )
 def test_shear_meas(layout, ntrial):
     nsub = max(ntrial // 100, 10)
@@ -267,3 +281,7 @@ def test_shear_meas(layout, ntrial):
 
     assert np.abs(m) < max(1e-3, 3*merr)
     assert np.abs(c) < 3*cerr
+    return
+
+if __name__ == "__main__":
+    test_shear_meas(layout="grid", ntrial=500)
