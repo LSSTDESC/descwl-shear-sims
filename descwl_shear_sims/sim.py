@@ -29,9 +29,9 @@ DEFAULT_SIM_CONFIG = {
     # randomize the psf fwhm and shape for each trial.  PSF is still same
     # for all epochs/bands
     "randomize_psf": False,
-    "coadd_dim": 250,
+    "coadd_dim": 300,
     "se_dim": None,
-    "buff": 0,
+    "buff": 20,
     "layout": "grid",
     "sep": None,  # sep in arcsec for layout=pair
     "dither": False,
