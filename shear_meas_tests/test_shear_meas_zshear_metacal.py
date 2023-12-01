@@ -47,14 +47,14 @@ CONFIG = {
 }
 
 
-def _make_lsst_sim(*, rng, shear_obj, layout):
+def _make_lsst_sim(*, rng, shear_obj, layout, gal_type):
 
     galaxy_catalog = sim.galaxies.make_galaxy_catalog(
         rng=rng,
         coadd_dim=sim.sim.DEFAULT_SIM_CONFIG["coadd_dim"],
         buff=sim.sim.DEFAULT_SIM_CONFIG["buff"],
         layout=layout,
-        gal_type='fixed',
+        gal_type=gal_type,
     )
 
     psf = sim.psfs.make_fixed_psf(psf_type='gauss')
@@ -206,9 +206,14 @@ def run_sim(seed, mdet_seed, **kwargs):
 
 
 @pytest.mark.parametrize(
-    'layout,ntrial', [('grid', 500)]
+    'layout,gal_type,ntrial',
+    [
+        ('grid', 'wldeblend', 50),
+        ('hex', 'wldeblend', 50),
+        ('random', 'wldeblend', 50),
+    ]
 )
-def test_shear_meas(layout, ntrial):
+def test_shear_meas(layout, gal_type, ntrial):
     nsub = max(ntrial // 100, 10)
     nitr = ntrial // nsub
     rng = np.random.RandomState(seed=116)
@@ -225,7 +230,10 @@ def test_shear_meas(layout, ntrial):
     for itr in tqdm.trange(nitr):
         jobs = [
             joblib.delayed(run_sim)(
-                seeds[loc+i], mdet_seeds[loc+i], layout=layout,
+                seeds[loc+i],
+                mdet_seeds[loc+i],
+                layout=layout,
+                gal_type=gal_type,
             )
             for i in range(nsub)
         ]
@@ -284,4 +292,4 @@ def test_shear_meas(layout, ntrial):
     return
 
 if __name__ == "__main__":
-    test_shear_meas(layout="grid", ntrial=500)
+    test_shear_meas(layout="grid", gal_type="wldeblend", ntrial=50)

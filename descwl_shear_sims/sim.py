@@ -29,7 +29,7 @@ DEFAULT_SIM_CONFIG = {
     # randomize the psf fwhm and shape for each trial.  PSF is still same
     # for all epochs/bands
     "randomize_psf": False,
-    "coadd_dim": 300,
+    "coadd_dim": 400,
     "se_dim": None,
     "buff": 20,
     "layout": "grid",
