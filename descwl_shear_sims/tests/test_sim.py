@@ -247,12 +247,12 @@ def test_sim_epochs(epochs_per_band):
 @pytest.mark.parametrize(
     "layout, gal_type",
     [
-    ("grid", "fixed"),
-    ("random", "fixed"),
-    ("random_disk", "fixed"),
-    ("hex", "fixed"),
-    ("grid", "wldeblend"),
-    ("hex", "wldeblend"),
+        ("grid", "fixed"),
+        ("random", "fixed"),
+        ("random_disk", "fixed"),
+        ("hex", "fixed"),
+        ("grid", "wldeblend"),
+        ("hex", "wldeblend"),
     ],
 )
 def test_sim_layout(layout, gal_type):
