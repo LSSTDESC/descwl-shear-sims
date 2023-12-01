@@ -32,11 +32,13 @@ CONFIG = {
 
 
 def _make_lsst_sim(*, rng, g1, g2, layout):
+    coadd_dim = 400
+    buff = 25
 
     galaxy_catalog = sim.galaxies.make_galaxy_catalog(
         rng=rng,
-        coadd_dim=sim.sim.DEFAULT_SIM_CONFIG["coadd_dim"],
-        buff=sim.sim.DEFAULT_SIM_CONFIG["buff"],
+        coadd_dim=coadd_dim,
+        buff=buff,
         layout=layout,
         gal_type='fixed',
     )
@@ -46,7 +48,7 @@ def _make_lsst_sim(*, rng, g1, g2, layout):
     sim_data = sim.make_sim(
         rng=rng,
         galaxy_catalog=galaxy_catalog,
-        coadd_dim=sim.sim.DEFAULT_SIM_CONFIG["coadd_dim"],
+        coadd_dim=coadd_dim,
         g1=g1,
         g2=g2,
         psf=psf,
