@@ -59,4 +59,7 @@ jobs:
       - name: test
         shell: bash -l {0}
         run: |
+          wget https://www.cosmo.bnl.gov/www/esheldon/data/catsim.tar.gz
+          tar xvfz catsim.tar.gz
+          export CATSIM_DIR=$(realpath catsim)
           pytest -vv --ignore descwl_shear_sims/tests/test_correlated_noise.py descwl_shear_sims
