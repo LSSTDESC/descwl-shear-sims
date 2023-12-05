@@ -34,11 +34,13 @@ CONFIG = {
 
 
 def _make_lsst_sim(*, rng, shear_obj, layout):
+    coadd_dim = 400
+    buff = 25
 
     galaxy_catalog = sim.galaxies.make_galaxy_catalog(
         rng=rng,
-        coadd_dim=sim.sim.DEFAULT_SIM_CONFIG["coadd_dim"],
-        buff=sim.sim.DEFAULT_SIM_CONFIG["buff"],
+        coadd_dim=coadd_dim,
+        buff=buff,
         layout=layout,
         gal_type='fixed',
     )
@@ -48,7 +50,7 @@ def _make_lsst_sim(*, rng, shear_obj, layout):
     sim_data = sim.make_sim(
         rng=rng,
         galaxy_catalog=galaxy_catalog,
-        coadd_dim=sim.sim.DEFAULT_SIM_CONFIG["coadd_dim"],
+        coadd_dim=coadd_dim,
         shear_obj=shear_obj,
         psf=psf,
     )
@@ -267,3 +269,6 @@ def test_shear_meas(layout, ntrial):
 
     assert np.abs(m) < max(1e-3, 3*merr)
     assert np.abs(c) < 3*cerr
+
+if __name__ == "__main__":
+    test_shear_meas(layout="random", ntrial=30)

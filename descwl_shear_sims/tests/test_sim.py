@@ -244,15 +244,25 @@ def test_sim_epochs(epochs_per_band):
         assert len(band_data[band]) == epochs_per_band
 
 
-@pytest.mark.parametrize("layout", ("grid", "random", "random_disk", "hex"))
-def test_sim_layout(layout):
+@pytest.mark.parametrize(
+    "layout, gal_type",
+    [
+        ("grid", "fixed"),
+        ("random", "fixed"),
+        ("random_disk", "fixed"),
+        ("hex", "fixed"),
+        ("grid", "wldeblend"),
+        ("hex", "wldeblend"),
+    ],
+)
+def test_sim_layout(layout, gal_type):
     seed = 7421
     coadd_dim = 201
     rng = np.random.RandomState(seed)
 
     galaxy_catalog = make_galaxy_catalog(
         rng=rng,
-        gal_type="fixed",
+        gal_type=gal_type,
         coadd_dim=coadd_dim,
         buff=30,
         layout=layout,
