@@ -587,10 +587,19 @@ class WLDeblendGalaxyCatalog(object):
     buff: int, optional
         Buffer region with no objects, on all sides of image.  Ingored
         for layout 'grid'.  Default 0.
+    pixel_scale: float
+        pixel scale
     layout: str, optional
 
     """
-    def __init__(self, *, rng, coadd_dim, buff=0, layout='random'):
+    def __init__(
+        self, *,
+        rng,
+        coadd_dim,
+        buff=0,
+        pixel_scale=SCALE,
+        layout='random'
+    ):
         self.gal_type = 'wldeblend'
         self.rng = rng
 
@@ -603,9 +612,9 @@ class WLDeblendGalaxyCatalog(object):
             # this layout is random in a square
             if (coadd_dim - 2*buff) < 2:
                 warnings.warn("dim - 2*buff <= 2, force it to 2.")
-                area = (2**SCALE/60)**2.
+                area = (2**pixel_scale/60)**2.
             else:
-                area = ((coadd_dim - 2*buff)*SCALE/60)**2
+                area = ((coadd_dim - 2*buff)*pixel_scale/60)**2
             # a least 1 expected galaxy (used for simple tests)
             nobj_mean = max(area * gal_dens, 1)
             nobj = rng.poisson(nobj_mean)
@@ -614,10 +623,10 @@ class WLDeblendGalaxyCatalog(object):
             # this layout is random in a circle
             if (coadd_dim - 2*buff) < 2:
                 warnings.warn("dim - 2*buff <= 2, force it to 2.")
-                radius = 2.*SCALE/60
+                radius = 2.*pixel_scale/60
                 area = np.pi*radius**2
             else:
-                radius = (coadd_dim/2. - buff)*SCALE/60
+                radius = (coadd_dim/2. - buff)*pixel_scale/60
                 area = np.pi*radius**2
             del radius
             # a least 1 expected galaxy (used for simple tests)

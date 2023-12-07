@@ -89,6 +89,8 @@ class StarCatalog(object):
         Dimensions of the coadd
     buff: int, optional
         Buffer around the edge where no objects are drawn. Default 0.
+    pixel_scale: float
+        pixel scale
     min_density: int, optional
         Set the minimum density to sample (ignored if density= is sent)
     max_density: int, optional
@@ -100,8 +102,11 @@ class StarCatalog(object):
         'random' or 'random_disk'
     """
     def __init__(
-        self, *, rng, coadd_dim,
+        self, *,
+        rng,
+        coadd_dim,
         buff=0,
+        pixel_scale=SCALE,
         min_density=DEFAULT_MIN_STAR_DENSITY,
         max_density=DEFAULT_MAX_STAR_DENSITY,
         density=DEFAULT_DENSITY,
@@ -122,10 +127,10 @@ class StarCatalog(object):
 
         if layout == 'random':
             # this layout is random in a square
-            area = ((coadd_dim - 2*buff)*SCALE/60)**2
+            area = ((coadd_dim - 2*buff)*pixel_scale/60)**2
         elif layout == 'random_disk':
             # this layout is random in a circle
-            radius = (coadd_dim/2. - buff)*SCALE/60  # unit: arcmin
+            radius = (coadd_dim/2. - buff)*pixel_scale/60  # unit: arcmin
             area = np.pi*radius**2
             del radius
         else:
@@ -140,6 +145,7 @@ class StarCatalog(object):
             rng=rng,
             coadd_dim=coadd_dim,
             buff=buff,
+            pixel_scale=pixel_scale,
             layout=layout,
             nobj=nobj,
         )

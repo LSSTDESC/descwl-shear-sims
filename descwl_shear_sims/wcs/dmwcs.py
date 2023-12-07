@@ -59,11 +59,15 @@ def make_dm_wcs(galsim_wcs):
             metadata.set(key, value)
 
         stack_wcs = makeSkyWcs(metadata)
+    else:
+        raise RuntimeError(
+            "Does not support galsim_wcs type: %s" % galsim_wcs.wcs_type
+        )
 
     return stack_wcs
 
 
-def make_coadd_dm_wcs(coadd_dim):
+def make_coadd_dm_wcs(coadd_dim, pixel_scale=SCALE):
     """
     make a coadd wcs, using the default world origin.  Create
     a bbox within larger box
@@ -73,6 +77,8 @@ def make_coadd_dm_wcs(coadd_dim):
     coadd_origin: int
         Origin in pixels of the coadd, can be within a larger
         pixel grid e.g. tract surrounding the patch
+    pixel_scale: float
+        pixel scale
 
     Returns
     --------
@@ -97,7 +103,7 @@ def make_coadd_dm_wcs(coadd_dim):
     )
     coadd_wcs = make_dm_wcs(
         make_wcs(
-            scale=SCALE,
+            scale=pixel_scale,
             image_origin=gs_coadd_origin,
             world_origin=WORLD_ORIGIN,
         )
@@ -105,7 +111,7 @@ def make_coadd_dm_wcs(coadd_dim):
     return coadd_wcs, coadd_bbox
 
 
-def make_coadd_dm_wcs_simple(coadd_dim):
+def make_coadd_dm_wcs_simple(coadd_dim, pixel_scale=SCALE):
     """
     make a coadd wcs, using the default world origin.
 
@@ -114,6 +120,8 @@ def make_coadd_dm_wcs_simple(coadd_dim):
     coadd_origin: int
         Origin in pixels of the coadd, can be within a larger
         pixel grid e.g. tract surrounding the patch
+    pixel_scale: float
+        pixel scale
 
     Returns
     --------
@@ -129,7 +137,7 @@ def make_coadd_dm_wcs_simple(coadd_dim):
     )
     coadd_wcs = make_dm_wcs(
         make_wcs(
-            scale=SCALE,
+            scale=pixel_scale,
             image_origin=gs_coadd_origin,
             world_origin=WORLD_ORIGIN,
         )

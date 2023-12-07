@@ -3,7 +3,7 @@ import galsim
 from ..constants import FIXED_PSF_FWHM, FIXED_MOFFAT_BETA
 
 
-def make_fixed_psf(*, psf_type):
+def make_fixed_psf(*, psf_type, psf_fwhm=FIXED_PSF_FWHM):
     """
     Make a fixed PSF
 
@@ -11,15 +11,17 @@ def make_fixed_psf(*, psf_type):
     ----------
     psf_type: string
         'gauss' or 'moffat'
+    psf_fwhm: float
+        FWHM of PSF
 
     Returns
     -------
     Gaussian or Moffat
     """
     if psf_type == "gauss":
-        psf = galsim.Gaussian(fwhm=FIXED_PSF_FWHM)
+        psf = galsim.Gaussian(fwhm=psf_fwhm)
     elif psf_type == "moffat":
-        psf = galsim.Moffat(fwhm=FIXED_PSF_FWHM, beta=FIXED_MOFFAT_BETA)
+        psf = galsim.Moffat(fwhm=psf_fwhm, beta=FIXED_MOFFAT_BETA)
     else:
         raise ValueError("bad psf_type '%s'" % psf_type)
 

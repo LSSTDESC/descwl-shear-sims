@@ -496,5 +496,6 @@ def test_sim_draw_method_smoke(draw_method):
 
 
 if __name__ == '__main__':
+    test_sim_layout("hex", "wldeblend")
     for rotate in (False, True):
         test_sim_exp_mag(rotate, show=True)

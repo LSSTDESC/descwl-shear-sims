@@ -14,6 +14,7 @@ def get_shifts(
     layout,
     coadd_dim=None,
     buff=0,
+    pixel_scale=SCALE,
     nobj=None,
     sep=None,
 ):
@@ -26,6 +27,8 @@ def get_shifts(
         Dimensions of final coadd
     buff: int, optional
         Buffer region where no objects will be drawn.  Default 0.
+    pixel_scale: float
+        pixel scale
     layout: string
         'grid', 'pair', 'hex', or 'random'
     nobj: int, optional
@@ -52,13 +55,14 @@ def get_shifts(
                 rng=rng,
                 dim=coadd_dim,
                 buff=buff,
+                pixel_scale=pixel_scale,
                 spacing=GRID_SPACING,
             )
         elif layout == 'random':
             # area covered by objects
             if nobj is None:
                 # in units of square arcmin
-                area = ((coadd_dim - 2*buff)*SCALE/60)**2
+                area = ((coadd_dim - 2 * buff) * pixel_scale / 60)**2
                 nobj_mean = max(area * RANDOM_DENSITY, 1)
                 nobj = rng.poisson(nobj_mean)
 
@@ -66,13 +70,14 @@ def get_shifts(
                 rng=rng,
                 dim=coadd_dim,
                 buff=buff,
+                pixel_scale=pixel_scale,
                 size=nobj,
             )
         elif layout == 'random_disk':
             # randomly distributed in a circle
             # area covered by objects
             if nobj is None:
-                radius = (coadd_dim/2. - buff)*SCALE/60.
+                radius = (coadd_dim/2. - buff) * pixel_scale / 60.
                 area = np.pi*radius**2
                 nobj_mean = max(area * RANDOM_DENSITY, 1)
                 nobj = rng.poisson(nobj_mean)
@@ -81,6 +86,7 @@ def get_shifts(
                 rng=rng,
                 dim=coadd_dim,
                 buff=buff,
+                pixel_scale=pixel_scale,
                 size=nobj,
             )
         elif layout == 'hex':
@@ -88,6 +94,7 @@ def get_shifts(
                 rng=rng,
                 dim=coadd_dim,
                 buff=buff,
+                pixel_scale=pixel_scale,
                 spacing=HEX_SPACING,
             )
         else:
@@ -96,7 +103,7 @@ def get_shifts(
     return shifts
 
 
-def get_hex_shifts(*, rng, dim, buff, spacing):
+def get_hex_shifts(*, rng, dim, pixel_scale, buff, spacing):
     """
     get a set of hex grid shifts, with random shifts at the pixel scale
 
@@ -108,6 +115,8 @@ def get_hex_shifts(*, rng, dim, buff, spacing):
         Dimensions of the final image
     buff: int, optional
         Buffer region where no objects will be drawn.
+    pixel_scale: float
+        pixel scale
     spacing: float
         Spacing of the hexagonal lattice
 
@@ -119,7 +128,7 @@ def get_hex_shifts(*, rng, dim, buff, spacing):
     """
     from hexalattice.hexalattice import create_hex_grid
 
-    width = (dim - 2*buff) * SCALE
+    width = (dim - 2*buff) * pixel_scale
     n_on_side = int(width / spacing) + 1
 
     nx = int(n_on_side * np.sqrt(2))
@@ -157,7 +166,7 @@ def get_hex_shifts(*, rng, dim, buff, spacing):
     return shifts
 
 
-def get_grid_shifts(*, rng, dim, buff, spacing):
+def get_grid_shifts(*, rng, dim, buff, pixel_scale, spacing):
     """
     get a set of gridded shifts, with random shifts at the pixel scale
 
@@ -169,6 +178,8 @@ def get_grid_shifts(*, rng, dim, buff, spacing):
         Dimensions of the final image
     buff: int, optional
         Buffer region where no objects will be drawn.
+    pixel_scale: float
+        pixel scale
     spacing: float
         Spacing of the lattice
 
@@ -211,7 +222,7 @@ def get_grid_shifts(*, rng, dim, buff, spacing):
     return shifts
 
 
-def get_random_shifts(*, rng, dim, buff, size):
+def get_random_shifts(*, rng, dim, buff, pixel_scale, size):
     """
     get a set of random shifts in a square, with random shifts at the pixel
     scale
@@ -224,6 +235,8 @@ def get_random_shifts(*, rng, dim, buff, size):
         Dimensions of the final image
     buff: int, optional
         Buffer region where no objects will be drawn.
+    pixel_scale: float
+        pixel scale
     size: int
         Number of objects to draw.
 
@@ -251,7 +264,7 @@ def get_random_shifts(*, rng, dim, buff, size):
     return shifts
 
 
-def get_random_disk_shifts(*, rng, dim, buff, size):
+def get_random_disk_shifts(*, rng, dim, buff, pixel_scale, size):
     """Gets a set of random shifts on a disk, with random shifts at the
     pixel scale
 
@@ -263,6 +276,8 @@ def get_random_disk_shifts(*, rng, dim, buff, size):
         Dimensions of the final image
     buff: int, optional
         Buffer region where no objects will be drawn.
+    pixel_scale: float
+        pixel scale
     size: int
         Number of objects to draw.
 

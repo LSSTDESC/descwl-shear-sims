@@ -1,12 +1,9 @@
 import numpy as np
 import descwl
-from .constants import (
-    ZERO_POINT,
-    SCALE,
-)
+from .constants import ZERO_POINT
 
 
-def get_survey(*, gal_type, band):
+def get_survey(*, gal_type, band, survey_name="LSST"):
     """
     Get a survey object
 
@@ -16,6 +13,8 @@ def get_survey(*, gal_type, band):
         'fixed', 'varying', or 'wldeblend'
     band: string
         e.g. 'r'
+    survey_name: string
+        The name of the survey, e.g., LSST, HSC
 
     Returns
     -------
@@ -23,7 +22,7 @@ def get_survey(*, gal_type, band):
     for gal_type 'fixed' returns BasicSurvey.
     """
     if gal_type == 'wldeblend':
-        survey = WLDeblendSurvey(band=band)
+        survey = WLDeblendSurvey(band=band, survey_name=survey_name)
     elif gal_type in ['fixed', 'varying']:
         survey = BasicSurvey(band=band)
     else:
@@ -32,7 +31,7 @@ def get_survey(*, gal_type, band):
     return survey
 
 
-def rescale_wldeblend_exp(*, survey, exp):
+def rescale_wldeblend_exp(*, survey, exp, calib_mag_zero=ZERO_POINT):
     """
     Rescale wldeblend images noise and weight to our zero point
 
@@ -47,7 +46,7 @@ def rescale_wldeblend_exp(*, survey, exp):
     -------
     None
     """
-    fac = get_wldeblend_rescale_fac(survey)
+    fac = get_wldeblend_rescale_fac(survey, calib_mag_zero)
     vfac = fac**2
 
     exp.image *= fac
@@ -55,7 +54,7 @@ def rescale_wldeblend_exp(*, survey, exp):
     exp.variance *= vfac
 
 
-def get_wldeblend_rescale_fac(survey):
+def get_wldeblend_rescale_fac(survey, calib_mag_zero):
     """
     Get the factor to rescale wldeblend images to our zero point
 
@@ -63,6 +62,8 @@ def get_wldeblend_rescale_fac(survey):
     ----------
     survey: WLDeblendSurvey
         The survey object
+    calib_mag_zero: float
+        The calibrated magnitude zero point
 
     Returns
     -------
@@ -72,7 +73,7 @@ def get_wldeblend_rescale_fac(survey):
     s_et = survey.exposure_time
     # following
     # https://github.com/LSSTDESC/WeakLensingDeblending/blob/228c6655d63de9edd9bf2c8530f99199ee47fc5e/descwl/survey.py#L143
-    return 10.0**(0.4*(ZERO_POINT - 24.0))/s_zp/s_et
+    return 10.0**(0.4*(calib_mag_zero - 24.0))/s_zp/s_et
 
 
 class WLDeblendSurvey(object):
@@ -83,17 +84,17 @@ class WLDeblendSurvey(object):
     ----------
     band: string
         The band, e.g. 'r'
+    survey_name: string
+        The name of the survey, e.g., LSST, HSC
     """
-    def __init__(self, *, band):
+    def __init__(self, *, band, survey_name):
 
         pars = descwl.survey.Survey.get_defaults(
-            survey_name='LSST',
+            survey_name=survey_name,
             filter_band=band,
         )
-
-        pars['survey_name'] = 'LSST'
-        pars['filter_band'] = band
-        pars['pixel_scale'] = SCALE
+        pars["survey_name"] = survey_name
+        pars["filter_band"] = band
 
         # note in the way we call the descwl package, the image width
         # and height is not actually used
@@ -132,7 +133,9 @@ class WLDeblendSurvey(object):
 
 class BasicSurvey(object):
     """
-    represent a simple survey with common interface
+    represent a simple survey with common interface.
+    Note, this is for calibrated images with magnitude zero point set to
+    ZERO_POINT = 30
 
     Parameters
     ----------
