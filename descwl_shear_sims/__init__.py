@@ -1,9 +1,4 @@
 # flake8: noqa
-import os
-__test_dir__ = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)),
-    "tests",
-)
 from .version import __version__
 
 from . import sim
