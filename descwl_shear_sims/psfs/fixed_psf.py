@@ -12,7 +12,7 @@ def make_fixed_psf(*, psf_type, psf_fwhm=FIXED_PSF_FWHM):
     psf_type: string
         'gauss' or 'moffat'
     psf_fwhm: float
-        FWHM of PSF
+       FWHM of PSF in units of arcsec
 
     Returns
     -------

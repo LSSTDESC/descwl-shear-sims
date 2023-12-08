@@ -1,6 +1,6 @@
 import numpy as np
 import descwl
-from .constants import ZERO_POINT
+from .constants import SCALE, ZERO_POINT
 
 
 def get_survey(*, gal_type, band, survey_name="LSST"):
@@ -71,8 +71,9 @@ def get_wldeblend_rescale_fac(survey, calib_mag_zero):
     """
     s_zp = survey.zero_point
     s_et = survey.exposure_time
-    # following
+    # wldeblend use electrons as default unit
     # https://github.com/LSSTDESC/WeakLensingDeblending/blob/228c6655d63de9edd9bf2c8530f99199ee47fc5e/descwl/survey.py#L143
+    # this function is to calibrate the image to units nano Jy
     return 10.0**(0.4*(calib_mag_zero - 24.0))/s_zp/s_et
 
 
@@ -110,8 +111,10 @@ class WLDeblendSurvey(object):
             svy = descwl.survey.Survey(**pars)
 
         self.noise = np.sqrt(svy.mean_sky_level)
-
         self.descwl_survey = svy
+        self.pixel_scale: float = float(pars['pixel_scale'])
+        if survey_name == "HSC":
+            self.pixel_scale = 0.168
 
     @property
     def filter_band(self):
@@ -135,7 +138,7 @@ class BasicSurvey(object):
     """
     represent a simple survey with common interface.
     Note, this is for calibrated images with magnitude zero point set to
-    ZERO_POINT = 30
+    ZERO_POINT = 30 (see the constant.py file)
 
     Parameters
     ----------
@@ -146,6 +149,7 @@ class BasicSurvey(object):
         self.band = band
         self.noise = 1.0
         self.filter_band = band
+        self.pixel_scale: float = SCALE
 
     def get_flux(self, mag):
         """

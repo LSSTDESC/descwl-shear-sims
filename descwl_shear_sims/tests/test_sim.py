@@ -495,7 +495,40 @@ def test_sim_draw_method_smoke(draw_method):
     )
 
 
+@pytest.mark.parametrize(
+    "psf_fwhm",
+    [0.6, 0.7],
+)
+def test_sim_hsc(psf_fwhm):
+    seed = 7421
+    coadd_dim = 201
+    rng = np.random.RandomState(seed)
+
+    galaxy_catalog = make_galaxy_catalog(
+        rng=rng,
+        gal_type="wldeblend",
+        coadd_dim=coadd_dim,
+        buff=10,
+        pixel_scale=0.168,
+        layout="random",
+    )
+
+    psf = make_fixed_psf(
+        psf_type="moffat",
+        psf_fwhm=psf_fwhm,
+    )
+    _ = make_sim(
+        rng=rng,
+        galaxy_catalog=galaxy_catalog,
+        coadd_dim=coadd_dim,
+        shear_obj=shear_obj,
+        psf=psf,
+        calib_mag_zero=27,
+        survey_name="HSC",
+    )
+
 if __name__ == '__main__':
     test_sim_layout("hex", "wldeblend")
+    test_sim_hsc(0.6)
     for rotate in (False, True):
         test_sim_exp_mag(rotate, show=True)

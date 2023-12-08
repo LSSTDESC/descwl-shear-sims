@@ -71,6 +71,8 @@ def make_sim(
     star_bleeds=False,
     sky_n_sigma=None,
     draw_method='auto',
+    calib_mag_zero=ZERO_POINT,
+    survey_name="LSST",
     theta0=0.,
     g1=None,
     g2=None,
@@ -127,6 +129,8 @@ def make_sim(
     theta0: float, optional
         rotation angle of intrinsic galaxies and positions [for ring test],
         default 0, in units of radians
+    g1,g2: float optional
+        reduced shear distortions
 
     Returns
     -------
@@ -144,7 +148,16 @@ def make_sim(
         se_wcs: list of WCS
     """
 
-    coadd_wcs, coadd_bbox = make_coadd_dm_wcs(coadd_dim)
+    pixel_scale = get_survey(
+        gal_type=galaxy_catalog.gal_type,
+        band=bands[0],
+        survey_name=survey_name,
+    ).pixel_scale
+
+    coadd_wcs, coadd_bbox = make_coadd_dm_wcs(
+        coadd_dim,
+        pixel_scale=pixel_scale,
+    )
     coadd_bbox_cen_gs_skypos = get_coadd_center_gs_pos(
         coadd_wcs=coadd_wcs, coadd_bbox=coadd_bbox,
     )
@@ -158,8 +171,11 @@ def make_sim(
     bright_info = []
     se_wcs = []
     for band in bands:
-
-        survey = get_survey(gal_type=galaxy_catalog.gal_type, band=band)
+        survey = get_survey(
+            gal_type=galaxy_catalog.gal_type,
+            band=band,
+            survey_name=survey_name,
+        )
         noise_for_gsparams = survey.noise*noise_factor
         noise_per_epoch = survey.noise*np.sqrt(epochs_per_band)*noise_factor
 
@@ -214,19 +230,23 @@ def make_sim(
                 se_wcs.append(this_se_wcs)
 
             if galaxy_catalog.gal_type == 'wldeblend':
+                # rescale the image to calibrate it to magnitude zero point
+                # = calib_mag_zero
                 rescale_wldeblend_exp(
                     survey=survey.descwl_survey,
                     exp=exp,
+                    calib_mag_zero=calib_mag_zero,
                 )
 
-            # mark high pixels SAT and also set sat value in image for
-            # any pixels already marked SAT
-            saturate_image_and_mask(
-                image=exp.image.array,
-                bmask=exp.mask.array,
-                sat_val=BAND_SAT_VALS[band],
-                flagval=get_flagval('SAT'),
-            )
+            if survey_name == "LSST":
+                # mark high pixels SAT and also set sat value in image for
+                # any pixels already marked SAT
+                saturate_image_and_mask(
+                    image=exp.image.array,
+                    bmask=exp.mask.array,
+                    sat_val=BAND_SAT_VALS[band],
+                    flagval=get_flagval('SAT'),
+                )
 
             bdata_list.append(exp)
 
@@ -274,6 +294,8 @@ def make_exp(
     sky_n_sigma=None,
     draw_method='auto',
     theta0=0.,
+    pixel_scale=SCALE,
+    calib_mag_zero=ZERO_POINT,
 ):
     """
     Make an SEObs
@@ -334,6 +356,10 @@ def make_exp(
     theta0: float
         rotation angle of intrinsic galaxies and positions [for ring test],
         default 0, in units of radians
+    pixel_scale: float
+        pixel scale in arcsec
+    calib_mag_zero: float
+        magnitude zero point after calibration
     Returns
     -------
     exp: lsst.afw.image.ExposureF
@@ -363,7 +389,7 @@ def make_exp(
 
     # galsim wcs
     se_wcs = make_wcs(
-        scale=SCALE,
+        scale=pixel_scale,
         theta=theta,
         image_origin=se_origin,
         world_origin=coadd_bbox_cen_gs_skypos,
@@ -441,7 +467,7 @@ def make_exp(
     # It can be retrieved as follow
     # zero_flux=  exposure.getPhotoCalib().getInstFluxAtZeroMagnitude()
     # magz    =   np.log10(zero_flux)*2.5 # magnitude zero point
-    zero_flux = 10.**(0.4*ZERO_POINT)
+    zero_flux = 10. ** (0.4 * calib_mag_zero)
     photoCalib = afw_image.makePhotoCalibFromCalibZeroPoint(zero_flux)
     exp.setPhotoCalib(photoCalib)
 

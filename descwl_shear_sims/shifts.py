@@ -44,7 +44,7 @@ def get_shifts(
         if sep is None:
             raise ValueError(f'send sep= for layout {layout}')
 
-        shifts = get_pair_shifts(rng=rng, sep=sep)
+        shifts = get_pair_shifts(rng=rng, sep=sep, pixel_scale=pixel_scale)
     else:
 
         if coadd_dim is None:
@@ -103,7 +103,7 @@ def get_shifts(
     return shifts
 
 
-def get_hex_shifts(*, rng, dim, pixel_scale, buff, spacing):
+def get_hex_shifts(*, rng, dim, buff, pixel_scale, spacing):
     """
     get a set of hex grid shifts, with random shifts at the pixel scale
 
@@ -145,8 +145,8 @@ def get_hex_shifts(*, rng, dim, pixel_scale, buff, spacing):
     vpos = hg[:, 1].ravel()
 
     # dither
-    upos += SCALE * rng.uniform(low=-0.5, high=0.5, size=upos.shape[0])
-    vpos += SCALE * rng.uniform(low=-0.5, high=0.5, size=vpos.shape[0])
+    upos += pixel_scale * rng.uniform(low=-0.5, high=0.5, size=upos.shape[0])
+    vpos += pixel_scale * rng.uniform(low=-0.5, high=0.5, size=vpos.shape[0])
 
     pos_bounds = (-width/2, width/2)
     msk = (
@@ -190,8 +190,8 @@ def get_grid_shifts(*, rng, dim, buff, pixel_scale, spacing):
         arcsec
     """
 
-    width = (dim - 2*buff) * SCALE
-    n_on_side = int(dim / spacing * SCALE)
+    width = (dim - 2*buff) * pixel_scale
+    n_on_side = int(dim / spacing * pixel_scale)
 
     ntot = n_on_side**2
 
@@ -203,8 +203,8 @@ def get_grid_shifts(*, rng, dim, buff, pixel_scale, spacing):
     i = 0
     for ix in range(n_on_side):
         for iy in range(n_on_side):
-            dx = grid[ix] + SCALE*rng.uniform(low=-0.5, high=0.5)
-            dy = grid[iy] + SCALE*rng.uniform(low=-0.5, high=0.5)
+            dx = grid[ix] + pixel_scale * rng.uniform(low=-0.5, high=0.5)
+            dy = grid[iy] + pixel_scale * rng.uniform(low=-0.5, high=0.5)
 
             shifts['dx'][i] = dx
             shifts['dy'][i] = dy
@@ -253,8 +253,8 @@ def get_random_shifts(*, rng, dim, buff, pixel_scale, size):
         # prevent user using a buffer that is too large
         raise ValueError("dim - 2*buff < 0")
 
-    low = -halfwidth*SCALE
-    high = halfwidth*SCALE
+    low = -halfwidth * pixel_scale
+    high = halfwidth * pixel_scale
 
     shifts = np.zeros(size, dtype=[('dx', 'f8'), ('dy', 'f8')])
 
@@ -288,9 +288,8 @@ def get_random_disk_shifts(*, rng, dim, buff, pixel_scale, size):
         arcsec
     """
 
-    radius = (dim - 2*buff) / 2.0*SCALE
+    radius = (dim - 2*buff) / 2.0 * pixel_scale
     if radius < 0:
-        print(dim, buff, radius)
         # prevent user using a buffer that is too large
         raise ValueError("dim - 2*buff < 0")
     radius_square = radius**2.
@@ -305,7 +304,7 @@ def get_random_disk_shifts(*, rng, dim, buff, pixel_scale, size):
     return shifts
 
 
-def get_pair_shifts(*, rng, sep):
+def get_pair_shifts(*, rng, sep, pixel_scale=SCALE):
     """
     get a set of gridded shifts, with random shifts at the pixel scale
 
@@ -315,6 +314,8 @@ def get_pair_shifts(*, rng, sep):
         The random number generator
     sep: float
         Separation of pair in arcsec
+    pixel_scale: float
+        pixel scale
 
     Returns
     -------
@@ -328,7 +329,7 @@ def get_pair_shifts(*, rng, sep):
     angle = rng.uniform(low=0, high=np.pi)
     shift_radius = sep / 2
 
-    xdither, ydither = SCALE*rng.uniform(low=-0.5, high=0.5, size=2)
+    xdither, ydither = pixel_scale * rng.uniform(low=-0.5, high=0.5, size=2)
 
     dx1 = np.cos(angle)*shift_radius
     dy1 = np.sin(angle)*shift_radius

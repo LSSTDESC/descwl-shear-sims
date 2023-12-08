@@ -25,6 +25,7 @@ def make_galaxy_catalog(
     gal_type,
     coadd_dim=None,
     buff=0,
+    pixel_scale=SCALE,
     layout=None,
     gal_config=None,
     sep=None,
@@ -163,7 +164,17 @@ class FixedGalaxyCatalog(object):
     morph: str
         Galaxy morphology, 'exp', 'dev' or 'bd', 'bdk'.  Default 'exp'
     """
-    def __init__(self, *, rng, coadd_dim, layout, mag, hlr, buff=0, morph='exp'):
+    def __init__(
+        self, *,
+        rng,
+        coadd_dim,
+        layout,
+        mag,
+        hlr,
+        buff=0,
+        pixel_scale=SCALE,
+        morph='exp'
+    ):
         self.gal_type = 'fixed'
         self.morph = morph
         self.mag = mag
@@ -173,6 +184,7 @@ class FixedGalaxyCatalog(object):
             rng=rng,
             coadd_dim=coadd_dim,
             buff=buff,
+            pixel_scale=SCALE,
             layout=layout,
         )
 
@@ -644,6 +656,7 @@ class WLDeblendGalaxyCatalog(object):
             rng=rng,
             coadd_dim=coadd_dim,
             buff=buff,
+            pixel_scale=pixel_scale,
             layout=layout,
             nobj=nobj,
         )

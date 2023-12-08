@@ -6,6 +6,7 @@ import lsst.afw.image as afw_image
 import lsst.afw.geom as afw_geom
 
 from descwl_shear_sims.sim import make_sim
+from descwl_shear_sims import __test_dir__
 from descwl_shear_sims.galaxies import make_galaxy_catalog
 from descwl_shear_sims.stars import StarCatalog, make_star_catalog
 from descwl_shear_sims.psfs import make_fixed_psf
@@ -51,7 +52,8 @@ def test_sim_consistency(gal_type):
     )
 
     data = _["band_data"]["i"][0].getMaskedImage().getImage().getArray()
-    data_ref = pyfits.getdata("image_%s_232d7f1.fits" % gal_type)
+    fname = os.path.join(__test_dir__, "image_%s_232d7f1.fits" % gal_type)
+    data_ref = pyfits.getdata(fname)
     assert np.max(np.abs(data-data_ref)) < 1e-9
     return
 
