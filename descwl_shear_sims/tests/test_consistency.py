@@ -2,18 +2,18 @@ import os
 import pytest
 import numpy as np
 import astropy.io.fits as pyfits
-import lsst.afw.image as afw_image
-import lsst.afw.geom as afw_geom
 
 from descwl_shear_sims.sim import make_sim
 from descwl_shear_sims import __test_dir__
 from descwl_shear_sims.galaxies import make_galaxy_catalog
-from descwl_shear_sims.stars import StarCatalog, make_star_catalog
+from descwl_shear_sims.stars import StarCatalog
 from descwl_shear_sims.psfs import make_fixed_psf
 
 from descwl_shear_sims.shear import ShearConstant
 
+
 shear_obj = ShearConstant(g1=0.02, g2=0.)
+
 
 @pytest.mark.parametrize('gal_type', ['wldeblend', 'fixed'])
 def test_sim_consistency(gal_type):
@@ -56,6 +56,7 @@ def test_sim_consistency(gal_type):
     data_ref = pyfits.getdata(fname)
     assert np.max(np.abs(data-data_ref)) < 1e-9
     return
+
 
 if __name__ == '__main__':
     test_sim_consistency("wldeblend")

@@ -502,15 +502,27 @@ def test_sim_draw_method_smoke(draw_method):
 def test_sim_hsc(psf_fwhm):
     seed = 7421
     coadd_dim = 201
+    buff = 10
+    layout="random"
     rng = np.random.RandomState(seed)
+    calib_mag_zero=27
 
     galaxy_catalog = make_galaxy_catalog(
         rng=rng,
         gal_type="wldeblend",
         coadd_dim=coadd_dim,
-        buff=10,
+        buff=buff,
         pixel_scale=0.168,
-        layout="random",
+        layout=layout,
+    )
+
+    star_catalog = StarCatalog(
+        rng=rng,
+        coadd_dim=coadd_dim,
+        buff=buff,
+        density=10,
+        pixel_scale=0.168,
+        layout=layout,
     )
 
     psf = make_fixed_psf(
@@ -523,9 +535,10 @@ def test_sim_hsc(psf_fwhm):
         coadd_dim=coadd_dim,
         shear_obj=shear_obj,
         psf=psf,
-        calib_mag_zero=27,
+        calib_mag_zero=calib_mag_zero,
         survey_name="HSC",
     )
+
 
 if __name__ == '__main__':
     test_sim_layout("hex", "wldeblend")
