@@ -8,7 +8,7 @@ from lsst.afw.cameraGeom.testUtils import DetectorWrapper
 
 from .lsst_bits import get_flagval
 from .saturation import saturate_image_and_mask, BAND_SAT_VALS
-from .surveys import get_survey, rescale_wldeblend_exp
+from .surveys import get_survey, rescale_wldeblend_exp, DEFAULT_SURVEY_BANDS
 from .constants import SCALE, ZERO_POINT
 from .artifacts import add_bleed, get_max_mag_with_bleed
 from .masking import (
@@ -45,6 +45,7 @@ DEFAULT_SIM_CONFIG = {
     "cosmic_rays": False,
     "bad_columns": False,
     "sky_n_sigma": None,
+    "survey_name": "LSST",
 }
 
 
@@ -147,10 +148,11 @@ def make_sim(
             has_bleed: bool, True if there is a bleed trail
         se_wcs: list of WCS
     """
-
+    # Get the pixel scale using a default band from the survey
+    _bd = deepcopy(DEFAULT_SURVEY_BANDS)[survey_name]
     pixel_scale = get_survey(
         gal_type=galaxy_catalog.gal_type,
-        band=bands[0],
+        band=_bd,
         survey_name=survey_name,
     ).pixel_scale
 

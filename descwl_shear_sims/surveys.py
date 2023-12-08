@@ -2,6 +2,14 @@ import numpy as np
 import descwl
 from .constants import SCALE, ZERO_POINT
 
+DEFAULT_SURVEY_BANDS = {
+    "LSST": "r",
+    "HSC": "i",
+    "DES": "r",
+    "EUCLID": "VIS",
+    "CFHT": "i",
+}
+
 
 def get_survey(*, gal_type, band, survey_name="LSST"):
     """

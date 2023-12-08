@@ -270,5 +270,6 @@ def test_shear_meas(layout, ntrial):
     assert np.abs(m) < max(1e-3, 3*merr)
     assert np.abs(c) < 3*cerr
 
+
 if __name__ == "__main__":
     test_shear_meas(layout="random", ntrial=30)
