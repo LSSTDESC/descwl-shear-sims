@@ -15,7 +15,7 @@ from descwl_shear_sims.shear import ShearConstant
 
 shear_obj = ShearConstant(g1=0.02, g2=0.)
 
-@pytest.mark.parametrize('gal_type', ['wldeblend'])
+@pytest.mark.parametrize('gal_type', ['wldeblend', 'fixed'])
 def test_sim_consistency(gal_type):
     seed = 7421
     coadd_dim = 201
@@ -59,3 +59,4 @@ def test_sim_consistency(gal_type):
 
 if __name__ == '__main__':
     test_sim_consistency("wldeblend")
+    test_sim_consistency("fixed")
