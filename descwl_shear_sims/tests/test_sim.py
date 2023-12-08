@@ -503,9 +503,9 @@ def test_sim_hsc(psf_fwhm):
     seed = 7421
     coadd_dim = 201
     buff = 10
-    layout="random"
+    layout = "random"
     rng = np.random.RandomState(seed)
-    calib_mag_zero=27
+    calib_mag_zero = 27
 
     galaxy_catalog = make_galaxy_catalog(
         rng=rng,
@@ -535,6 +535,7 @@ def test_sim_hsc(psf_fwhm):
         coadd_dim=coadd_dim,
         shear_obj=shear_obj,
         psf=psf,
+        star_catalog=star_catalog,
         calib_mag_zero=calib_mag_zero,
         survey_name="HSC",
     )
