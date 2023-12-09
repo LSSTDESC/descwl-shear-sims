@@ -226,6 +226,8 @@ def make_sim(
                 sky_n_sigma=sky_n_sigma,
                 draw_method=draw_method,
                 theta0=theta0,
+                pixel_scale=pixel_scale,
+                calib_mag_zero=calib_mag_zero,
             )
             if epoch == 0:
                 bright_info += this_bright_info

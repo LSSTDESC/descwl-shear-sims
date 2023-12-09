@@ -6,7 +6,7 @@ DEFAULT_SURVEY_BANDS = {
     "LSST": "r",
     "HSC": "i",
     "DES": "r",
-    "EUCLID": "VIS",
+    "Euclid": "VIS",
     "CFHT": "i",
 }
 

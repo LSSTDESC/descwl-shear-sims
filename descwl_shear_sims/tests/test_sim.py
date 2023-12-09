@@ -1,8 +1,10 @@
 import os
 import pytest
 import numpy as np
+from copy import deepcopy
 import lsst.afw.image as afw_image
 import lsst.afw.geom as afw_geom
+from descwl_shear_sims.surveys import get_survey, DEFAULT_SURVEY_BANDS
 
 from descwl_shear_sims.galaxies import make_galaxy_catalog, DEFAULT_FIXED_GAL_CONFIG
 from descwl_shear_sims.stars import StarCatalog, make_star_catalog
@@ -499,20 +501,28 @@ def test_sim_draw_method_smoke(draw_method):
     "psf_fwhm",
     [0.6, 0.7],
 )
-def test_sim_hsc(psf_fwhm):
+def test_sim_hsc(psf_fwhm=0.6):
     seed = 7421
     coadd_dim = 201
-    buff = 10
+    buff = 20
     layout = "random"
     rng = np.random.RandomState(seed)
     calib_mag_zero = 27
+    survey_name = "HSC"
+    gal_type = "wldeblend"
+
+    pixel_scale = get_survey(
+        gal_type=gal_type,
+        band=deepcopy(DEFAULT_SURVEY_BANDS)[survey_name],
+        survey_name=survey_name,
+    ).pixel_scale
 
     galaxy_catalog = make_galaxy_catalog(
         rng=rng,
-        gal_type="wldeblend",
+        gal_type=gal_type,
         coadd_dim=coadd_dim,
         buff=buff,
-        pixel_scale=0.168,
+        pixel_scale=pixel_scale,
         layout=layout,
     )
 
@@ -521,7 +531,7 @@ def test_sim_hsc(psf_fwhm):
         coadd_dim=coadd_dim,
         buff=buff,
         density=10,
-        pixel_scale=0.168,
+        pixel_scale=pixel_scale,
         layout=layout,
     )
 
@@ -537,12 +547,92 @@ def test_sim_hsc(psf_fwhm):
         psf=psf,
         star_catalog=star_catalog,
         calib_mag_zero=calib_mag_zero,
-        survey_name="HSC",
+        survey_name=survey_name,
     )
+
+    exposure = _["band_data"]["i"][0]
+    # check the pixel scale
+    wcs = exposure.getWcs()
+    pix_scale = wcs.getPixelScale()
+    assert np.abs(pix_scale.asArcseconds() - pixel_scale) < 1e-5
+    assert np.abs(0.168 - pixel_scale) < 1e-5
+
+    # check the magnitude zero point
+    zero_flux = 10. ** (0.4 * calib_mag_zero)
+    flux = exposure.getPhotoCalib().getInstFluxAtZeroMagnitude()
+    assert np.abs(zero_flux - flux) < 1e-3
+
+
+@pytest.mark.parametrize(
+    "psf_fwhm",
+    [1.0, 1.2],
+)
+def test_sim_des(psf_fwhm=1.0):
+    seed = 7421
+    coadd_dim = 201
+    buff = 20
+    layout = "random"
+    rng = np.random.RandomState(seed)
+    calib_mag_zero = 30
+    survey_name = "DES"
+    gal_type = "wldeblend"
+
+    pixel_scale = get_survey(
+        gal_type=gal_type,
+        band=deepcopy(DEFAULT_SURVEY_BANDS)[survey_name],
+        survey_name=survey_name,
+    ).pixel_scale
+
+    galaxy_catalog = make_galaxy_catalog(
+        rng=rng,
+        gal_type=gal_type,
+        coadd_dim=coadd_dim,
+        buff=buff,
+        pixel_scale=pixel_scale,
+        layout=layout,
+    )
+
+    star_catalog = StarCatalog(
+        rng=rng,
+        coadd_dim=coadd_dim,
+        buff=buff,
+        density=10,
+        pixel_scale=pixel_scale,
+        layout=layout,
+    )
+
+    psf = make_fixed_psf(
+        psf_type="moffat",
+        psf_fwhm=psf_fwhm,
+    )
+    _ = make_sim(
+        rng=rng,
+        bands=["i"],
+        galaxy_catalog=galaxy_catalog,
+        coadd_dim=coadd_dim,
+        shear_obj=shear_obj,
+        psf=psf,
+        star_catalog=star_catalog,
+        calib_mag_zero=calib_mag_zero,
+        survey_name=survey_name,
+    )
+
+    exposure = _["band_data"]["i"][0]
+    # check the pixel scale
+    wcs = exposure.getWcs()
+    pix_scale = wcs.getPixelScale()
+    assert np.abs(pix_scale.asArcseconds() - pixel_scale) < 1e-5
+    assert np.abs(0.263 - pixel_scale) < 1e-5
+
+    # check the magnitude zero point
+    zero_flux = 10. ** (0.4 * calib_mag_zero)
+    flux = exposure.getPhotoCalib().getInstFluxAtZeroMagnitude()
+    assert np.abs(zero_flux - flux) < 1e-3
 
 
 if __name__ == '__main__':
-    test_sim_layout("hex", "wldeblend")
-    test_sim_hsc(0.6)
-    for rotate in (False, True):
-        test_sim_exp_mag(rotate, show=True)
+    # test_sim_layout("hex", "wldeblend")
+    # for rotate in (False, True):
+    #     test_sim_exp_mag(rotate, show=True)
+    test_sim_des()
+    test_sim_hsc()

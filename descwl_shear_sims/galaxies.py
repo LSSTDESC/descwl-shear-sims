@@ -40,6 +40,8 @@ def make_galaxy_catalog(
     buff: int, optional
         Buffer around the edge where no objects are drawn.  Ignored for
         layout 'grid'.  Default 0.
+    pixel_scale: float
+        pixel scale in arcsec
     layout: string, optional
         'grid' or 'random'.  Ignored for gal_type "wldeblend", otherwise
         required.
@@ -83,6 +85,7 @@ def make_galaxy_catalog(
                 rng=rng,
                 coadd_dim=coadd_dim,
                 buff=buff,
+                pixel_scale=pixel_scale,
                 layout=layout,
             )
         elif gal_type in ['fixed', 'varying', 'exp']:  # TODO remove exp
@@ -100,6 +103,7 @@ def make_galaxy_catalog(
                 rng=rng,
                 coadd_dim=coadd_dim,
                 buff=buff,
+                pixel_scale=pixel_scale,
                 layout=layout,
                 mag=gal_config['mag'],
                 hlr=gal_config['hlr'],
@@ -161,6 +165,8 @@ class FixedGalaxyCatalog(object):
     buff: int, optional
         Buffer region with no objects, on all sides of image.  Ingored
         for layout 'grid'.  Default 0.
+    pixel_scale: float
+        pixel scale in arcsec
     morph: str
         Galaxy morphology, 'exp', 'dev' or 'bd', 'bdk'.  Default 'exp'
     """
@@ -271,13 +277,31 @@ class GalaxyCatalog(FixedGalaxyCatalog):
     buff: int, optional
         Buffer region with no objects, on all sides of image.  Ingored
         for layout 'grid'.  Default 0.
+    pixel_scale: float
+        pixel scale in arcsec
     morph: str
         Galaxy morphology, 'exp', 'dev' or 'bd', 'bdk'.  Default 'exp'
     """
-    def __init__(self, *, rng, coadd_dim, layout, mag, hlr, buff=0, morph='exp'):
+    def __init__(
+        self, *,
+        rng,
+        coadd_dim,
+        layout,
+        mag,
+        hlr,
+        buff=0,
+        pixel_scale=SCALE,
+        morph='exp'
+    ):
         super().__init__(
-            rng=rng, coadd_dim=coadd_dim, buff=buff, layout=layout,
-            mag=mag, hlr=hlr, morph=morph,
+            rng=rng,
+            coadd_dim=coadd_dim,
+            buff=buff,
+            pixel_scale=pixel_scale,
+            layout=layout,
+            mag=mag,
+            hlr=hlr,
+            morph=morph,
         )
         self.gal_type = 'varying'
 
