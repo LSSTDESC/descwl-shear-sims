@@ -501,7 +501,7 @@ def test_sim_draw_method_smoke(draw_method):
     "psf_fwhm",
     [0.6, 0.7],
 )
-def test_sim_hsc(psf_fwhm=0.6):
+def test_sim_hsc(psf_fwhm):
     seed = 7421
     coadd_dim = 201
     buff = 20
@@ -567,7 +567,7 @@ def test_sim_hsc(psf_fwhm=0.6):
     "psf_fwhm",
     [1.0, 1.2],
 )
-def test_sim_des(psf_fwhm=1.0):
+def test_sim_des(psf_fwhm):
     seed = 7421
     coadd_dim = 201
     buff = 20
@@ -631,8 +631,6 @@ def test_sim_des(psf_fwhm=1.0):
 
 
 if __name__ == '__main__':
-    # test_sim_layout("hex", "wldeblend")
-    # for rotate in (False, True):
-    #     test_sim_exp_mag(rotate, show=True)
-    test_sim_des()
-    test_sim_hsc()
+    test_sim_layout("hex", "wldeblend")
+    for rotate in (False, True):
+        test_sim_exp_mag(rotate, show=True)
