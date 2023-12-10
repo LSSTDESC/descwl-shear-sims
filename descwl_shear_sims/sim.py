@@ -128,7 +128,7 @@ def make_sim(
         Draw method for galaxy galsim objects, default 'auto'.  Set to
         'phot' to get poisson noise.  Note this is much slower.
     theta0: float, optional
-        rotation angle of intrinsic galaxies and positions [for ring test],
+        rotation angle of intrinsic galaxy shapes and positions on the sky,
         default 0, in units of radians
     g1,g2: float optional
         reduced shear distortions
@@ -375,7 +375,7 @@ def make_exp(
         has_bleed: bool, True if there is a bleed trail
     """
     dims = [dim]*2
-    # I think Galsim uses 1 offset. An array with length=dim=5
+    # Galsim uses 1 offset. An array with length =dim=5
     # The center is at 3=(5+1)/2
     cen = (np.array(dims)+1)/2
 
