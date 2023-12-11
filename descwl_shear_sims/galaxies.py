@@ -71,10 +71,10 @@ def make_galaxy_catalog(
         )
 
     else:
-        if coadd_dim is None:
-            raise ValueError(
-                f'send coadd_dim= for gal_type {gal_type} and layout {layout}'
-            )
+        if isinstance(layout, str):
+            layout = Layout(layout, coadd_dim, buff, pixel_scale)
+        else:
+            assert isinstance(layout, Layout)
 
         if gal_type == 'wldeblend':
             if layout is None:
@@ -82,9 +82,6 @@ def make_galaxy_catalog(
 
             galaxy_catalog = WLDeblendGalaxyCatalog(
                 rng=rng,
-                coadd_dim=coadd_dim,
-                buff=buff,
-                pixel_scale=pixel_scale,
                 layout=layout,
             )
         elif gal_type in ['fixed', 'varying', 'exp']:  # TODO remove exp
@@ -100,13 +97,10 @@ def make_galaxy_catalog(
 
             galaxy_catalog = cls(
                 rng=rng,
-                coadd_dim=coadd_dim,
-                buff=buff,
-                pixel_scale=pixel_scale,
-                layout=layout,
                 mag=gal_config['mag'],
                 hlr=gal_config['hlr'],
                 morph=gal_config['morph'],
+                layout=layout,
             )
 
         else:
@@ -261,10 +255,6 @@ class GalaxyCatalog(FixedGalaxyCatalog):
     ----------
     rng: np.random.RandomState
         The random number generator
-    coadd_dim: int
-        dimensions of the coadd
-    layout: string
-        The layout of objects, either 'grid' or 'random'
     mag: float
         Magnitude of all objects. Objects brighter than magntiude 17 (e.g., 14
         since mags are opposite) tend to cause the Rubin Observatory science
@@ -274,24 +264,28 @@ class GalaxyCatalog(FixedGalaxyCatalog):
         magnitude of 17 or fainter for this kind of galaxy.
     hlr: float
         Half light radius of all objects
+    morph: str
+        Galaxy morphology, 'exp', 'dev' or 'bd', 'bdk'.  Default 'exp'
+    layout: string
+        The layout of objects, either 'grid' or 'random'
+    coadd_dim: int
+        dimensions of the coadd
     buff: int, optional
         Buffer region with no objects, on all sides of image.  Ingored
         for layout 'grid'.  Default 0.
     pixel_scale: float
         pixel scale in arcsec
-    morph: str
-        Galaxy morphology, 'exp', 'dev' or 'bd', 'bdk'.  Default 'exp'
     """
     def __init__(
         self, *,
         rng,
-        coadd_dim,
-        layout,
         mag,
         hlr,
+        morph='exp',
+        layout=None,
+        coadd_dim=None,
         buff=0,
         pixel_scale=SCALE,
-        morph='exp'
     ):
         super().__init__(
             rng=rng,

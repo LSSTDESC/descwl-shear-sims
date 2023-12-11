@@ -46,11 +46,11 @@ def get_star_config(config=None):
 
 def make_star_catalog(
     rng,
-    coadd_dim,
+    layout='random',
+    coadd_dim=None,
     buff=0,
     pixel_scale=SCALE,
     star_config=None,
-    layout='random',
 ):
     """
     Creat a StarCatalog
@@ -73,15 +73,18 @@ def make_star_catalog(
     """
 
     star_config = get_star_config(config=star_config)
+
+    if isinstance(layout, str):
+        layout = Layout(layout, coadd_dim, buff, pixel_scale)
+    else:
+        assert isinstance(layout, Layout)
     return StarCatalog(
         rng=rng,
-        coadd_dim=coadd_dim,
-        buff=buff,
+        layout=layout,
         pixel_scale=pixel_scale,
         density=star_config['density'],
         min_density=star_config['min_density'],
         max_density=star_config['max_density'],
-        layout=layout,
     )
 
 
@@ -112,13 +115,13 @@ class StarCatalog(object):
     def __init__(
         self, *,
         rng,
-        coadd_dim,
+        layout='random',
+        coadd_dim=None,
         buff=0,
         pixel_scale=SCALE,
         min_density=DEFAULT_MIN_STAR_DENSITY,
         max_density=DEFAULT_MAX_STAR_DENSITY,
         density=DEFAULT_DENSITY,
-        layout='random',
     ):
         self.rng = rng
         self._star_cat = load_sample_stars()
