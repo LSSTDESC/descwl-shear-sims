@@ -7,7 +7,7 @@ import galsim
 
 from .constants import SCALE
 from .cache_tools import cached_catalog_read
-from .shifts import get_shifts
+from .shifts import Layout
 
 DEFAULT_MIN_STAR_DENSITY = 2    # unit: per square arcmin
 DEFAULT_MAX_STAR_DENSITY = 100
@@ -121,9 +121,7 @@ class StarCatalog(object):
         layout='random',
     ):
         self.rng = rng
-
         self._star_cat = load_sample_stars()
-
         if density is None:
             density_mean = sample_star_density(
                 rng=self.rng,
@@ -133,32 +131,17 @@ class StarCatalog(object):
         else:
             density_mean = density
 
-        if layout == 'random':
-            # this layout is random in a square
-            area = ((coadd_dim - 2*buff)*pixel_scale/60)**2
-        elif layout == 'random_disk':
-            # this layout is random in a circle
-            radius = (coadd_dim/2. - buff)*pixel_scale/60  # unit: arcmin
-            area = np.pi*radius**2
-            del radius
+        if isinstance(layout, str):
+            layout = Layout(layout, coadd_dim, buff, pixel_scale)
         else:
-            raise ValueError("layout can only be 'random' or 'random_disk' \
-                    for wldeblend")
-
-        nobj_mean = area * density_mean
-        nobj = rng.poisson(nobj_mean)
-        self.density = nobj/area
-
-        self.shifts_array = get_shifts(
+            assert isinstance(layout, Layout)
+        self.shifts_array = layout.get_shifts(
             rng=rng,
-            coadd_dim=coadd_dim,
-            buff=buff,
-            pixel_scale=pixel_scale,
-            layout=layout,
-            nobj=nobj,
+            density=density_mean,
         )
 
         num = len(self)
+        self.density = num / layout.area  # final density (after Poisson process)
         self.indices = self.rng.randint(
             0,
             self._star_cat.size,
@@ -166,7 +149,7 @@ class StarCatalog(object):
         )
 
     def __len__(self):
-        return self.shifts_array.size
+        return len(self.shifts_array)
 
     def get_objlist(self, *, survey, noise):
         """

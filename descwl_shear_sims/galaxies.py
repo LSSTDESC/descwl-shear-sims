@@ -1,4 +1,3 @@
-import warnings
 import numpy as np
 import os
 import copy
@@ -7,7 +6,7 @@ from galsim import DeVaucouleurs
 from galsim import Exponential
 import descwl
 
-from .shifts import get_shifts, get_pair_shifts
+from .shifts import Layout, get_pair_shifts
 from .constants import SCALE
 from .cache_tools import cached_catalog_read
 
@@ -173,10 +172,10 @@ class FixedGalaxyCatalog(object):
     def __init__(
         self, *,
         rng,
-        coadd_dim,
-        layout,
         mag,
         hlr,
+        layout=None,
+        coadd_dim=None,
         buff=0,
         pixel_scale=SCALE,
         morph='exp'
@@ -186,12 +185,13 @@ class FixedGalaxyCatalog(object):
         self.mag = mag
         self.hlr = hlr
 
-        self.shifts_array = get_shifts(
+        if isinstance(layout, str):
+            layout = Layout(layout, coadd_dim, buff, pixel_scale)
+        else:
+            assert isinstance(layout, Layout)
+
+        self.shifts_array = layout.get_shifts(
             rng=rng,
-            coadd_dim=coadd_dim,
-            buff=buff,
-            pixel_scale=SCALE,
-            layout=layout,
         )
 
     def __len__(self):
@@ -629,12 +629,13 @@ class WLDeblendGalaxyCatalog(object):
 
     """
     def __init__(
-        self, *,
+        self,
+        *,
         rng,
-        coadd_dim,
-        buff=0,
+        layout='random',
+        coadd_dim=None,
+        buff=None,
         pixel_scale=SCALE,
-        layout='random'
     ):
         self.gal_type = 'wldeblend'
         self.rng = rng
@@ -642,47 +643,14 @@ class WLDeblendGalaxyCatalog(object):
         self._wldeblend_cat = read_wldeblend_cat(rng)
 
         # one square degree catalog, convert to arcmin
-        gal_dens = self._wldeblend_cat.size / (60 * 60)
-        if layout == 'random':
-            # need to calculate number of objects first
-            # this layout is random in a square
-            if (coadd_dim - 2*buff) < 2:
-                warnings.warn("dim - 2*buff <= 2, force it to 2.")
-                area = (2**pixel_scale/60)**2.
-            else:
-                area = ((coadd_dim - 2*buff)*pixel_scale/60)**2
-            # a least 1 expected galaxy (used for simple tests)
-            nobj_mean = max(area * gal_dens, 1)
-            nobj = rng.poisson(nobj_mean)
-        elif layout == 'random_disk':
-            # need to calculate number of objects first
-            # this layout is random in a circle
-            if (coadd_dim - 2*buff) < 2:
-                warnings.warn("dim - 2*buff <= 2, force it to 2.")
-                radius = 2.*pixel_scale/60
-                area = np.pi*radius**2
-            else:
-                radius = (coadd_dim/2. - buff)*pixel_scale/60
-                area = np.pi*radius**2
-            del radius
-            # a least 1 expected galaxy (used for simple tests)
-            nobj_mean = max(area * gal_dens, 1)
-            nobj = rng.poisson(nobj_mean)
-        elif layout == "hex":
-            nobj = None
-        elif layout == "grid":
-            nobj = None
+        density_mean = self._wldeblend_cat.size / (60 * 60)
+        if isinstance(layout, str):
+            layout = Layout(layout, coadd_dim, buff, pixel_scale)
         else:
-            raise ValueError("layout can only be 'random', 'random_disk' \
-                    'hex' or 'grid 'for wldeblend")
-
-        self.shifts_array = get_shifts(
+            assert isinstance(layout, Layout)
+        self.shifts_array = layout.get_shifts(
             rng=rng,
-            coadd_dim=coadd_dim,
-            buff=buff,
-            pixel_scale=pixel_scale,
-            layout=layout,
-            nobj=nobj,
+            density=density_mean,
         )
 
         # randomly sample from the catalog
