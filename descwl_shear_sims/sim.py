@@ -9,7 +9,7 @@ from lsst.afw.cameraGeom.testUtils import DetectorWrapper
 from .lsst_bits import get_flagval
 from .saturation import saturate_image_and_mask, BAND_SAT_VALS
 from .surveys import get_survey, rescale_wldeblend_exp, DEFAULT_SURVEY_BANDS
-from .constants import SCALE, ZERO_POINT
+from .constants import SCALE, ZERO_POINT, WORLD_ORIGIN
 from .artifacts import add_bleed, get_max_mag_with_bleed
 from .masking import (
     get_bmask_and_set_image,
@@ -304,7 +304,7 @@ def make_exp(
     bright_objlist=None,
     bright_shifts=None,
     bright_mags=None,
-    coadd_bbox_cen_gs_skypos,
+    coadd_bbox_cen_gs_skypos=None,
     dither=False,
     rotate=False,
     mask_threshold=None,
@@ -338,9 +338,6 @@ def make_exp(
         the psf
     psf_dim: int
         Dimensions of psf image that will be drawn when psf func is called
-    coadd_bbox_cen_gs_skypos: galsim.CelestialCoord
-        The sky position of the center (origin) of the coadd we
-        will make, as a galsim object not stack object
     dither: bool
         If set to True, dither randomly by a pixel width
     rotate: bool
@@ -358,6 +355,9 @@ def make_exp(
         List of PositionD for stars representing offsets
     bright_mags: array, optional
         Mags for the bright objects
+    coadd_bbox_cen_gs_skypos: galsim.CelestialCoord, optional
+        The sky position of the center (origin) of the coadd we
+        will make, as a galsim object not stack object
     mask_threshold: float
         Bright masks are created such that the profile goes out
         to this threshold
@@ -394,8 +394,9 @@ def make_exp(
     # Galsim uses 1 offset. An array with length =dim=5
     # The center is at 3=(5+1)/2
     cen = (np.array(dims)+1)/2
-
     se_origin = galsim.PositionD(x=cen[1], y=cen[0])
+    if coadd_bbox_cen_gs_skypos is None:
+        coadd_bbox_cen_gs_skypos = WORLD_ORIGIN
     if dither:
         dither_range = 0.5
         off = rng.uniform(low=-dither_range, high=dither_range, size=2)
