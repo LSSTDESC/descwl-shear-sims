@@ -1,6 +1,6 @@
 import warnings
 import numpy as np
-
+from .wcs import make_coadd_dm_wcs
 from .constants import (
     RANDOM_DENSITY,
     GRID_SPACING,
@@ -10,13 +10,13 @@ from .constants import (
 
 
 class Layout(object):
-    def __init__(self, layout, coadd_dim, buff, pixel_scale):
+    def __init__(self, layout_name, coadd_dim, buff, pixel_scale):
         """
         Layout object to make position shifts for galaxy and star objects
 
         Parameters
         ----------
-        layout: string
+        layout_name: string
             'grid', 'pair', 'hex', or 'random'
         coadd_dim: int
             Dimensions of final coadd
@@ -25,7 +25,7 @@ class Layout(object):
         pixel_scale: float
             pixel scale
         """
-        if layout == 'random':
+        if layout_name == 'random':
             # need to calculate number of objects first this layout is random
             # in a square
             if (coadd_dim - 2*buff) < 2:
@@ -34,9 +34,9 @@ class Layout(object):
             else:
                 # [arcmin^2]
                 self.area = ((coadd_dim - 2*buff)*pixel_scale/60)**2
-        elif layout == 'random_disk':
+        elif layout_name == 'random_disk':
             # need to calculate number of objects first
-            # this layout is random in a circle
+            # this layout_name is random in a circle
             if (coadd_dim - 2*buff) < 2:
                 warnings.warn("dim - 2*buff <= 2, force it to 2.")
                 radius = 2.*pixel_scale/60
@@ -44,17 +44,21 @@ class Layout(object):
             else:
                 radius = (coadd_dim/2. - buff)*pixel_scale/60
                 self.area = np.pi*radius**2  # [arcmin^2]
-        elif layout == "hex":
+        elif layout_name == "hex":
             self.area = 0
-        elif layout == "grid":
+        elif layout_name == "grid":
             self.area = 0
         else:
-            raise ValueError("layout can only be 'random', 'random_disk' \
+            raise ValueError("layout_name can only be 'random', 'random_disk' \
                     'hex' or 'grid 'for wldeblend")
-        self.layout = layout
+        self.layout_name = layout_name
         self.coadd_dim = coadd_dim
         self.buff = buff
         self.pixel_scale = pixel_scale
+        self.wcs, self.bbox = make_coadd_dm_wcs(
+            coadd_dim,
+            pixel_scale=pixel_scale,
+        )
         return
 
     def get_shifts(
@@ -64,7 +68,7 @@ class Layout(object):
         sep=None,
     ):
         """
-        Make position shifts for objects
+        Make position shifts for objects. The position shifts
 
         rng: numpy.random.RandomState
             Numpy random state
@@ -74,16 +78,16 @@ class Layout(object):
             The separation in arcseconds for layout='pair'
         """
 
-        if self.layout == 'pair':
+        if self.layout_name == 'pair':
             if sep is None:
-                raise ValueError(f'send sep= for layout {self.layout}')
+                raise ValueError(f'send sep= for layout {self.layout_name}')
             shifts = get_pair_shifts(
                 rng=rng,
                 sep=sep,
                 pixel_scale=self.pixel_scale
             )
         else:
-            if self.layout == 'grid':
+            if self.layout_name == 'grid':
                 shifts = get_grid_shifts(
                     rng=rng,
                     dim=self.coadd_dim,
@@ -91,7 +95,7 @@ class Layout(object):
                     pixel_scale=self.pixel_scale,
                     spacing=GRID_SPACING,
                 )
-            elif self.layout == 'hex':
+            elif self.layout_name == 'hex':
                 shifts = get_hex_shifts(
                     rng=rng,
                     dim=self.coadd_dim,
@@ -99,11 +103,11 @@ class Layout(object):
                     pixel_scale=self.pixel_scale,
                     spacing=HEX_SPACING,
                 )
-            elif self.layout == 'random':
+            elif self.layout_name == 'random':
                 # area covered by objects
                 if self.area <= 0:
                     raise ValueError(
-                        f"nonpositive area for layout {self.layout}"
+                        f"nonpositive area for layout {self.layout_name}"
                     )
                 nobj_mean = max(self.area * density, 1)
                 nobj = rng.poisson(nobj_mean)
@@ -114,10 +118,10 @@ class Layout(object):
                     pixel_scale=self.pixel_scale,
                     size=nobj,
                 )
-            elif self.layout == 'random_disk':
+            elif self.layout_name == 'random_disk':
                 if self.area <= 0:
                     raise ValueError(
-                        f"nonpositive area for layout {self.layout}"
+                        f"nonpositive area for layout {self.layout_name}"
                     )
                 nobj_mean = max(self.area * density, 1)
                 nobj = rng.poisson(nobj_mean)
@@ -129,7 +133,7 @@ class Layout(object):
                     size=nobj,
                 )
             else:
-                raise ValueError("bad layout: '%s'" % self.layout)
+                raise ValueError("bad layout: '%s'" % self.layout_name)
         return shifts
 
 
@@ -350,8 +354,7 @@ def get_pair_shifts(*, rng, sep, pixel_scale=SCALE):
     Returns
     -------
     shifts: array
-        Array with dx, dy offset fields for each point, in
-        arcsec
+        Array with dx, dy offset fields for each point, in arcsec
     """
 
     shifts = np.zeros(2, dtype=[('dx', 'f8'), ('dy', 'f8')])

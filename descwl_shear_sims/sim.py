@@ -53,7 +53,6 @@ def make_sim(
     *,
     rng,
     galaxy_catalog,
-    coadd_dim,
     psf,
     shear_obj=None,
     se_dim=None,
@@ -77,6 +76,7 @@ def make_sim(
     theta0=0.,
     g1=None,
     g2=None,
+    coadd_dim=None,
 ):
     """
     Make simulation data
@@ -87,10 +87,6 @@ def make_sim(
         Numpy random state
     galaxy_catalog: catalog
         E.g. WLDeblendGalaxyCatalog or FixedGalaxyCatalog
-    coadd_dim: int
-        Dimensions for planned final coadd.  This is used for generating
-        the final coadd WCS and deteremines some properties of
-        the single epoch images.
     shear_obj:
         shear distortion object
     psf: GSObject or PowerSpectrumPSF
@@ -132,6 +128,10 @@ def make_sim(
         default 0, in units of radians
     g1,g2: float optional
         reduced shear distortions
+    coadd_dim: optional, int
+        Dimensions for planned final coadd.  This is used for generating
+        the final coadd WCS and deteremines some properties of
+        the single epoch images.
 
     Returns
     -------
@@ -156,19 +156,35 @@ def make_sim(
         survey_name=survey_name,
     ).pixel_scale
 
-    coadd_wcs, coadd_bbox = make_coadd_dm_wcs(
-        coadd_dim,
-        pixel_scale=pixel_scale,
-    )
+    if not hasattr(galaxy_catalog, "layout"):
+        if not isinstance(coadd_dim, int):
+            raise ValueError(
+                "coadd_dim should be int when galaxy catalog does not",
+                "have attribute 'layout'",
+            )
+        coadd_wcs, coadd_bbox = make_coadd_dm_wcs(
+            coadd_dim,
+            pixel_scale=pixel_scale,
+        )
+    else:
+        coadd_wcs = galaxy_catalog.layout.wcs
+        coadd_bbox = galaxy_catalog.layout.bbox
     coadd_bbox_cen_gs_skypos = get_coadd_center_gs_pos(
         coadd_wcs=coadd_wcs, coadd_bbox=coadd_bbox,
     )
-
     if se_dim is None:
-        se_dim = get_se_dim(coadd_dim=coadd_dim, dither=dither, rotate=rotate)
+        coadd_scale = coadd_wcs.getPixelScale().asArcseconds()
+        coadd_dim = coadd_bbox.getHeight()
+        se_dim = get_se_dim(
+            coadd_scale=coadd_scale,
+            coadd_dim=coadd_dim,
+            se_scale=pixel_scale,
+            dither=dither,
+            rotate=rotate
+        )
+
     if shear_obj is None:
         shear_obj = ShearConstant(g1=float(g1), g2=float(g2))
-
     band_data = {}
     bright_info = []
     se_wcs = []
@@ -686,7 +702,7 @@ def get_sim_config(config=None):
     return out_config
 
 
-def get_se_dim(*, coadd_dim, dither, rotate):
+def get_se_dim(*, coadd_scale, coadd_dim, se_scale, dither, rotate):
     """
     get single epoch (se) dimensions given coadd dim.
 
@@ -703,13 +719,15 @@ def get_se_dim(*, coadd_dim, dither, rotate):
     -------
     integer dimensions of SE image
     """
+    coadd_length = coadd_scale * coadd_dim
+    dim = int((coadd_length + 0.5) // se_scale)
     if rotate:
         # make sure to completely cover the coadd
-        se_dim = int(np.ceil(coadd_dim * np.sqrt(2))) + 20
+        se_dim = int(np.ceil(dim * np.sqrt(2))) + 20
     else:
         # make big enough to avoid boundary checks for downstream
         # which are 3 pixels
-        se_dim = coadd_dim + 5 * 2
+        se_dim = dim + 5 * 2
 
     return se_dim
 

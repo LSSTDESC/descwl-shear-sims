@@ -142,10 +142,6 @@ class FixedGalaxyCatalog(object):
     ----------
     rng: np.random.RandomState
         The random number generator
-    coadd_dim: int
-        dimensions of the coadd
-    layout: string
-        The layout of objects, either 'grid' or 'random'
     mag: float
         Magnitude of all objects. Objects brighter than magntiude 17 (e.g., 14
         since mags are opposite) tend to cause the Rubin Observatory science
@@ -155,24 +151,28 @@ class FixedGalaxyCatalog(object):
         magnitude of 17 or fainter for this kind of galaxy.
     hlr: float
         Half light radius of all objects
+    morph: str
+        Galaxy morphology, 'exp', 'dev' or 'bd', 'bdk'.  Default 'exp'
+    layout: string | Layout, optional
+        The layout of objects, either 'grid' or 'random'
+    coadd_dim: int, optional
+        dimensions of the coadd
     buff: int, optional
         Buffer region with no objects, on all sides of image.  Ingored
         for layout 'grid'.  Default 0.
-    pixel_scale: float
+    pixel_scale: float, optional
         pixel scale in arcsec
-    morph: str
-        Galaxy morphology, 'exp', 'dev' or 'bd', 'bdk'.  Default 'exp'
     """
     def __init__(
         self, *,
         rng,
         mag,
         hlr,
+        morph='exp',
         layout=None,
         coadd_dim=None,
         buff=0,
         pixel_scale=SCALE,
-        morph='exp'
     ):
         self.gal_type = 'fixed'
         self.morph = morph
@@ -180,11 +180,11 @@ class FixedGalaxyCatalog(object):
         self.hlr = hlr
 
         if isinstance(layout, str):
-            layout = Layout(layout, coadd_dim, buff, pixel_scale)
+            self.layout = Layout(layout, coadd_dim, buff, pixel_scale)
         else:
             assert isinstance(layout, Layout)
-
-        self.shifts_array = layout.get_shifts(
+            self.layout = layout
+        self.shifts_array = self.layout.get_shifts(
             rng=rng,
         )
 
@@ -612,14 +612,14 @@ class WLDeblendGalaxyCatalog(object):
     ----------
     rng: np.random.RandomState
         The random number generator
-    coadd_dim: int
+    layout: str|Layout, optional
+    coadd_dim: int, optional
         Dimensions of the coadd
     buff: int, optional
         Buffer region with no objects, on all sides of image.  Ingored
         for layout 'grid'.  Default 0.
-    pixel_scale: float
+    pixel_scale: float, optional
         pixel scale
-    layout: str, optional
 
     """
     def __init__(
@@ -639,10 +639,11 @@ class WLDeblendGalaxyCatalog(object):
         # one square degree catalog, convert to arcmin
         density_mean = self._wldeblend_cat.size / (60 * 60)
         if isinstance(layout, str):
-            layout = Layout(layout, coadd_dim, buff, pixel_scale)
+            self.layout = Layout(layout, coadd_dim, buff, pixel_scale)
         else:
             assert isinstance(layout, Layout)
-        self.shifts_array = layout.get_shifts(
+            self.layout = layout
+        self.shifts_array = self.layout.get_shifts(
             rng=rng,
             density=density_mean,
         )
@@ -654,7 +655,6 @@ class WLDeblendGalaxyCatalog(object):
             self._wldeblend_cat.size,
             size=num,
         )
-
         # do a random rotation for each galaxy
         self.angles = self.rng.uniform(low=0, high=360, size=num)
 
