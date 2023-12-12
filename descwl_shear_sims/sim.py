@@ -390,7 +390,7 @@ def make_exp(
         radius_pixels: radius of mask in pixels
         has_bleed: bool, True if there is a bleed trail
     """
-    dims = [dim]*2
+    dims = [dim] * 2
     # Galsim uses 1 offset. An array with length =dim=5
     # The center is at 3=(5+1)/2
     cen = (np.array(dims)+1)/2

@@ -6,7 +6,7 @@ from galsim import DeVaucouleurs
 from galsim import Exponential
 import descwl
 
-from .shifts import Layout, get_pair_shifts
+from .layout import Layout
 from .constants import SCALE
 from .cache_tools import cached_catalog_read
 
@@ -50,6 +50,11 @@ def make_galaxy_catalog(
     sep: float, optional
         Separation of pair in arcsec for layout='pair'
     """
+
+    if isinstance(layout, str):
+        layout = Layout(layout, coadd_dim, buff, pixel_scale)
+    else:
+        assert isinstance(layout, Layout)
     if layout == 'pair':
         if sep is None:
             raise ValueError(
@@ -71,11 +76,6 @@ def make_galaxy_catalog(
         )
 
     else:
-        if isinstance(layout, str):
-            layout = Layout(layout, coadd_dim, buff, pixel_scale)
-        else:
-            assert isinstance(layout, Layout)
-
         if gal_type == 'wldeblend':
             if layout is None:
                 layout = "random"
@@ -105,7 +105,6 @@ def make_galaxy_catalog(
 
         else:
             raise ValueError(f'bad gal_type "{gal_type}"')
-
     return galaxy_catalog
 
 
@@ -558,7 +557,8 @@ class FixedPairGalaxyCatalog(FixedGalaxyCatalog):
         self.hlr = hlr
         self.rng = rng
 
-        self.shifts_array = get_pair_shifts(
+        self.layout = Layout("pair")
+        self.shifts_array = self.layout.get_shifts(
             rng=rng,
             sep=sep,
         )
@@ -598,7 +598,8 @@ class PairGalaxyCatalog(GalaxyCatalog):
         self.morph_seed = rng.randint(0, 2**31)
         self.gs_morph_seed = rng.randint(0, 2**31)
 
-        self.shifts_array = get_pair_shifts(
+        self.layout = Layout("pair")
+        self.shifts_array = self.layout.get_shifts(
             rng=rng,
             sep=sep,
         )

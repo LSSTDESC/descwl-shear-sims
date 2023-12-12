@@ -7,7 +7,7 @@ import galsim
 
 from .constants import SCALE
 from .cache_tools import cached_catalog_read
-from .shifts import Layout
+from .layout import Layout
 
 DEFAULT_MIN_STAR_DENSITY = 2    # unit: per square arcmin
 DEFAULT_MAX_STAR_DENSITY = 100
