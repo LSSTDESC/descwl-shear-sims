@@ -56,7 +56,6 @@ def test_sim_center(ran_seed):
     )
     img_array = sim_data["band_data"][band_list[0]][0].getImage().getArray()
     out_dim = img_array.shape[0]
-    # +10 is to avoid downstream (what is that?)
     assert out_dim == coadd_dim + 10, (
         "The length of the output image should \
             be %d"

@@ -702,7 +702,14 @@ def get_sim_config(config=None):
     return out_config
 
 
-def get_se_dim(*, coadd_scale, coadd_dim, se_scale, dither, rotate):
+def get_se_dim(
+    *,
+    coadd_dim,
+    coadd_scale=None,
+    se_scale=None,
+    dither=False,
+    rotate=False
+):
     """
     get single epoch (se) dimensions given coadd dim.
 
@@ -710,24 +717,32 @@ def get_se_dim(*, coadd_scale, coadd_dim, se_scale, dither, rotate):
     ----------
     coadd_dim: int
         dimensions of coadd
-    dither: bool
+    coadd_scale: float, optional
+        pixel scale of coadd
+    se_scale: float, optional
+        pixel scale of single exposure
+    dither: bool, optional
         Whether there is dithering or not
-    rotate: bool
+    rotate: bool, optional
         Whether there are random rotations of image exposure or not
 
     Returns
     -------
     integer dimensions of SE image
     """
-    coadd_length = coadd_scale * coadd_dim
-    dim = int((coadd_length + 0.5) // se_scale)
+    if (coadd_scale is None) or (se_scale is None):
+        print("no coadd_scale or se_scale. Assume they are the same")
+        dim = coadd_dim
+    else:
+        coadd_length = coadd_scale * coadd_dim
+        dim = int((coadd_length) / se_scale + 0.5)
     if rotate:
         # make sure to completely cover the coadd
         se_dim = int(np.ceil(dim * np.sqrt(2))) + 20
     else:
         # make big enough to avoid boundary checks for downstream
         # which are 3 pixels
-        se_dim = dim + 5 * 2
+        se_dim = dim + 10
 
     return se_dim
 

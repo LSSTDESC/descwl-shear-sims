@@ -124,7 +124,11 @@ def test_sim_exp_mag(rotate, show=False):
     rng = np.random.RandomState(seed)
 
     # use fixed single epoch dim so we can look in the same spot for the object
-    se_dim = get_se_dim(coadd_dim=coadd_dim, dither=False, rotate=True)
+    se_dim = get_se_dim(
+        coadd_dim=coadd_dim,
+        dither=False,
+        rotate=True,
+    )
 
     ok = False
     for i in range(ntrial):
@@ -631,6 +635,8 @@ def test_sim_des(psf_fwhm):
 
 
 if __name__ == '__main__':
-    test_sim_layout("hex", "wldeblend")
-    for rotate in (False, True):
-        test_sim_exp_mag(rotate, show=True)
+    # test_sim_layout("hex", "wldeblend")
+    # for rotate in (False, True):
+    #     test_sim_exp_mag(rotate, show=True)
+    test_sim_exp_mag(True)
+    test_sim_exp_mag(False)
