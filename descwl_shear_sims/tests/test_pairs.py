@@ -55,5 +55,6 @@ def test_pairs_smoke(dither, rotate):
     mag = ZERO_POINT - 2.5*np.log10(avg_flux)
     assert abs(mag - DEFAULT_FIXED_GAL_CONFIG['mag']) < 0.005
 
+
 if __name__ == '__main__':
     test_pairs_smoke(True, False)

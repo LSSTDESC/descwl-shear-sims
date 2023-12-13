@@ -157,7 +157,7 @@ def make_sim(
     ).pixel_scale
 
     if hasattr(galaxy_catalog.layout, "wcs") and \
-        hasattr(galaxy_catalog.layout, "bbox"):
+            hasattr(galaxy_catalog.layout, "bbox"):
         coadd_wcs = galaxy_catalog.layout.wcs
         coadd_bbox = galaxy_catalog.layout.bbox
     else:
