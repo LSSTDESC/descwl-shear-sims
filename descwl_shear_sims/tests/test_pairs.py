@@ -1,10 +1,10 @@
 import pytest
 import numpy as np
-from ..galaxies import make_galaxy_catalog, DEFAULT_FIXED_GAL_CONFIG
-from ..psfs import make_fixed_psf
+from descwl_shear_sims.galaxies import make_galaxy_catalog, DEFAULT_FIXED_GAL_CONFIG
+from descwl_shear_sims.psfs import make_fixed_psf
 
-from ..sim import make_sim
-from ..constants import ZERO_POINT
+from descwl_shear_sims.sim import make_sim
+from descwl_shear_sims.constants import ZERO_POINT
 
 from descwl_shear_sims.shear import ShearConstant
 
@@ -54,3 +54,6 @@ def test_pairs_smoke(dither, rotate):
     avg_flux = imsum / 2
     mag = ZERO_POINT - 2.5*np.log10(avg_flux)
     assert abs(mag - DEFAULT_FIXED_GAL_CONFIG['mag']) < 0.005
+
+if __name__ == '__main__':
+    test_pairs_smoke(True, False)

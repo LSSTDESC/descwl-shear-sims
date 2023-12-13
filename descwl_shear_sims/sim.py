@@ -156,7 +156,11 @@ def make_sim(
         survey_name=survey_name,
     ).pixel_scale
 
-    if not hasattr(galaxy_catalog, "layout"):
+    if hasattr(galaxy_catalog.layout, "wcs") and \
+        hasattr(galaxy_catalog.layout, "bbox"):
+        coadd_wcs = galaxy_catalog.layout.wcs
+        coadd_bbox = galaxy_catalog.layout.bbox
+    else:
         if not isinstance(coadd_dim, int):
             raise ValueError(
                 "coadd_dim should be int when galaxy catalog does not",
@@ -166,9 +170,6 @@ def make_sim(
             coadd_dim,
             pixel_scale=pixel_scale,
         )
-    else:
-        coadd_wcs = galaxy_catalog.layout.wcs
-        coadd_bbox = galaxy_catalog.layout.bbox
     coadd_bbox_cen_gs_skypos = get_coadd_center_gs_pos(
         coadd_wcs=coadd_wcs, coadd_bbox=coadd_bbox,
     )

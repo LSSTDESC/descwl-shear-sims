@@ -52,10 +52,15 @@ def make_galaxy_catalog(
     """
 
     if isinstance(layout, str):
-        layout = Layout(layout, coadd_dim, buff, pixel_scale)
+        layout = Layout(
+            layout_name=layout,
+            coadd_dim=coadd_dim,
+            buff=buff,
+            pixel_scale=pixel_scale,
+        )
     else:
         assert isinstance(layout, Layout)
-    if layout == 'pair':
+    if layout.layout_name == 'pair':
         if sep is None:
             raise ValueError(
                 f'send sep= for gal_type {gal_type} and layout {layout}'
