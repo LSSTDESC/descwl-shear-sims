@@ -3,14 +3,14 @@ import numpy as np
 import galsim
 import pytest
 
-from descwl_shear_sims.lsst_bits import get_flagval
-from descwl_shear_sims.saturation import BAND_SAT_VALS
-from descwl_shear_sims.artifacts.star_bleeds import add_bleed
-from descwl_shear_sims.stars import StarCatalog
-from descwl_shear_sims.galaxies import make_galaxy_catalog
-from descwl_shear_sims.psfs import make_fixed_psf
-from descwl_shear_sims.sim import make_sim
-from descwl_shear_sims.shear import ShearConstant
+from ..lsst_bits import get_flagval
+from ..saturation import BAND_SAT_VALS
+from ..artifacts.star_bleeds import add_bleed
+from ..stars import StarCatalog
+from ..galaxies import make_galaxy_catalog
+from ..psfs import make_fixed_psf
+from ..sim import make_sim
+from ..shear import ShearConstant
 
 
 shear_obj = ShearConstant(g1=0., g2=0.)

@@ -1,12 +1,12 @@
 import pytest
 import numpy as np
-from descwl_shear_sims.galaxies import make_galaxy_catalog, DEFAULT_FIXED_GAL_CONFIG
-from descwl_shear_sims.psfs import make_fixed_psf
+from ..galaxies import make_galaxy_catalog, DEFAULT_FIXED_GAL_CONFIG
+from ..psfs import make_fixed_psf
 
-from descwl_shear_sims.sim import make_sim
-from descwl_shear_sims.constants import ZERO_POINT
+from ..sim import make_sim
+from ..constants import ZERO_POINT
 
-from descwl_shear_sims.shear import ShearConstant
+from ..shear import ShearConstant
 
 shear_obj = ShearConstant(g1=0.02, g2=0.)
 

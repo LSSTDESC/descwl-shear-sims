@@ -6,10 +6,10 @@ This is the unit test to make sure that the simulated images are centerred at
 import pytest
 import galsim
 import numpy as np
-from descwl_shear_sims.sim import make_sim
-from descwl_shear_sims.galaxies import make_galaxy_catalog
-from descwl_shear_sims.psfs import make_fixed_psf  # for making a power spectrum PSF
-from descwl_shear_sims.shear import ShearConstant
+from ..sim import make_sim
+from ..galaxies import make_galaxy_catalog
+from ..psfs import make_fixed_psf  # for making a power spectrum PSF
+from ..shear import ShearConstant
 
 shear_obj = ShearConstant(g1=0.02, g2=0.)
 

@@ -1,6 +1,6 @@
 import pytest
 
-from descwl_shear_sims.sim import get_sim_config
+from ..sim import get_sim_config
 
 
 def test_config_smoke():
