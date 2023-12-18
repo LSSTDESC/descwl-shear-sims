@@ -1,4 +1,3 @@
-import warnings
 import numpy as np
 import os
 import copy
@@ -7,7 +6,7 @@ from galsim import DeVaucouleurs
 from galsim import Exponential
 import descwl
 
-from .shifts import get_shifts, get_pair_shifts
+from .layout import Layout
 from .constants import SCALE
 from .cache_tools import cached_catalog_read
 
@@ -25,6 +24,7 @@ def make_galaxy_catalog(
     gal_type,
     coadd_dim=None,
     buff=0,
+    pixel_scale=SCALE,
     layout=None,
     gal_config=None,
     sep=None,
@@ -39,6 +39,8 @@ def make_galaxy_catalog(
     buff: int, optional
         Buffer around the edge where no objects are drawn.  Ignored for
         layout 'grid'.  Default 0.
+    pixel_scale: float
+        pixel scale in arcsec
     layout: string, optional
         'grid' or 'random'.  Ignored for gal_type "wldeblend", otherwise
         required.
@@ -48,7 +50,17 @@ def make_galaxy_catalog(
     sep: float, optional
         Separation of pair in arcsec for layout='pair'
     """
-    if layout == 'pair':
+
+    if isinstance(layout, str):
+        layout = Layout(
+            layout_name=layout,
+            coadd_dim=coadd_dim,
+            buff=buff,
+            pixel_scale=pixel_scale,
+        )
+    else:
+        assert isinstance(layout, Layout)
+    if layout.layout_name == 'pair':
         if sep is None:
             raise ValueError(
                 f'send sep= for gal_type {gal_type} and layout {layout}'
@@ -69,19 +81,12 @@ def make_galaxy_catalog(
         )
 
     else:
-        if coadd_dim is None:
-            raise ValueError(
-                f'send coadd_dim= for gal_type {gal_type} and layout {layout}'
-            )
-
         if gal_type == 'wldeblend':
             if layout is None:
                 layout = "random"
 
             galaxy_catalog = WLDeblendGalaxyCatalog(
                 rng=rng,
-                coadd_dim=coadd_dim,
-                buff=buff,
                 layout=layout,
             )
         elif gal_type in ['fixed', 'varying', 'exp']:  # TODO remove exp
@@ -97,17 +102,14 @@ def make_galaxy_catalog(
 
             galaxy_catalog = cls(
                 rng=rng,
-                coadd_dim=coadd_dim,
-                buff=buff,
-                layout=layout,
                 mag=gal_config['mag'],
                 hlr=gal_config['hlr'],
                 morph=gal_config['morph'],
+                layout=layout,
             )
 
         else:
             raise ValueError(f'bad gal_type "{gal_type}"')
-
     return galaxy_catalog
 
 
@@ -144,10 +146,6 @@ class FixedGalaxyCatalog(object):
     ----------
     rng: np.random.RandomState
         The random number generator
-    coadd_dim: int
-        dimensions of the coadd
-    layout: string
-        The layout of objects, either 'grid' or 'random'
     mag: float
         Magnitude of all objects. Objects brighter than magntiude 17 (e.g., 14
         since mags are opposite) tend to cause the Rubin Observatory science
@@ -157,23 +155,41 @@ class FixedGalaxyCatalog(object):
         magnitude of 17 or fainter for this kind of galaxy.
     hlr: float
         Half light radius of all objects
+    morph: str
+        Galaxy morphology, 'exp', 'dev' or 'bd', 'bdk'.  Default 'exp'
+    layout: string | Layout, optional
+        The layout of objects, either 'grid' or 'random'
+    coadd_dim: int, optional
+        dimensions of the coadd
     buff: int, optional
         Buffer region with no objects, on all sides of image.  Ingored
         for layout 'grid'.  Default 0.
-    morph: str
-        Galaxy morphology, 'exp', 'dev' or 'bd', 'bdk'.  Default 'exp'
+    pixel_scale: float, optional
+        pixel scale in arcsec
     """
-    def __init__(self, *, rng, coadd_dim, layout, mag, hlr, buff=0, morph='exp'):
+    def __init__(
+        self, *,
+        rng,
+        mag,
+        hlr,
+        morph='exp',
+        layout=None,
+        coadd_dim=None,
+        buff=0,
+        pixel_scale=SCALE,
+    ):
         self.gal_type = 'fixed'
         self.morph = morph
         self.mag = mag
         self.hlr = hlr
 
-        self.shifts_array = get_shifts(
+        if isinstance(layout, str):
+            self.layout = Layout(layout, coadd_dim, buff, pixel_scale)
+        else:
+            assert isinstance(layout, Layout)
+            self.layout = layout
+        self.shifts_array = self.layout.get_shifts(
             rng=rng,
-            coadd_dim=coadd_dim,
-            buff=buff,
-            layout=layout,
         )
 
     def __len__(self):
@@ -243,10 +259,6 @@ class GalaxyCatalog(FixedGalaxyCatalog):
     ----------
     rng: np.random.RandomState
         The random number generator
-    coadd_dim: int
-        dimensions of the coadd
-    layout: string
-        The layout of objects, either 'grid' or 'random'
     mag: float
         Magnitude of all objects. Objects brighter than magntiude 17 (e.g., 14
         since mags are opposite) tend to cause the Rubin Observatory science
@@ -256,16 +268,38 @@ class GalaxyCatalog(FixedGalaxyCatalog):
         magnitude of 17 or fainter for this kind of galaxy.
     hlr: float
         Half light radius of all objects
+    morph: str
+        Galaxy morphology, 'exp', 'dev' or 'bd', 'bdk'.  Default 'exp'
+    layout: string
+        The layout of objects, either 'grid' or 'random'
+    coadd_dim: int
+        dimensions of the coadd
     buff: int, optional
         Buffer region with no objects, on all sides of image.  Ingored
         for layout 'grid'.  Default 0.
-    morph: str
-        Galaxy morphology, 'exp', 'dev' or 'bd', 'bdk'.  Default 'exp'
+    pixel_scale: float
+        pixel scale in arcsec
     """
-    def __init__(self, *, rng, coadd_dim, layout, mag, hlr, buff=0, morph='exp'):
+    def __init__(
+        self, *,
+        rng,
+        mag,
+        hlr,
+        morph='exp',
+        layout=None,
+        coadd_dim=None,
+        buff=0,
+        pixel_scale=SCALE,
+    ):
         super().__init__(
-            rng=rng, coadd_dim=coadd_dim, buff=buff, layout=layout,
-            mag=mag, hlr=hlr, morph=morph,
+            rng=rng,
+            coadd_dim=coadd_dim,
+            buff=buff,
+            pixel_scale=pixel_scale,
+            layout=layout,
+            mag=mag,
+            hlr=hlr,
+            morph=morph,
         )
         self.gal_type = 'varying'
 
@@ -528,7 +562,8 @@ class FixedPairGalaxyCatalog(FixedGalaxyCatalog):
         self.hlr = hlr
         self.rng = rng
 
-        self.shifts_array = get_pair_shifts(
+        self.layout = Layout("pair")
+        self.shifts_array = self.layout.get_shifts(
             rng=rng,
             sep=sep,
         )
@@ -568,7 +603,8 @@ class PairGalaxyCatalog(GalaxyCatalog):
         self.morph_seed = rng.randint(0, 2**31)
         self.gs_morph_seed = rng.randint(0, 2**31)
 
-        self.shifts_array = get_pair_shifts(
+        self.layout = Layout("pair")
+        self.shifts_array = self.layout.get_shifts(
             rng=rng,
             sep=sep,
         )
@@ -582,61 +618,40 @@ class WLDeblendGalaxyCatalog(object):
     ----------
     rng: np.random.RandomState
         The random number generator
-    coadd_dim: int
+    layout: str|Layout, optional
+    coadd_dim: int, optional
         Dimensions of the coadd
     buff: int, optional
         Buffer region with no objects, on all sides of image.  Ingored
         for layout 'grid'.  Default 0.
-    layout: str, optional
+    pixel_scale: float, optional
+        pixel scale
 
     """
-    def __init__(self, *, rng, coadd_dim, buff=0, layout='random'):
+    def __init__(
+        self,
+        *,
+        rng,
+        layout='random',
+        coadd_dim=None,
+        buff=None,
+        pixel_scale=SCALE,
+    ):
         self.gal_type = 'wldeblend'
         self.rng = rng
 
         self._wldeblend_cat = read_wldeblend_cat(rng)
 
         # one square degree catalog, convert to arcmin
-        gal_dens = self._wldeblend_cat.size / (60 * 60)
-        if layout == 'random':
-            # need to calculate number of objects first
-            # this layout is random in a square
-            if (coadd_dim - 2*buff) < 2:
-                warnings.warn("dim - 2*buff <= 2, force it to 2.")
-                area = (2**SCALE/60)**2.
-            else:
-                area = ((coadd_dim - 2*buff)*SCALE/60)**2
-            # a least 1 expected galaxy (used for simple tests)
-            nobj_mean = max(area * gal_dens, 1)
-            nobj = rng.poisson(nobj_mean)
-        elif layout == 'random_disk':
-            # need to calculate number of objects first
-            # this layout is random in a circle
-            if (coadd_dim - 2*buff) < 2:
-                warnings.warn("dim - 2*buff <= 2, force it to 2.")
-                radius = 2.*SCALE/60
-                area = np.pi*radius**2
-            else:
-                radius = (coadd_dim/2. - buff)*SCALE/60
-                area = np.pi*radius**2
-            del radius
-            # a least 1 expected galaxy (used for simple tests)
-            nobj_mean = max(area * gal_dens, 1)
-            nobj = rng.poisson(nobj_mean)
-        elif layout == "hex":
-            nobj = None
-        elif layout == "grid":
-            nobj = None
+        density_mean = self._wldeblend_cat.size / (60 * 60)
+        if isinstance(layout, str):
+            self.layout = Layout(layout, coadd_dim, buff, pixel_scale)
         else:
-            raise ValueError("layout can only be 'random', 'random_disk' \
-                    'hex' or 'grid 'for wldeblend")
-
-        self.shifts_array = get_shifts(
+            assert isinstance(layout, Layout)
+            self.layout = layout
+        self.shifts_array = self.layout.get_shifts(
             rng=rng,
-            coadd_dim=coadd_dim,
-            buff=buff,
-            layout=layout,
-            nobj=nobj,
+            density=density_mean,
         )
 
         # randomly sample from the catalog
@@ -646,7 +661,6 @@ class WLDeblendGalaxyCatalog(object):
             self._wldeblend_cat.size,
             size=num,
         )
-
         # do a random rotation for each galaxy
         self.angles = self.rng.uniform(low=0, high=360, size=num)
 

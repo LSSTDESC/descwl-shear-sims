@@ -7,7 +7,7 @@ import galsim
 
 from .constants import SCALE
 from .cache_tools import cached_catalog_read
-from .shifts import get_shifts
+from .layout import Layout
 
 DEFAULT_MIN_STAR_DENSITY = 2    # unit: per square arcmin
 DEFAULT_MAX_STAR_DENSITY = 100
@@ -44,7 +44,14 @@ def get_star_config(config=None):
     return out_config
 
 
-def make_star_catalog(rng, coadd_dim, buff=0, star_config=None, layout='random'):
+def make_star_catalog(
+    rng,
+    layout='random',
+    coadd_dim=None,
+    buff=0,
+    pixel_scale=SCALE,
+    star_config=None,
+):
     """
     Creat a StarCatalog
 
@@ -66,14 +73,18 @@ def make_star_catalog(rng, coadd_dim, buff=0, star_config=None, layout='random')
     """
 
     star_config = get_star_config(config=star_config)
+
+    if isinstance(layout, str):
+        layout = Layout(layout, coadd_dim, buff, pixel_scale)
+    else:
+        assert isinstance(layout, Layout)
     return StarCatalog(
         rng=rng,
-        coadd_dim=coadd_dim,
-        buff=buff,
+        layout=layout,
+        pixel_scale=pixel_scale,
         density=star_config['density'],
         min_density=star_config['min_density'],
         max_density=star_config['max_density'],
-        layout=layout,
     )
 
 
@@ -89,6 +100,8 @@ class StarCatalog(object):
         Dimensions of the coadd
     buff: int, optional
         Buffer around the edge where no objects are drawn. Default 0.
+    pixel_scale: float
+        pixel scale
     min_density: int, optional
         Set the minimum density to sample (ignored if density= is sent)
     max_density: int, optional
@@ -100,17 +113,18 @@ class StarCatalog(object):
         'random' or 'random_disk'
     """
     def __init__(
-        self, *, rng, coadd_dim,
+        self, *,
+        rng,
+        layout='random',
+        coadd_dim=None,
         buff=0,
+        pixel_scale=SCALE,
         min_density=DEFAULT_MIN_STAR_DENSITY,
         max_density=DEFAULT_MAX_STAR_DENSITY,
         density=DEFAULT_DENSITY,
-        layout='random',
     ):
         self.rng = rng
-
         self._star_cat = load_sample_stars()
-
         if density is None:
             density_mean = sample_star_density(
                 rng=self.rng,
@@ -120,31 +134,17 @@ class StarCatalog(object):
         else:
             density_mean = density
 
-        if layout == 'random':
-            # this layout is random in a square
-            area = ((coadd_dim - 2*buff)*SCALE/60)**2
-        elif layout == 'random_disk':
-            # this layout is random in a circle
-            radius = (coadd_dim/2. - buff)*SCALE/60  # unit: arcmin
-            area = np.pi*radius**2
-            del radius
+        if isinstance(layout, str):
+            layout = Layout(layout, coadd_dim, buff, pixel_scale)
         else:
-            raise ValueError("layout can only be 'random' or 'random_disk' \
-                    for wldeblend")
-
-        nobj_mean = area * density_mean
-        nobj = rng.poisson(nobj_mean)
-        self.density = nobj/area
-
-        self.shifts_array = get_shifts(
+            assert isinstance(layout, Layout)
+        self.shifts_array = layout.get_shifts(
             rng=rng,
-            coadd_dim=coadd_dim,
-            buff=buff,
-            layout=layout,
-            nobj=nobj,
+            density=density_mean,
         )
 
         num = len(self)
+        self.density = num / layout.area  # final density (after Poisson process)
         self.indices = self.rng.randint(
             0,
             self._star_cat.size,
@@ -152,7 +152,7 @@ class StarCatalog(object):
         )
 
     def __len__(self):
-        return self.shifts_array.size
+        return len(self.shifts_array)
 
     def get_objlist(self, *, survey, noise):
         """

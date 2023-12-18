@@ -293,5 +293,6 @@ def test_shear_meas(layout, gal_type, ntrial):
     assert np.abs(c) < 3*cerr
     return
 
+
 if __name__ == "__main__":
     test_shear_meas(layout="grid", gal_type="wldeblend", ntrial=50)

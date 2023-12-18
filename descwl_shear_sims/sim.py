@@ -8,8 +8,8 @@ from lsst.afw.cameraGeom.testUtils import DetectorWrapper
 
 from .lsst_bits import get_flagval
 from .saturation import saturate_image_and_mask, BAND_SAT_VALS
-from .surveys import get_survey, rescale_wldeblend_exp
-from .constants import SCALE, ZERO_POINT
+from .surveys import get_survey, rescale_wldeblend_exp, DEFAULT_SURVEY_BANDS
+from .constants import SCALE, ZERO_POINT, WORLD_ORIGIN
 from .artifacts import add_bleed, get_max_mag_with_bleed
 from .masking import (
     get_bmask_and_set_image,
@@ -45,6 +45,7 @@ DEFAULT_SIM_CONFIG = {
     "cosmic_rays": False,
     "bad_columns": False,
     "sky_n_sigma": None,
+    "survey_name": "LSST",
 }
 
 
@@ -52,7 +53,6 @@ def make_sim(
     *,
     rng,
     galaxy_catalog,
-    coadd_dim,
     psf,
     shear_obj=None,
     se_dim=None,
@@ -71,9 +71,12 @@ def make_sim(
     star_bleeds=False,
     sky_n_sigma=None,
     draw_method='auto',
+    calib_mag_zero=ZERO_POINT,
+    survey_name="LSST",
     theta0=0.,
     g1=None,
     g2=None,
+    coadd_dim=None,
 ):
     """
     Make simulation data
@@ -84,10 +87,6 @@ def make_sim(
         Numpy random state
     galaxy_catalog: catalog
         E.g. WLDeblendGalaxyCatalog or FixedGalaxyCatalog
-    coadd_dim: int
-        Dimensions for planned final coadd.  This is used for generating
-        the final coadd WCS and deteremines some properties of
-        the single epoch images.
     shear_obj:
         shear distortion object
     psf: GSObject or PowerSpectrumPSF
@@ -125,8 +124,14 @@ def make_sim(
         Draw method for galaxy galsim objects, default 'auto'.  Set to
         'phot' to get poisson noise.  Note this is much slower.
     theta0: float, optional
-        rotation angle of intrinsic galaxies and positions [for ring test],
+        rotation angle of intrinsic galaxy shapes and positions on the sky,
         default 0, in units of radians
+    g1,g2: float optional
+        reduced shear distortions
+    coadd_dim: optional, int
+        Dimensions for planned final coadd.  This is used for generating
+        the final coadd WCS and deteremines some properties of
+        the single epoch images.
 
     Returns
     -------
@@ -143,23 +148,53 @@ def make_sim(
             has_bleed: bool, True if there is a bleed trail
         se_wcs: list of WCS
     """
+    # Get the pixel scale using a default band from the survey
+    _bd = deepcopy(DEFAULT_SURVEY_BANDS)[survey_name]
+    pixel_scale = get_survey(
+        gal_type=galaxy_catalog.gal_type,
+        band=_bd,
+        survey_name=survey_name,
+    ).pixel_scale
 
-    coadd_wcs, coadd_bbox = make_coadd_dm_wcs(coadd_dim)
+    if hasattr(galaxy_catalog.layout, "wcs") and \
+            hasattr(galaxy_catalog.layout, "bbox"):
+        coadd_wcs = galaxy_catalog.layout.wcs
+        coadd_bbox = galaxy_catalog.layout.bbox
+    else:
+        if not isinstance(coadd_dim, int):
+            raise ValueError(
+                "coadd_dim should be int when galaxy catalog does not",
+                "have attribute 'layout'",
+            )
+        coadd_wcs, coadd_bbox = make_coadd_dm_wcs(
+            coadd_dim,
+            pixel_scale=pixel_scale,
+        )
     coadd_bbox_cen_gs_skypos = get_coadd_center_gs_pos(
         coadd_wcs=coadd_wcs, coadd_bbox=coadd_bbox,
     )
-
     if se_dim is None:
-        se_dim = get_se_dim(coadd_dim=coadd_dim, dither=dither, rotate=rotate)
+        coadd_scale = coadd_wcs.getPixelScale().asArcseconds()
+        coadd_dim = coadd_bbox.getHeight()
+        se_dim = get_se_dim(
+            coadd_scale=coadd_scale,
+            coadd_dim=coadd_dim,
+            se_scale=pixel_scale,
+            dither=dither,
+            rotate=rotate
+        )
+
     if shear_obj is None:
         shear_obj = ShearConstant(g1=float(g1), g2=float(g2))
-
     band_data = {}
     bright_info = []
     se_wcs = []
     for band in bands:
-
-        survey = get_survey(gal_type=galaxy_catalog.gal_type, band=band)
+        survey = get_survey(
+            gal_type=galaxy_catalog.gal_type,
+            band=band,
+            survey_name=survey_name,
+        )
         noise_for_gsparams = survey.noise*noise_factor
         noise_per_epoch = survey.noise*np.sqrt(epochs_per_band)*noise_factor
 
@@ -208,25 +243,31 @@ def make_sim(
                 sky_n_sigma=sky_n_sigma,
                 draw_method=draw_method,
                 theta0=theta0,
+                pixel_scale=pixel_scale,
+                calib_mag_zero=calib_mag_zero,
             )
             if epoch == 0:
                 bright_info += this_bright_info
                 se_wcs.append(this_se_wcs)
 
             if galaxy_catalog.gal_type == 'wldeblend':
+                # rescale the image to calibrate it to magnitude zero point
+                # = calib_mag_zero
                 rescale_wldeblend_exp(
                     survey=survey.descwl_survey,
                     exp=exp,
+                    calib_mag_zero=calib_mag_zero,
                 )
 
-            # mark high pixels SAT and also set sat value in image for
-            # any pixels already marked SAT
-            saturate_image_and_mask(
-                image=exp.image.array,
-                bmask=exp.mask.array,
-                sat_val=BAND_SAT_VALS[band],
-                flagval=get_flagval('SAT'),
-            )
+            if survey_name == "LSST":
+                # mark high pixels SAT and also set sat value in image for
+                # any pixels already marked SAT
+                saturate_image_and_mask(
+                    image=exp.image.array,
+                    bmask=exp.mask.array,
+                    sat_val=BAND_SAT_VALS[band],
+                    flagval=get_flagval('SAT'),
+                )
 
             bdata_list.append(exp)
 
@@ -264,7 +305,7 @@ def make_exp(
     bright_objlist=None,
     bright_shifts=None,
     bright_mags=None,
-    coadd_bbox_cen_gs_skypos,
+    coadd_bbox_cen_gs_skypos=None,
     dither=False,
     rotate=False,
     mask_threshold=None,
@@ -274,6 +315,8 @@ def make_exp(
     sky_n_sigma=None,
     draw_method='auto',
     theta0=0.,
+    pixel_scale=SCALE,
+    calib_mag_zero=ZERO_POINT,
 ):
     """
     Make an SEObs
@@ -296,9 +339,6 @@ def make_exp(
         the psf
     psf_dim: int
         Dimensions of psf image that will be drawn when psf func is called
-    coadd_bbox_cen_gs_skypos: galsim.CelestialCoord
-        The sky position of the center (origin) of the coadd we
-        will make, as a galsim object not stack object
     dither: bool
         If set to True, dither randomly by a pixel width
     rotate: bool
@@ -316,6 +356,9 @@ def make_exp(
         List of PositionD for stars representing offsets
     bright_mags: array, optional
         Mags for the bright objects
+    coadd_bbox_cen_gs_skypos: galsim.CelestialCoord, optional
+        The sky position of the center (origin) of the coadd we
+        will make, as a galsim object not stack object
     mask_threshold: float
         Bright masks are created such that the profile goes out
         to this threshold
@@ -334,6 +377,10 @@ def make_exp(
     theta0: float
         rotation angle of intrinsic galaxies and positions [for ring test],
         default 0, in units of radians
+    pixel_scale: float
+        pixel scale in arcsec
+    calib_mag_zero: float
+        magnitude zero point after calibration
     Returns
     -------
     exp: lsst.afw.image.ExposureF
@@ -344,12 +391,13 @@ def make_exp(
         radius_pixels: radius of mask in pixels
         has_bleed: bool, True if there is a bleed trail
     """
-    dims = [dim]*2
-    # I think Galsim uses 1 offset. An array with length=dim=5
+    dims = [dim] * 2
+    # Galsim uses 1 offset. An array with length =dim=5
     # The center is at 3=(5+1)/2
     cen = (np.array(dims)+1)/2
-
     se_origin = galsim.PositionD(x=cen[1], y=cen[0])
+    if coadd_bbox_cen_gs_skypos is None:
+        coadd_bbox_cen_gs_skypos = WORLD_ORIGIN
     if dither:
         dither_range = 0.5
         off = rng.uniform(low=-dither_range, high=dither_range, size=2)
@@ -363,7 +411,7 @@ def make_exp(
 
     # galsim wcs
     se_wcs = make_wcs(
-        scale=SCALE,
+        scale=pixel_scale,
         theta=theta,
         image_origin=se_origin,
         world_origin=coadd_bbox_cen_gs_skypos,
@@ -441,7 +489,7 @@ def make_exp(
     # It can be retrieved as follow
     # zero_flux=  exposure.getPhotoCalib().getInstFluxAtZeroMagnitude()
     # magz    =   np.log10(zero_flux)*2.5 # magnitude zero point
-    zero_flux = 10.**(0.4*ZERO_POINT)
+    zero_flux = 10. ** (0.4 * calib_mag_zero)
     photoCalib = afw_image.makePhotoCalibFromCalibZeroPoint(zero_flux)
     exp.setPhotoCalib(photoCalib)
 
@@ -656,7 +704,14 @@ def get_sim_config(config=None):
     return out_config
 
 
-def get_se_dim(*, coadd_dim, dither, rotate):
+def get_se_dim(
+    *,
+    coadd_dim,
+    coadd_scale=None,
+    se_scale=None,
+    dither=False,
+    rotate=False
+):
     """
     get single epoch (se) dimensions given coadd dim.
 
@@ -664,22 +719,32 @@ def get_se_dim(*, coadd_dim, dither, rotate):
     ----------
     coadd_dim: int
         dimensions of coadd
-    dither: bool
+    coadd_scale: float, optional
+        pixel scale of coadd
+    se_scale: float, optional
+        pixel scale of single exposure
+    dither: bool, optional
         Whether there is dithering or not
-    rotate: bool
+    rotate: bool, optional
         Whether there are random rotations of image exposure or not
 
     Returns
     -------
     integer dimensions of SE image
     """
+    if (coadd_scale is None) or (se_scale is None):
+        print("no coadd_scale or se_scale. Assume they are the same")
+        dim = coadd_dim
+    else:
+        coadd_length = coadd_scale * coadd_dim
+        dim = int((coadd_length) / se_scale + 0.5)
     if rotate:
         # make sure to completely cover the coadd
-        se_dim = int(np.ceil(coadd_dim * np.sqrt(2))) + 20
+        se_dim = int(np.ceil(dim * np.sqrt(2))) + 20
     else:
         # make big enough to avoid boundary checks for downstream
         # which are 3 pixels
-        se_dim = coadd_dim + 5 * 2
+        se_dim = dim + 10
 
     return se_dim
 

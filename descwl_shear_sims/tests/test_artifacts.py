@@ -5,8 +5,8 @@ https://github.com/beckermr/metadetect-coadding-sims
 import numpy as np
 import galsim
 
-from descwl_shear_sims.masking import get_bmask_and_set_image
-from descwl_shear_sims.artifacts import (
+from ..masking import get_bmask_and_set_image
+from ..artifacts import (
     generate_bad_columns,
     generate_cosmic_rays,
 )

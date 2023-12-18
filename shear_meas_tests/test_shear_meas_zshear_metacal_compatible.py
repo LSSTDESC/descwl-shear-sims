@@ -8,7 +8,6 @@ import pytest
 
 from metadetect.lsst.metadetect import run_metadetect
 import descwl_shear_sims as sim
-from descwl_shear_sims.shear import ShearRedshift
 
 
 CONFIG = {
@@ -273,6 +272,7 @@ def test_shear_meas(layout, ntrial):
     assert np.abs(m) < max(1e-3, 3*merr)
     assert np.abs(c) < 3*cerr
     return
+
 
 if __name__ == "__main__":
     test_shear_meas(layout="grid", ntrial=10)

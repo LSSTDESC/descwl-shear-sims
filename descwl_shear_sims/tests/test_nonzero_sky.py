@@ -3,7 +3,7 @@ from ..galaxies import make_galaxy_catalog
 from ..psfs import make_fixed_psf
 
 from ..sim import make_sim
-from descwl_shear_sims.shear import ShearConstant
+from ..shear import ShearConstant
 
 shear_obj = ShearConstant(g1=0.02, g2=0.)
 

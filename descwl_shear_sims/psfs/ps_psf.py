@@ -10,7 +10,7 @@ import galsim.table
 import galsim.utilities
 
 
-def make_ps_psf(*, rng, dim, variation_factor=1):
+def make_ps_psf(*, rng, dim, pixel_scale=SCALE, variation_factor=1):
     """
     get a power spectrum psf
 
@@ -20,6 +20,13 @@ def make_ps_psf(*, rng, dim, variation_factor=1):
         The random number generator
     dim: int
         Dimensions of image
+    pixel_scale: float
+        pixel scale
+    variation_factor : float, optional
+        This factor is used internally to scale the overall variance in the
+        PSF shape power spectra and the change in the PSF size across the
+        image. Setting this factor greater than 1 results in more variation
+        and less than 1 results in less variation.
 
     Returns
     -------
@@ -29,7 +36,7 @@ def make_ps_psf(*, rng, dim, variation_factor=1):
         rng=rng,
         im_width=dim,
         buff=dim/2,
-        scale=SCALE,
+        scale=pixel_scale,
         variation_factor=variation_factor,
     )
 

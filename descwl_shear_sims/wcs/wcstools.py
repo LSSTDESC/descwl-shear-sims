@@ -45,7 +45,7 @@ def make_wcs(*, scale, image_origin, world_origin, theta=None):
     )
 
 
-def make_coadd_wcs(coadd_dim):
+def make_coadd_wcs(coadd_dim, pixel_scale=SCALE):
     """
     make a coadd wcs, using the default world origin
 
@@ -53,6 +53,8 @@ def make_coadd_wcs(coadd_dim):
     ----------
     coadd_dim: int
         dimensions of the coadd
+    pixel_scale: float
+        pixel scale
 
     Returns
     --------
@@ -62,7 +64,7 @@ def make_coadd_wcs(coadd_dim):
     coadd_cen = (np.array(coadd_dims)-1)/2
     coadd_origin = galsim.PositionD(x=coadd_cen[1], y=coadd_cen[0])
     return make_wcs(
-        scale=SCALE,
+        scale=pixel_scale,
         image_origin=coadd_origin,
         world_origin=WORLD_ORIGIN,
     )

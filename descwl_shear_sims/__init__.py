@@ -13,7 +13,7 @@ from . import stars
 from . import galaxies
 from . import objlists
 from . import surveys
-from . import shifts
+from . import layout
 from . import shear
 from . import constants
 from . import artifacts
