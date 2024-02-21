@@ -626,6 +626,8 @@ class WLDeblendGalaxyCatalog(object):
         for layout 'grid'.  Default 0.
     pixel_scale: float, optional
         pixel scale
+    density: float, optional
+        expectation of density [/arcmin^2], if not set, use wldeblend density
 
     """
     def __init__(
@@ -636,14 +638,16 @@ class WLDeblendGalaxyCatalog(object):
         coadd_dim=None,
         buff=None,
         pixel_scale=SCALE,
+        density=None,
     ):
         self.gal_type = 'wldeblend'
         self.rng = rng
 
         self._wldeblend_cat = read_wldeblend_cat(rng)
 
-        # one square degree catalog, convert to arcmin
-        density_mean = self._wldeblend_cat.size / (60 * 60)
+        if density is None:
+            # one square degree catalog, convert to arcmin
+            density = self._wldeblend_cat.size / (60 * 60)
         if isinstance(layout, str):
             self.layout = Layout(layout, coadd_dim, buff, pixel_scale)
         else:
@@ -651,7 +655,7 @@ class WLDeblendGalaxyCatalog(object):
             self.layout = layout
         self.shifts_array = self.layout.get_shifts(
             rng=rng,
-            density=density_mean,
+            density=density,
         )
 
         # randomly sample from the catalog
