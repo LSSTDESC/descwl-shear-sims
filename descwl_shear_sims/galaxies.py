@@ -207,7 +207,7 @@ class FixedGalaxyCatalog(object):
 
         Returns
         -------
-        [galsim objects], [shifts]
+        [galsim objects], [shifts], [redshifts]
         """
 
         flux = survey.get_flux(self.mag)
@@ -215,11 +215,12 @@ class FixedGalaxyCatalog(object):
         sarray = self.shifts_array
         objlist = []
         shifts = []
+        redshifts = None
         for i in range(len(self)):
             objlist.append(self._get_galaxy(flux))
             shifts.append(galsim.PositionD(sarray['dx'][i], sarray['dy'][i]))
 
-        return objlist, shifts, None
+        return objlist, shifts, redshifts
 
     def _get_galaxy(self, flux):
         """
@@ -320,7 +321,7 @@ class GalaxyCatalog(FixedGalaxyCatalog):
 
         Returns
         -------
-        [galsim objects], [shifts]
+        [galsim objects], [shifts], [redshifts]
         """
 
         self._morph_rng = np.random.RandomState(self.morph_seed)
@@ -682,7 +683,7 @@ class WLDeblendGalaxyCatalog(object):
 
         Returns
         -------
-        [galsim objects], [shifts]
+        [galsim objects], [shifts], [redshifts]
         """
 
         builder = descwl.model.GalaxyBuilder(

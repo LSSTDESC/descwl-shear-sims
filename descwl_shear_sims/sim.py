@@ -507,7 +507,12 @@ def make_exp(
 
 
 def _draw_objects(
-    image, objlist, shifts, redshifts, psf, draw_method,
+    image,
+    objlist,
+    shifts,
+    redshifts,
+    psf,
+    draw_method,
     coadd_bbox_cen_gs_skypos,
     rng,
     shear_obj=None,
@@ -533,9 +538,7 @@ def _draw_objects(
             shift = _roate_pos(shift, theta0)
 
         if shear_obj is not None:
-            shear = shear_obj.get_shear(z, shift)
-            obj = obj.shear(shear)
-            shift = shift.shear(shear)
+            obj, shift = shear_obj.distort_galaxy(obj, shift, z)
 
         # Deproject from u,v onto sphere. Then use wcs to get to image pos.
         world_pos = coadd_bbox_cen_gs_skypos.deproject(
