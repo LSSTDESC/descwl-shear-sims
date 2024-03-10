@@ -124,7 +124,7 @@ class Layout(object):
                     raise ValueError(
                         f"nonpositive area for layout {self.layout_name}"
                     )
-                nobj_mean = max(self.area * density, 1)
+                nobj_mean = max(self.area * density, 0)
                 nobj = rng.poisson(nobj_mean)
                 shifts = get_random_shifts(
                     rng=rng,
@@ -138,7 +138,7 @@ class Layout(object):
                     raise ValueError(
                         f"nonpositive area for layout {self.layout_name}"
                     )
-                nobj_mean = max(self.area * density, 1)
+                nobj_mean = max(self.area * density, 0)
                 nobj = rng.poisson(nobj_mean)
                 shifts = get_random_disk_shifts(
                     rng=rng,
