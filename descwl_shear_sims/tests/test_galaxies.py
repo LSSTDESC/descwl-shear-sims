@@ -1,6 +1,7 @@
 import pytest
 import numpy as np
 from ..galaxies import (
+    WLDeblendGalaxyCatalog,
     make_galaxy_catalog,
     FixedGalaxyCatalog,
     GalaxyCatalog,
@@ -75,3 +76,39 @@ def test_galaxies_smoke(layout, gal_type, morph):
             new_image = sim_data['band_data']['i'][0].image.array
 
             assert np.all(image == new_image)
+
+
+def test_wlgalaxies_selection():
+    seed = 74321
+    rng = np.random.RandomState(seed)
+    coadd_dim = 100
+    buff = 10
+
+    for _ in ["g_ab", "r_ab", "i_ab"]:
+        galaxy_catalog = WLDeblendGalaxyCatalog(
+            pixel_scale=0.2,
+            rng=rng,
+            coadd_dim=coadd_dim,
+            buff=buff,
+            layout="random",
+            select_observable=_,
+            select_upper_limit=27,
+            select_lower_limit=25,
+        )
+        assert np.min(galaxy_catalog._wldeblend_cat[_]) >= 25.0
+        assert np.max(galaxy_catalog._wldeblend_cat[_]) <= 27.0
+    galaxy_catalog = WLDeblendGalaxyCatalog(
+        pixel_scale=0.2,
+        rng=rng,
+        coadd_dim=coadd_dim,
+        buff=buff,
+        layout="random",
+        select_observable=["r_ab", "z_ab"],
+        select_upper_limit=[27, 26],
+        select_lower_limit=[25, 22],
+    )
+    assert np.min(galaxy_catalog._wldeblend_cat["r_ab"]) >= 25.0
+    assert np.max(galaxy_catalog._wldeblend_cat["r_ab"]) <= 27.0
+    assert np.min(galaxy_catalog._wldeblend_cat["z_ab"]) >= 22.0
+    assert np.max(galaxy_catalog._wldeblend_cat["z_ab"]) <= 26.0
+    return

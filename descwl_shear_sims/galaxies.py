@@ -207,7 +207,7 @@ class FixedGalaxyCatalog(object):
 
         Returns
         -------
-        [galsim objects], [shifts]
+        [galsim objects], [shifts], [redshifts]
         """
 
         flux = survey.get_flux(self.mag)
@@ -215,11 +215,12 @@ class FixedGalaxyCatalog(object):
         sarray = self.shifts_array
         objlist = []
         shifts = []
+        redshifts = None
         for i in range(len(self)):
             objlist.append(self._get_galaxy(flux))
             shifts.append(galsim.PositionD(sarray['dx'][i], sarray['dy'][i]))
 
-        return objlist, shifts, None
+        return objlist, shifts, redshifts
 
     def _get_galaxy(self, flux):
         """
@@ -320,7 +321,7 @@ class GalaxyCatalog(FixedGalaxyCatalog):
 
         Returns
         -------
-        [galsim objects], [shifts]
+        [galsim objects], [shifts], [redshifts]
         """
 
         self._morph_rng = np.random.RandomState(self.morph_seed)
@@ -626,7 +627,12 @@ class WLDeblendGalaxyCatalog(object):
         for layout 'grid'.  Default 0.
     pixel_scale: float, optional
         pixel scale
-
+    select_observable: list[str] | str
+        A list of observables to apply selection
+    select_lower_limit: list | ndarray
+        lower limits of the slection cuts
+    select_upper_limit: list | ndarray
+        upper limits of the slection cuts
     """
     def __init__(
         self,
@@ -636,14 +642,21 @@ class WLDeblendGalaxyCatalog(object):
         coadd_dim=None,
         buff=None,
         pixel_scale=SCALE,
+        select_observable=None,
+        select_lower_limit=None,
+        select_upper_limit=None,
     ):
         self.gal_type = 'wldeblend'
         self.rng = rng
 
-        self._wldeblend_cat = read_wldeblend_cat(rng)
+        self._wldeblend_cat = read_wldeblend_cat(
+            select_observable=select_observable,
+            select_lower_limit=select_lower_limit,
+            select_upper_limit=select_upper_limit,
+        )
 
         # one square degree catalog, convert to arcmin
-        density_mean = self._wldeblend_cat.size / (60 * 60)
+        density = self._wldeblend_cat.size / (60 * 60)
         if isinstance(layout, str):
             self.layout = Layout(layout, coadd_dim, buff, pixel_scale)
         else:
@@ -651,7 +664,7 @@ class WLDeblendGalaxyCatalog(object):
             self.layout = layout
         self.shifts_array = self.layout.get_shifts(
             rng=rng,
-            density=density_mean,
+            density=density,
         )
 
         # randomly sample from the catalog
@@ -678,7 +691,7 @@ class WLDeblendGalaxyCatalog(object):
 
         Returns
         -------
-        [galsim objects], [shifts]
+        [galsim objects], [shifts], [redshifts]
         """
 
         builder = descwl.model.GalaxyBuilder(
@@ -736,14 +749,22 @@ class WLDeblendGalaxyCatalog(object):
         return galaxy
 
 
-def read_wldeblend_cat(rng):
+def read_wldeblend_cat(
+    select_observable=None,
+    select_lower_limit=None,
+    select_upper_limit=None,
+):
     """
     Read the catalog from the cache, but update the position angles each time
 
     Parameters
     ----------
-    rng: np.random.RandomState
-        The random number generator
+    select_observable: list[str] | str
+        A list of observables to apply selection
+    select_lower_limit: list[float] | ndarray[float]
+        lower limits of the slection cuts
+    select_upper_limit: list[float] | ndarray[float]
+        upper limits of the slection cuts
 
     Returns
     -------
@@ -756,4 +777,20 @@ def read_wldeblend_cat(rng):
 
     # not thread safe
     cat = cached_catalog_read(fname)
+    if select_observable is not None:
+        select_observable = np.atleast_1d(select_observable)
+        if not set(select_observable) < set(cat.dtype.names):
+            raise ValueError("Selection observables not in the catalog columns")
+        mask = np.ones(len(cat)).astype(bool)
+        if select_lower_limit is not None:
+            select_lower_limit = np.atleast_1d(select_lower_limit)
+            assert len(select_observable) == len(select_lower_limit)
+            for nn, ll in zip(select_observable, select_lower_limit):
+                mask = mask & (cat[nn] > ll)
+        if select_upper_limit is not None:
+            select_upper_limit = np.atleast_1d(select_upper_limit)
+            assert len(select_observable) == len(select_upper_limit)
+            for nn, ul in zip(select_observable, select_upper_limit):
+                mask = mask & (cat[nn] <= ul)
+        cat = cat[mask]
     return cat

@@ -28,15 +28,38 @@ class ShearConstant(object):
         return
 
     def get_shear(self, redshift=None, shift=None):
-        """
+        """This function returns the galsim shear object
+        Parameters
+        ---------
+        redshift (float):           redshift of the galaxy
+        shift (galsim.PositionD):   position of the galaxy
+
         Returns
         ---------
-        shear (galsim.Shear)        shear distortion on the galaxy
+        shear (galsim.Shear):       shear distortion on the galaxy
         """
         return self.shear
 
+    def distort_galaxy(self, gso, shift, redshift):
+        """This function distorts the galaxy's shape and position
+        Parameters
+        ---------
+        gso (galsim object):        galsim galaxy
+        shift (galsim.PositionD):   position of the galaxy
+        redshift (float):           redshift of galaxy
 
-class ShearRedshift(object):
+        Returns
+        ---------
+        gso, shift:
+            distorted galaxy object and shift
+        """
+        shear = self.get_shear(redshift, shift)
+        gso = gso.shear(shear)
+        shift = shift.shear(shear)
+        return gso, shift
+
+
+class ShearRedshift(ShearConstant):
     """
     Constant shear in each redshift slice
     """
