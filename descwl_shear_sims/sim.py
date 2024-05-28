@@ -249,7 +249,6 @@ def make_sim(
             )
             if epoch == 0:
                 bright_info += this_bright_info
-            
 
             if galaxy_catalog.gal_type == 'wldeblend':
                 # rescale the image to calibrate it to magnitude zero point
