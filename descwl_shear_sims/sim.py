@@ -146,6 +146,10 @@ def make_sim(
             ra, dec: sky position of bright stars
             radius_pixels: radius of mask in pixels
             has_bleed: bool, True if there is a bleed trail
+        truth_info: structured array
+            fields are
+            ra, dec: sky position of input galaxies
+            z: redshift of input galaxies
         se_wcs: a dict keyed by band name, holding a list of se_wcs
     """
     # Get the pixel scale using a default band from the survey
@@ -188,6 +192,7 @@ def make_sim(
         shear_obj = ShearConstant(g1=float(g1), g2=float(g2))
     band_data = {}
     bright_info = []
+    truth_info = []
     se_wcs = {}
     for band in bands:
         survey = get_survey(
@@ -215,7 +220,7 @@ def make_sim(
         bdata_list = []
         se_wcs_list = []
         for epoch in range(epochs_per_band):
-            exp, this_bright_info, this_se_wcs = make_exp(
+            exp, this_bright_info,this_truth_info, this_se_wcs = make_exp(
                 rng=rng,
                 band=band,
                 noise=noise_per_epoch,
@@ -249,7 +254,7 @@ def make_sim(
             )
             if epoch == 0:
                 bright_info += this_bright_info
-
+                truth_info += this_truth_info
             if galaxy_catalog.gal_type == 'wldeblend':
                 # rescale the image to calibrate it to magnitude zero point
                 # = calib_mag_zero
@@ -276,6 +281,8 @@ def make_sim(
         se_wcs[band] = se_wcs_list
 
     bright_info = eu.numpy_util.combine_arrlist(bright_info)
+    truth_info = eu.numpy_util.combine_arrlist(truth_info)
+
     return {
         'band_data': band_data,
         'coadd_wcs': coadd_wcs,
@@ -283,6 +290,7 @@ def make_sim(
         'coadd_dims': (coadd_dim, )*2,
         'coadd_bbox': coadd_bbox,
         'bright_info': bright_info,
+        'truth_info': truth_info,
         'se_wcs': se_wcs,
     }
 
@@ -392,6 +400,10 @@ def make_exp(
         ra, dec: sky position of bright stars
         radius_pixels: radius of mask in pixels
         has_bleed: bool, True if there is a bleed trail
+    truth_info: structured array
+        fields are
+        ra, dec: sky position of input galaxies
+        z: redshift of input galaxies
     """
     dims = [dim] * 2
     # Galsim uses 1 offset. An array with length =dim=5
@@ -423,7 +435,7 @@ def make_exp(
 
     if objlist is not None and draw_gals:
         assert shifts is not None
-        _draw_objects(
+        truth_info = _draw_objects(
             image,
             objlist, shifts, redshifts, psf, draw_method,
             coadd_bbox_cen_gs_skypos,
@@ -431,6 +443,8 @@ def make_exp(
             shear_obj=shear_obj,
             theta0=theta0,
         )
+    else:
+        truth_info = []
 
     if star_objlist is not None and draw_stars:
         assert star_shifts is not None, 'send star_shifts with star_objlist'
@@ -505,7 +519,7 @@ def make_exp(
     detector = DetectorWrapper().detector
     exp.setDetector(detector)
 
-    return exp, bright_info, se_wcs
+    return exp, bright_info, truth_info, se_wcs
 
 
 def _draw_objects(
@@ -520,6 +534,16 @@ def _draw_objects(
     shear_obj=None,
     theta0=None,
 ):
+    """
+    draw objects.
+
+    Returns
+    -------
+        truth_info: structured array
+        fields are
+        ra, dec: sky position of input galaxies
+        z: redshift of input galaxies
+    """
 
     wcs = image.wcs
     kw = {}
@@ -531,6 +555,8 @@ def _draw_objects(
         # set redshifts to -1 if not sepcified
         redshifts = np.ones(len(objlist)) * -1.0
 
+    truth_info = []
+    
     for obj, shift, z in zip(objlist, shifts, redshifts):
 
         if theta0 is not None:
@@ -560,6 +586,15 @@ def _draw_objects(
         b = stamp.bounds & image.bounds
         if b.isDefined():
             image[b] += stamp[b]
+
+        info = get_truth_info_struct()
+        info['ra'] = world_pos.ra / galsim.degrees
+        info['dec'] = world_pos.dec / galsim.degrees
+        info['z'] = z
+
+        truth_info.append(info)
+            
+    return truth_info
 
 
 def _draw_bright_objects(
@@ -816,6 +851,14 @@ def get_bright_info_struct():
         ('dec', 'f8'),
         ('radius_pixels', 'f4'),
         ('has_bleed', bool),
+    ]
+    return np.zeros(1, dtype=dt)
+
+def get_truth_info_struct():
+    dt = [
+        ('ra', 'f8'),
+        ('dec', 'f8'),
+        ('z', 'f8')
     ]
     return np.zeros(1, dtype=dt)
 
