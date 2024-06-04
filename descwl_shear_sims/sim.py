@@ -220,7 +220,7 @@ def make_sim(
         bdata_list = []
         se_wcs_list = []
         for epoch in range(epochs_per_band):
-            exp, this_bright_info,this_truth_info, this_se_wcs = make_exp(
+            exp, this_bright_info, this_truth_info, this_se_wcs = make_exp(
                 rng=rng,
                 band=band,
                 noise=noise_per_epoch,
@@ -556,7 +556,7 @@ def _draw_objects(
         redshifts = np.ones(len(objlist)) * -1.0
 
     truth_info = []
-    
+ 
     for obj, shift, z in zip(objlist, shifts, redshifts):
 
         if theta0 is not None:
@@ -593,7 +593,7 @@ def _draw_objects(
         info['z'] = z
 
         truth_info.append(info)
-            
+ 
     return truth_info
 
 
@@ -853,6 +853,7 @@ def get_bright_info_struct():
         ('has_bleed', bool),
     ]
     return np.zeros(1, dtype=dt)
+
 
 def get_truth_info_struct():
     dt = [
