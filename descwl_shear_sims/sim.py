@@ -150,6 +150,7 @@ def make_sim(
             fields are
             ra, dec: sky position of input galaxies
             z: redshift of input galaxies
+            image_x, image_y: image position of input galaxies
         se_wcs: a dict keyed by band name, holding a list of se_wcs
     """
     # Get the pixel scale using a default band from the survey
@@ -404,6 +405,7 @@ def make_exp(
         fields are
         ra, dec: sky position of input galaxies
         z: redshift of input galaxies
+        image_x, image_y: image position of input galaxies
     """
     dims = [dim] * 2
     # Galsim uses 1 offset. An array with length =dim=5
@@ -543,6 +545,7 @@ def _draw_objects(
         fields are
         ra, dec: sky position of input galaxies
         z: redshift of input galaxies
+        image_x, image_y: image position of input galaxies
     """
 
     wcs = image.wcs
@@ -590,7 +593,9 @@ def _draw_objects(
         info = get_truth_info_struct()
         info['ra'] = world_pos.ra / galsim.degrees
         info['dec'] = world_pos.dec / galsim.degrees
-        info['z'] = z
+        info['z'] = z,
+        info['image_x'] = image_pos.x,
+        info['image_y'] = image_pos.y,
 
         truth_info.append(info)
  
@@ -859,7 +864,9 @@ def get_truth_info_struct():
     dt = [
         ('ra', 'f8'),
         ('dec', 'f8'),
-        ('z', 'f8')
+        ('z', 'f8'),
+        ('image_x', 'f8'),
+        ('image_y', 'f8'),
     ]
     return np.zeros(1, dtype=dt)
 
