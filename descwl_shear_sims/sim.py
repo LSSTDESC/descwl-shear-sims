@@ -558,8 +558,8 @@ def _draw_objects(
         # set redshifts to -1 if not sepcified
         redshifts = np.ones(len(objlist)) * -1.0
 
-    truth_info = []
- 
+    truth_info = [] 
+
     for obj, shift, z in zip(objlist, shifts, redshifts):
 
         if theta0 is not None:
