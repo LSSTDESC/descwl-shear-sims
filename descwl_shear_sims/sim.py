@@ -146,12 +146,7 @@ def make_sim(
             ra, dec: sky position of bright stars
             radius_pixels: radius of mask in pixels
             has_bleed: bool, True if there is a bleed trail
-        truth_info: structured array
-            fields are
-            ra, dec: sky position of input galaxies
-            z: redshift of input galaxies
-            image_x, image_y: image position of input galaxies
-        se_wcs: a dict keyed by band name, holding a list of se_wcs
+        se_wcs: list of WCS
     """
     # Get the pixel scale using a default band from the survey
     _bd = deepcopy(DEFAULT_SURVEY_BANDS)[survey_name]
@@ -194,7 +189,7 @@ def make_sim(
     band_data = {}
     bright_info = []
     truth_info = []
-    se_wcs = {}
+    se_wcs = []
     for band in bands:
         survey = get_survey(
             gal_type=galaxy_catalog.gal_type,
@@ -219,7 +214,6 @@ def make_sim(
         # bright_info once
 
         bdata_list = []
-        se_wcs_list = []
         for epoch in range(epochs_per_band):
             exp, this_bright_info, this_truth_info, this_se_wcs = make_exp(
                 rng=rng,
@@ -255,7 +249,10 @@ def make_sim(
             )
             if epoch == 0:
                 bright_info += this_bright_info
+                se_wcs.append(this_se_wcs)
                 truth_info += this_truth_info
+
+
             if galaxy_catalog.gal_type == 'wldeblend':
                 # rescale the image to calibrate it to magnitude zero point
                 # = calib_mag_zero
@@ -276,10 +273,8 @@ def make_sim(
                 )
 
             bdata_list.append(exp)
-            se_wcs_list.append(this_se_wcs)
 
         band_data[band] = bdata_list
-        se_wcs[band] = se_wcs_list
 
     bright_info = eu.numpy_util.combine_arrlist(bright_info)
     truth_info = eu.numpy_util.combine_arrlist(truth_info)
