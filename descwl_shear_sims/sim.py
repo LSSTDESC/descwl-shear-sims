@@ -46,6 +46,7 @@ DEFAULT_SIM_CONFIG = {
     "bad_columns": False,
     "sky_n_sigma": None,
     "survey_name": "LSST",
+    "draw_noise": True,
 }
 
 
@@ -77,6 +78,7 @@ def make_sim(
     g1=None,
     g2=None,
     coadd_dim=None,
+    draw_noise=True,
 ):
     """
     Make simulation data
@@ -132,6 +134,8 @@ def make_sim(
         Dimensions for planned final coadd.  This is used for generating
         the final coadd WCS and deteremines some properties of
         the single epoch images.
+    draw_noise: optional, bool
+        Whether draw image noise
 
     Returns
     -------
@@ -245,6 +249,7 @@ def make_sim(
                 theta0=theta0,
                 pixel_scale=pixel_scale,
                 calib_mag_zero=calib_mag_zero,
+                draw_noise=draw_noise,
             )
             if epoch == 0:
                 bright_info += this_bright_info
@@ -317,6 +322,7 @@ def make_exp(
     theta0=0.,
     pixel_scale=SCALE,
     calib_mag_zero=ZERO_POINT,
+    draw_noise=True,
 ):
     """
     Make an SEObs
@@ -439,7 +445,8 @@ def make_exp(
             rng,
         )
 
-    image.array[:, :] += rng.normal(scale=noise, size=dims)
+    if draw_noise:
+        image.array[:, :] += rng.normal(scale=noise, size=dims)
     if sky_n_sigma is not None:
         image.array[:, :] += sky_n_sigma * noise
 
