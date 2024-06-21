@@ -582,7 +582,7 @@ def _draw_objects(
         redshifts = np.ones(len(objlist)) * -1.0
 
     if indexes is None:
-        # set redshifts to -1 if not sepcified
+        # set input galaxy indexes to -1 if not sepcified
         indexes = np.ones(len(objlist)) * -1.0
 
     truth_info = []
