@@ -64,17 +64,17 @@ def make_sim(
     psf_dim=51,
     dither=False,
     rotate=False,
-    bands=['i'],
+    bands=["i"],
     epochs_per_band=1,
     noise_factor=1.0,
     cosmic_rays=False,
     bad_columns=False,
     star_bleeds=False,
     sky_n_sigma=None,
-    draw_method='auto',
+    draw_method="auto",
     calib_mag_zero=ZERO_POINT,
     survey_name="LSST",
-    theta0=0.,
+    theta0=0.0,
     g1=None,
     g2=None,
     coadd_dim=None,
@@ -150,7 +150,12 @@ def make_sim(
             ra, dec: sky position of bright stars
             radius_pixels: radius of mask in pixels
             has_bleed: bool, True if there is a bleed trail
-        se_wcs: list of WCS
+        truth_info: structured array
+            fields are
+            ra, dec: sky position of input galaxies
+            z: redshift of input galaxies
+            image_x, image_y: image position of input galaxies
+        se_wcs: a dict keyed by band name, holding a list of se_wcs
     """
     # Get the pixel scale using a default band from the survey
     _bd = deepcopy(DEFAULT_SURVEY_BANDS)[survey_name]
@@ -160,8 +165,7 @@ def make_sim(
         survey_name=survey_name,
     ).pixel_scale
 
-    if hasattr(galaxy_catalog.layout, "wcs") and \
-            hasattr(galaxy_catalog.layout, "bbox"):
+    if hasattr(galaxy_catalog.layout, "wcs") and hasattr(galaxy_catalog.layout, "bbox"):
         coadd_wcs = galaxy_catalog.layout.wcs
         coadd_bbox = galaxy_catalog.layout.bbox
     else:
@@ -175,7 +179,8 @@ def make_sim(
             pixel_scale=pixel_scale,
         )
     coadd_bbox_cen_gs_skypos = get_coadd_center_gs_pos(
-        coadd_wcs=coadd_wcs, coadd_bbox=coadd_bbox,
+        coadd_wcs=coadd_wcs,
+        coadd_bbox=coadd_bbox,
     )
     if se_dim is None:
         coadd_scale = coadd_wcs.getPixelScale().asArcseconds()
@@ -185,26 +190,27 @@ def make_sim(
             coadd_dim=coadd_dim,
             se_scale=pixel_scale,
             dither=dither,
-            rotate=rotate
+            rotate=rotate,
         )
 
     if shear_obj is None:
         shear_obj = ShearConstant(g1=float(g1), g2=float(g2))
     band_data = {}
     bright_info = []
-    se_wcs = []
+    truth_info = []
+    se_wcs = {}
     for band in bands:
         survey = get_survey(
             gal_type=galaxy_catalog.gal_type,
             band=band,
             survey_name=survey_name,
         )
-        noise_for_gsparams = survey.noise*noise_factor
-        noise_per_epoch = survey.noise*np.sqrt(epochs_per_band)*noise_factor
+        noise_for_gsparams = survey.noise * noise_factor
+        noise_per_epoch = survey.noise * np.sqrt(epochs_per_band) * noise_factor
 
         # go down to coadd depth in this band, not dividing by sqrt(nbands)
         # but we could if we want to be more conservative
-        mask_threshold = survey.noise*noise_factor
+        mask_threshold = survey.noise * noise_factor
 
         lists = get_objlist(
             galaxy_catalog=galaxy_catalog,
@@ -217,26 +223,27 @@ def make_sim(
         # bright_info once
 
         bdata_list = []
+        se_wcs_list = []
         for epoch in range(epochs_per_band):
-            exp, this_bright_info, this_se_wcs = make_exp(
+            exp, this_bright_info, this_truth_info, this_se_wcs = make_exp(
                 rng=rng,
                 band=band,
                 noise=noise_per_epoch,
-                objlist=lists['objlist'],
-                shifts=lists['shifts'],
-                redshifts=lists['redshifts'],
+                objlist=lists["objlist"],
+                shifts=lists["shifts"],
+                redshifts=lists["redshifts"],
                 dim=se_dim,
                 psf=psf,
                 psf_dim=psf_dim,
                 shear_obj=shear_obj,
                 draw_gals=draw_gals,
-                star_objlist=lists['star_objlist'],
-                star_shifts=lists['star_shifts'],
+                star_objlist=lists["star_objlist"],
+                star_shifts=lists["star_shifts"],
                 draw_stars=draw_stars,
                 draw_bright=draw_bright,
-                bright_objlist=lists['bright_objlist'],
-                bright_shifts=lists['bright_shifts'],
-                bright_mags=lists['bright_mags'],
+                bright_objlist=lists["bright_objlist"],
+                bright_shifts=lists["bright_shifts"],
+                bright_mags=lists["bright_mags"],
                 coadd_bbox_cen_gs_skypos=coadd_bbox_cen_gs_skypos,
                 dither=dither,
                 rotate=rotate,
@@ -253,9 +260,8 @@ def make_sim(
             )
             if epoch == 0:
                 bright_info += this_bright_info
-                se_wcs.append(this_se_wcs)
-
-            if galaxy_catalog.gal_type == 'wldeblend':
+                truth_info += this_truth_info
+            if galaxy_catalog.gal_type == "wldeblend":
                 # rescale the image to calibrate it to magnitude zero point
                 # = calib_mag_zero
                 rescale_wldeblend_exp(
@@ -271,22 +277,27 @@ def make_sim(
                     image=exp.image.array,
                     bmask=exp.mask.array,
                     sat_val=BAND_SAT_VALS[band],
-                    flagval=get_flagval('SAT'),
+                    flagval=get_flagval("SAT"),
                 )
 
             bdata_list.append(exp)
+            se_wcs_list.append(this_se_wcs)
 
         band_data[band] = bdata_list
+        se_wcs[band] = se_wcs_list
 
     bright_info = eu.numpy_util.combine_arrlist(bright_info)
+    truth_info = eu.numpy_util.combine_arrlist(truth_info)
+
     return {
-        'band_data': band_data,
-        'coadd_wcs': coadd_wcs,
-        'psf_dims': (psf_dim, )*2,
-        'coadd_dims': (coadd_dim, )*2,
-        'coadd_bbox': coadd_bbox,
-        'bright_info': bright_info,
-        'se_wcs': se_wcs,
+        "band_data": band_data,
+        "coadd_wcs": coadd_wcs,
+        "psf_dims": (psf_dim,) * 2,
+        "coadd_dims": (coadd_dim,) * 2,
+        "coadd_bbox": coadd_bbox,
+        "bright_info": bright_info,
+        "truth_info": truth_info,
+        "se_wcs": se_wcs,
     }
 
 
@@ -318,8 +329,8 @@ def make_exp(
     bad_columns=False,
     star_bleeds=False,
     sky_n_sigma=None,
-    draw_method='auto',
-    theta0=0.,
+    draw_method="auto",
+    theta0=0.0,
     pixel_scale=SCALE,
     calib_mag_zero=ZERO_POINT,
     draw_noise=True,
@@ -396,11 +407,16 @@ def make_exp(
         ra, dec: sky position of bright stars
         radius_pixels: radius of mask in pixels
         has_bleed: bool, True if there is a bleed trail
+    truth_info: structured array
+        fields are
+        ra, dec: sky position of input galaxies
+        z: redshift of input galaxies
+        image_x, image_y: image position of input galaxies
     """
     dims = [dim] * 2
     # Galsim uses 1 offset. An array with length =dim=5
     # The center is at 3=(5+1)/2
-    cen = (np.array(dims)+1)/2
+    cen = (np.array(dims) + 1) / 2
     se_origin = galsim.PositionD(x=cen[1], y=cen[0])
     if coadd_bbox_cen_gs_skypos is None:
         coadd_bbox_cen_gs_skypos = WORLD_ORIGIN
@@ -411,7 +427,7 @@ def make_exp(
         se_origin = se_origin + offset
 
     if rotate:
-        theta = rng.uniform(low=0, high=2*np.pi)
+        theta = rng.uniform(low=0, high=2 * np.pi)
     else:
         theta = None
 
@@ -427,20 +443,30 @@ def make_exp(
 
     if objlist is not None and draw_gals:
         assert shifts is not None
-        _draw_objects(
+        truth_info = _draw_objects(
             image,
-            objlist, shifts, redshifts, psf, draw_method,
+            objlist,
+            shifts,
+            redshifts,
+            psf,
+            draw_method,
             coadd_bbox_cen_gs_skypos,
             rng,
             shear_obj=shear_obj,
             theta0=theta0,
         )
+    else:
+        truth_info = []
 
     if star_objlist is not None and draw_stars:
-        assert star_shifts is not None, 'send star_shifts with star_objlist'
+        assert star_shifts is not None, "send star_shifts with star_objlist"
         _draw_objects(
             image,
-            star_objlist, star_shifts, None, psf, draw_method,
+            star_objlist,
+            star_shifts,
+            None,
+            psf,
+            draw_method,
             coadd_bbox_cen_gs_skypos,
             rng,
         )
@@ -496,7 +522,7 @@ def make_exp(
     # It can be retrieved as follow
     # zero_flux=  exposure.getPhotoCalib().getInstFluxAtZeroMagnitude()
     # magz    =   np.log10(zero_flux)*2.5 # magnitude zero point
-    zero_flux = 10. ** (0.4 * calib_mag_zero)
+    zero_flux = 10.0 ** (0.4 * calib_mag_zero)
     photoCalib = afw_image.makePhotoCalibFromCalibZeroPoint(zero_flux)
     exp.setPhotoCalib(photoCalib)
 
@@ -510,7 +536,7 @@ def make_exp(
     detector = DetectorWrapper().detector
     exp.setDetector(detector)
 
-    return exp, bright_info, se_wcs
+    return exp, bright_info, truth_info, se_wcs
 
 
 def _draw_objects(
@@ -525,21 +551,34 @@ def _draw_objects(
     shear_obj=None,
     theta0=None,
 ):
+    """
+    draw objects.
+
+    Returns
+    -------
+        truth_info: structured array
+        fields are
+        ra, dec: sky position of input galaxies
+        z: redshift of input galaxies
+        image_x, image_y: image position of input galaxies
+    """
 
     wcs = image.wcs
     kw = {}
-    if draw_method == 'phot':
-        kw['maxN'] = 1_000_000
-        kw['rng'] = galsim.BaseDeviate(seed=rng.randint(low=0, high=2**30))
+    if draw_method == "phot":
+        kw["maxN"] = 1_000_000
+        kw["rng"] = galsim.BaseDeviate(seed=rng.randint(low=0, high=2**30))
 
     if redshifts is None:
         # set redshifts to -1 if not sepcified
         redshifts = np.ones(len(objlist)) * -1.0
 
+    truth_info = []
+
     for obj, shift, z in zip(objlist, shifts, redshifts):
 
         if theta0 is not None:
-            ang = theta0*galsim.radians
+            ang = theta0 * galsim.radians
             # rotation on intrinsic galaxies comes before shear distortion
             obj = obj.rotate(ang)
             shift = _roate_pos(shift, theta0)
@@ -565,6 +604,17 @@ def _draw_objects(
         b = stamp.bounds & image.bounds
         if b.isDefined():
             image[b] += stamp[b]
+
+        info = get_truth_info_struct()
+        info["ra"] = world_pos.ra / galsim.degrees
+        info["dec"] = world_pos.dec / galsim.degrees
+        info["z"] = (z,)
+        info["image_x"] = (image_pos.x,)
+        info["image_y"] = (image_pos.y,)
+
+        truth_info.append(info)
+
+    return truth_info
 
 
 def _draw_bright_objects(
@@ -635,8 +685,9 @@ def _draw_bright_objects(
         n_photons = 0 if obj.flux < max_n_photons else max_n_photons
 
         stamp = convolved_object.drawImage(
-            center=image_pos, wcs=local_wcs,
-            method='phot',
+            center=image_pos,
+            wcs=local_wcs,
+            method="phot",
             n_photons=n_photons,
             poisson_flux=True,
             maxN=1_000_000,  # shoot in batches this size
@@ -649,7 +700,8 @@ def _draw_bright_objects(
 
             # use smooth version for radius calculation
             stamp_fft = convolved_object.drawImage(
-                center=image_pos, wcs=local_wcs,
+                center=image_pos,
+                wcs=local_wcs,
             )
 
             timage[b] += stamp_fft[b]
@@ -662,12 +714,12 @@ def _draw_bright_objects(
             )
 
             info = get_bright_info_struct()
-            info['ra'] = world_pos.ra / galsim.degrees
-            info['dec'] = world_pos.dec / galsim.degrees
-            info['radius_pixels'] = radius_pixels
+            info["ra"] = world_pos.ra / galsim.degrees
+            info["dec"] = world_pos.dec / galsim.degrees
+            info["radius_pixels"] = radius_pixels
 
             if star_bleeds and mag < max_bleed_mag:
-                info['has_bleed'] = True
+                info["has_bleed"] = True
                 add_bleed(
                     image=image.array,
                     bmask=bmask.array,
@@ -676,7 +728,7 @@ def _draw_bright_objects(
                     band=band,
                 )
             else:
-                info['has_bleed'] = False
+                info["has_bleed"] = False
 
             bright_info.append(info)
 
@@ -702,7 +754,7 @@ def get_sim_config(config=None):
     config dict
     """
     out_config = deepcopy(DEFAULT_SIM_CONFIG)
-    sub_configs = ['gal_config', 'star_config']
+    sub_configs = ["gal_config", "star_config"]
 
     if config is not None:
         for key in config:
@@ -715,12 +767,7 @@ def get_sim_config(config=None):
 
 
 def get_se_dim(
-    *,
-    coadd_dim,
-    coadd_scale=None,
-    se_scale=None,
-    dither=False,
-    rotate=False
+    *, coadd_dim, coadd_scale=None, se_scale=None, dither=False, rotate=False
 ):
     """
     get single epoch (se) dimensions given coadd dim.
@@ -779,9 +826,7 @@ def get_coadd_center_gs_pos(coadd_wcs, coadd_bbox):
     # world origin is at center of the coadd, which itself
     # is in a bbox shifted from the overall WORLD_ORIGIN
 
-    bbox_cen_skypos = coadd_wcs.pixelToSky(
-        coadd_bbox.getCenter()
-    )
+    bbox_cen_skypos = coadd_wcs.pixelToSky(coadd_bbox.getCenter())
 
     return galsim.CelestialCoord(
         ra=float(bbox_cen_skypos.getRa()) * galsim.radians,
@@ -817,16 +862,27 @@ def get_convolved_object(obj, psf, image_pos):
 
 def get_bright_info_struct():
     dt = [
-        ('ra', 'f8'),
-        ('dec', 'f8'),
-        ('radius_pixels', 'f4'),
-        ('has_bleed', bool),
+        ("ra", "f8"),
+        ("dec", "f8"),
+        ("radius_pixels", "f4"),
+        ("has_bleed", bool),
+    ]
+    return np.zeros(1, dtype=dt)
+
+
+def get_truth_info_struct():
+    dt = [
+        ("ra", "f8"),
+        ("dec", "f8"),
+        ("z", "f8"),
+        ("image_x", "f8"),
+        ("image_y", "f8"),
     ]
     return np.zeros(1, dtype=dt)
 
 
 def _roate_pos(pos, theta):
-    '''Rotates coordinates by an angle theta
+    """Rotates coordinates by an angle theta
 
     Args:
         pos (PositionD):a galsim position
@@ -834,11 +890,11 @@ def _roate_pos(pos, theta):
     Returns:
         x2 (ndarray):   rotated coordiantes [x]
         y2 (ndarray):   rotated coordiantes [y]
-    '''
+    """
     x = pos.x
     y = pos.y
     cost = np.cos(theta)
     sint = np.sin(theta)
-    x2 = cost*x - sint*y
-    y2 = sint*x + cost*y
+    x2 = cost * x - sint * y
+    y2 = sint * x + cost * y
     return galsim.PositionD(x=x2, y=y2)

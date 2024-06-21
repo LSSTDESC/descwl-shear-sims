@@ -51,6 +51,9 @@ def make_galaxy_catalog(
         Separation of pair in arcsec for layout='pair'
     """
 
+    if layout is None and gal_type == 'wldeblend':
+        layout = 'random'
+
     if isinstance(layout, str):
         layout = Layout(
             layout_name=layout,
@@ -60,6 +63,7 @@ def make_galaxy_catalog(
         )
     else:
         assert isinstance(layout, Layout)
+
     if layout.layout_name == 'pair':
         if sep is None:
             raise ValueError(
@@ -82,17 +86,11 @@ def make_galaxy_catalog(
 
     else:
         if gal_type == 'wldeblend':
-            if layout is None:
-                layout = "random"
-
             galaxy_catalog = WLDeblendGalaxyCatalog(
                 rng=rng,
                 layout=layout,
             )
         elif gal_type in ['fixed', 'varying', 'exp']:  # TODO remove exp
-            if layout is None:
-                raise ValueError("send layout= for gal_type '%s'" % gal_type)
-
             gal_config = get_fixed_gal_config(config=gal_config)
 
             if gal_type == 'fixed':

@@ -78,6 +78,51 @@ def test_galaxies_smoke(layout, gal_type, morph):
             assert np.all(image == new_image)
 
 
+@pytest.mark.parametrize('layout', ('random', None))
+def test_wldeblend_galaxies_smoke(layout):
+    """
+    test sim can run and is repeatable.  This is relevant as we now support
+    varying galaxies
+    """
+    seed = 912
+
+    for trial in (1, 2):
+        rng = np.random.RandomState(seed)
+
+        sep = 4.0  # arcseconds
+
+        coadd_dim = 100
+        buff = 10
+        bands = ['i']
+
+        galaxy_catalog = make_galaxy_catalog(
+            rng=rng,
+            coadd_dim=coadd_dim,
+            buff=buff,
+            gal_type='wldeblend',
+            layout=layout,
+            sep=sep,
+        )
+        assert isinstance(galaxy_catalog, WLDeblendGalaxyCatalog)
+
+        psf = make_fixed_psf(psf_type='gauss')
+        sim_data = make_sim(
+            rng=rng,
+            galaxy_catalog=galaxy_catalog,
+            coadd_dim=coadd_dim,
+            bands=bands,
+            shear_obj=shear_obj,
+            psf=psf,
+        )
+
+        if trial == 1:
+            image = sim_data['band_data']['i'][0].image.array
+        else:
+            new_image = sim_data['band_data']['i'][0].image.array
+
+            assert np.all(image == new_image)
+
+
 def test_wlgalaxies_selection():
     seed = 74321
     rng = np.random.RandomState(seed)
