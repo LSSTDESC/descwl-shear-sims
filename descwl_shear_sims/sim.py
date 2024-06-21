@@ -194,6 +194,7 @@ def make_sim(
         )
 
     if shear_obj is None:
+        assert g1 is not None and g2 is not None
         shear_obj = ShearConstant(g1=float(g1), g2=float(g2))
     band_data = {}
     bright_info = []
@@ -257,6 +258,7 @@ def make_sim(
                 pixel_scale=pixel_scale,
                 calib_mag_zero=calib_mag_zero,
                 draw_noise=draw_noise,
+                indexes=lists["indexes"],
             )
             if epoch == 0:
                 bright_info += this_bright_info
@@ -334,6 +336,7 @@ def make_exp(
     pixel_scale=SCALE,
     calib_mag_zero=ZERO_POINT,
     draw_noise=True,
+    indexes=None,
 ):
     """
     Make an SEObs
@@ -398,6 +401,8 @@ def make_exp(
         pixel scale in arcsec
     calib_mag_zero: float
         magnitude zero point after calibration
+    indexes: list
+        list of indexes in the input galaxy catalog
     Returns
     -------
     exp: lsst.afw.image.ExposureF
@@ -409,6 +414,7 @@ def make_exp(
         has_bleed: bool, True if there is a bleed trail
     truth_info: structured array
         fields are
+        index: index in the input catalog
         ra, dec: sky position of input galaxies
         z: redshift of input galaxies
         image_x, image_y: image position of input galaxies
@@ -454,6 +460,7 @@ def make_exp(
             rng,
             shear_obj=shear_obj,
             theta0=theta0,
+            indexes=indexes,
         )
     else:
         truth_info = []
@@ -550,9 +557,10 @@ def _draw_objects(
     rng,
     shear_obj=None,
     theta0=None,
+    indexes=None,
 ):
     """
-    draw objects.
+    draw objects and return the input galaxy catalog.
 
     Returns
     -------
@@ -573,9 +581,13 @@ def _draw_objects(
         # set redshifts to -1 if not sepcified
         redshifts = np.ones(len(objlist)) * -1.0
 
+    if indexes is None:
+        # set redshifts to -1 if not sepcified
+        indexes = np.ones(len(objlist)) * -1.0
+
     truth_info = []
 
-    for obj, shift, z in zip(objlist, shifts, redshifts):
+    for obj, shift, z, ind in zip(objlist, shifts, redshifts, indexes):
 
         if theta0 is not None:
             ang = theta0 * galsim.radians
@@ -606,6 +618,7 @@ def _draw_objects(
             image[b] += stamp[b]
 
         info = get_truth_info_struct()
+        info["index"] = (ind,)
         info["ra"] = world_pos.ra / galsim.degrees
         info["dec"] = world_pos.dec / galsim.degrees
         info["z"] = (z,)
@@ -872,6 +885,7 @@ def get_bright_info_struct():
 
 def get_truth_info_struct():
     dt = [
+        ("index", "i4"),
         ("ra", "f8"),
         ("dec", "f8"),
         ("z", "f8"),
