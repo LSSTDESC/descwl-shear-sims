@@ -647,7 +647,7 @@ def _draw_bright_objects(
     draw_stars,
 ):
     """
-    draw bright objects.
+    draw bright objects and return bright object information.
 
     Returns
     -------
