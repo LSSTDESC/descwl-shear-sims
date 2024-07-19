@@ -688,6 +688,14 @@ def test_sim_truth_info():
     assert out["truth_info"].dtype.names == (
         'index', 'ra', 'dec', 'z', 'image_x', 'image_y'
     )
+    np.testing.assert_allclose(
+        galaxy_catalog.indices,
+        out["truth_info"]["index"],
+    )
+    np.testing.assert_allclose(
+        galaxy_catalog._wldeblend_cat[galaxy_catalog.indices]["redshift"],
+        out["truth_info"]["z"],
+    )
 
 
 if __name__ == '__main__':
