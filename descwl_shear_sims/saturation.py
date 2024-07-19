@@ -8,6 +8,7 @@ BAND_SAT_VALS = {
     'r': 140000 * 10.0**(0.4*(ZERO_POINT-32.16)),
     'i': 140000 * 10.0**(0.4*(ZERO_POINT-31.825)),
     'z': 140000 * 10.0**(0.4*(ZERO_POINT-31.50)),
+    'y': 140000 * 10.0**(0.4*(ZERO_POINT-31.20)),  # extrapolate from riz
 }
 
 

@@ -262,6 +262,8 @@ def make_sim(
             )
             if epoch == 0:
                 bright_info += this_bright_info
+            if epoch == 0 and band == bands[0]:
+                # only record the input catalog info for one band
                 truth_info += this_truth_info
             if galaxy_catalog.gal_type == "wldeblend":
                 # rescale the image to calibrate it to magnitude zero point
@@ -566,6 +568,7 @@ def _draw_objects(
     -------
         truth_info: structured array
         fields are
+        index: index in the input galaxy catalog
         ra, dec: sky position of input galaxies
         z: redshift of input galaxies
         image_x, image_y: image position of input galaxies
@@ -622,8 +625,8 @@ def _draw_objects(
         info["ra"] = world_pos.ra / galsim.degrees
         info["dec"] = world_pos.dec / galsim.degrees
         info["z"] = (z,)
-        info["image_x"] = (image_pos.x,)
-        info["image_y"] = (image_pos.y,)
+        info["image_x"] = (image_pos.x - 1,)
+        info["image_y"] = (image_pos.y - 1,)
 
         truth_info.append(info)
 
