@@ -219,7 +219,12 @@ class FixedGalaxyCatalog(object):
             objlist.append(self._get_galaxy(flux))
             shifts.append(galsim.PositionD(sarray['dx'][i], sarray['dy'][i]))
 
-        return objlist, shifts, redshifts, indexes
+        return {
+            "objlist": objlist,
+            "shifts": shifts,
+            "redshifts": redshifts,
+            "indexes": indexes,
+        }
 
     def _get_galaxy(self, flux):
         """
@@ -715,7 +720,12 @@ class WLDeblendGalaxyCatalog(object):
             indexes.append(index)
             redshifts.append(self._wldeblend_cat[index]["redshift"])
 
-        return objlist, shifts, redshifts, indexes
+        return {
+            "objlist": objlist,
+            "shifts": shifts,
+            "redshifts": redshifts,
+            "indexes": indexes,
+        }
 
     def _get_galaxy(self, builder, band, i):
         """
