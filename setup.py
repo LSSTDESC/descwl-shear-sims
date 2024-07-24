@@ -1,7 +1,7 @@
 import os
 from setuptools import setup, find_packages
 
-__version__ = None
+__version__ = ""
 
 pth = os.path.join(
     os.path.dirname(os.path.realpath(__file__)),

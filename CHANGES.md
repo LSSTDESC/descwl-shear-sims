@@ -1,3 +1,13 @@
+## 0.4.3
+### new features
+    - add support for ring test
+    - add random circular layout where galaxies are randomly distribution in a
+      circle
+    - the objlist now includs the input galaxy's position, redshift, index (in
+      the truth catalog)
+    - use shear object to apply distortion, enabling adding lensing distortion
+      from clusters
+
 ## 0.4.2
 
 ### new features
