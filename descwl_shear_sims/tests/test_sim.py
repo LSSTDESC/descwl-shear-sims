@@ -634,6 +634,70 @@ def test_sim_des(psf_fwhm):
     assert np.abs(zero_flux - flux) < 1e-3
 
 
+def test_sim_truth_info():
+    psf_fwhm = 0.8
+    seed = 7421
+    coadd_dim = 201
+    buff = 20
+    layout = "random"
+    rng = np.random.RandomState(seed)
+    calib_mag_zero = 30
+    survey_name = "LSST"
+    gal_type = "wldeblend"
+
+    pixel_scale = get_survey(
+        gal_type=gal_type,
+        band=deepcopy(DEFAULT_SURVEY_BANDS)[survey_name],
+        survey_name=survey_name,
+    ).pixel_scale
+
+    galaxy_catalog = make_galaxy_catalog(
+        rng=rng,
+        gal_type=gal_type,
+        coadd_dim=coadd_dim,
+        buff=buff,
+        pixel_scale=pixel_scale,
+        layout=layout,
+    )
+
+    star_catalog = StarCatalog(
+        rng=rng,
+        coadd_dim=coadd_dim,
+        buff=buff,
+        density=10,
+        pixel_scale=pixel_scale,
+        layout=layout,
+    )
+
+    psf = make_fixed_psf(
+        psf_type="moffat",
+        psf_fwhm=psf_fwhm,
+    )
+    out = make_sim(
+        rng=rng,
+        bands=["i"],
+        galaxy_catalog=galaxy_catalog,
+        coadd_dim=coadd_dim,
+        shear_obj=shear_obj,
+        psf=psf,
+        star_catalog=star_catalog,
+        calib_mag_zero=calib_mag_zero,
+        survey_name=survey_name,
+    )
+    assert "truth_info" in out.keys()
+    assert out["truth_info"].dtype.names == (
+        'index', 'ra', 'dec', 'z', 'image_x', 'image_y'
+    )
+    np.testing.assert_allclose(
+        galaxy_catalog.indices,
+        out["truth_info"]["index"],
+    )
+    np.testing.assert_allclose(
+        galaxy_catalog._wldeblend_cat[galaxy_catalog.indices]["redshift"],
+        out["truth_info"]["z"],
+    )
+
+
 if __name__ == '__main__':
     # test_sim_layout("hex", "wldeblend")
     # for rotate in (False, True):

@@ -195,7 +195,7 @@ class FixedGalaxyCatalog(object):
 
     def get_objlist(self, *, survey):
         """
-        get a list of galsim objects
+        get a list of galsim objects, position shifts, redshifts and indexes
 
         Parameters
         ----------
@@ -205,9 +205,10 @@ class FixedGalaxyCatalog(object):
 
         Returns
         -------
-        [galsim objects], [shifts], [redshifts]
+        [galsim objects], [shifts], [redshifts], [indexes]
         """
 
+        indexes = None
         flux = survey.get_flux(self.mag)
 
         sarray = self.shifts_array
@@ -218,7 +219,12 @@ class FixedGalaxyCatalog(object):
             objlist.append(self._get_galaxy(flux))
             shifts.append(galsim.PositionD(sarray['dx'][i], sarray['dy'][i]))
 
-        return objlist, shifts, redshifts
+        return {
+            "objlist": objlist,
+            "shifts": shifts,
+            "redshifts": redshifts,
+            "indexes": indexes,
+        }
 
     def _get_galaxy(self, flux):
         """
@@ -309,7 +315,7 @@ class GalaxyCatalog(FixedGalaxyCatalog):
 
     def get_objlist(self, *, survey):
         """
-        get a list of galsim objects
+        get a list of galsim objects, position shifts, redshifts and indexes
 
         Parameters
         ----------
@@ -319,7 +325,7 @@ class GalaxyCatalog(FixedGalaxyCatalog):
 
         Returns
         -------
-        [galsim objects], [shifts], [redshifts]
+        [galsim objects], [shifts], [redshifts], [indexes]
         """
 
         self._morph_rng = np.random.RandomState(self.morph_seed)
@@ -680,7 +686,7 @@ class WLDeblendGalaxyCatalog(object):
 
     def get_objlist(self, *, survey):
         """
-        get a list of galsim objects
+        get a list of galsim objects, position shifts, redshifts and indexes
 
         Parameters
         ----------
@@ -689,7 +695,7 @@ class WLDeblendGalaxyCatalog(object):
 
         Returns
         -------
-        [galsim objects], [shifts], [redshifts]
+        [galsim objects], [shifts], [redshifts], [indexes]
         """
 
         builder = descwl.model.GalaxyBuilder(
@@ -703,6 +709,7 @@ class WLDeblendGalaxyCatalog(object):
         band = survey.filter_band
 
         sarray = self.shifts_array
+        indexes = []
         objlist = []
         shifts = []
         redshifts = []
@@ -710,9 +717,15 @@ class WLDeblendGalaxyCatalog(object):
             objlist.append(self._get_galaxy(builder, band, i))
             shifts.append(galsim.PositionD(sarray['dx'][i], sarray['dy'][i]))
             index = self.indices[i]
+            indexes.append(index)
             redshifts.append(self._wldeblend_cat[index]["redshift"])
 
-        return objlist, shifts, redshifts
+        return {
+            "objlist": objlist,
+            "shifts": shifts,
+            "redshifts": redshifts,
+            "indexes": indexes,
+        }
 
     def _get_galaxy(self, builder, band, i):
         """

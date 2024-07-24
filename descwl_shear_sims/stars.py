@@ -192,7 +192,13 @@ class StarCatalog(object):
                 objlist.append(star)
                 shifts.append(pos)
 
-        return objlist, shifts, bright_objlist, bright_shifts, bright_mags
+        return {
+            "star_objlist": objlist,
+            "star_shifts": shifts,
+            "bright_objlist": bright_objlist,
+            "bright_shifts": bright_shifts,
+            "bright_mags": bright_mags,
+        }
 
     def _get_star(self, survey, band, i, noise):
         """

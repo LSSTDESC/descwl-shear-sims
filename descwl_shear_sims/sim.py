@@ -46,6 +46,7 @@ DEFAULT_SIM_CONFIG = {
     "bad_columns": False,
     "sky_n_sigma": None,
     "survey_name": "LSST",
+    "draw_noise": True,
 }
 
 
@@ -77,6 +78,7 @@ def make_sim(
     g1=None,
     g2=None,
     coadd_dim=None,
+    draw_noise=True,
 ):
     """
     Make simulation data
@@ -132,6 +134,8 @@ def make_sim(
         Dimensions for planned final coadd.  This is used for generating
         the final coadd WCS and deteremines some properties of
         the single epoch images.
+    draw_noise: optional, bool
+        Whether draw image noise
 
     Returns
     -------
@@ -190,6 +194,7 @@ def make_sim(
         )
 
     if shear_obj is None:
+        assert g1 is not None and g2 is not None
         shear_obj = ShearConstant(g1=float(g1), g2=float(g2))
     band_data = {}
     bright_info = []
@@ -252,9 +257,13 @@ def make_sim(
                 theta0=theta0,
                 pixel_scale=pixel_scale,
                 calib_mag_zero=calib_mag_zero,
+                draw_noise=draw_noise,
+                indexes=lists["indexes"],
             )
             if epoch == 0:
                 bright_info += this_bright_info
+            if epoch == 0 and band == bands[0]:
+                # only record the input catalog info for one band
                 truth_info += this_truth_info
             if galaxy_catalog.gal_type == "wldeblend":
                 # rescale the image to calibrate it to magnitude zero point
@@ -328,6 +337,8 @@ def make_exp(
     theta0=0.0,
     pixel_scale=SCALE,
     calib_mag_zero=ZERO_POINT,
+    draw_noise=True,
+    indexes=None,
 ):
     """
     Make an SEObs
@@ -392,6 +403,8 @@ def make_exp(
         pixel scale in arcsec
     calib_mag_zero: float
         magnitude zero point after calibration
+    indexes: list
+        list of indexes in the input galaxy catalog
     Returns
     -------
     exp: lsst.afw.image.ExposureF
@@ -403,6 +416,7 @@ def make_exp(
         has_bleed: bool, True if there is a bleed trail
     truth_info: structured array
         fields are
+        index: index in the input catalog
         ra, dec: sky position of input galaxies
         z: redshift of input galaxies
         image_x, image_y: image position of input galaxies
@@ -448,6 +462,7 @@ def make_exp(
             rng,
             shear_obj=shear_obj,
             theta0=theta0,
+            indexes=indexes,
         )
     else:
         truth_info = []
@@ -465,7 +480,8 @@ def make_exp(
             rng,
         )
 
-    image.array[:, :] += rng.normal(scale=noise, size=dims)
+    if draw_noise:
+        image.array[:, :] += rng.normal(scale=noise, size=dims)
     if sky_n_sigma is not None:
         image.array[:, :] += sky_n_sigma * noise
 
@@ -543,14 +559,16 @@ def _draw_objects(
     rng,
     shear_obj=None,
     theta0=None,
+    indexes=None,
 ):
     """
-    draw objects.
+    draw objects and return the input galaxy catalog.
 
     Returns
     -------
         truth_info: structured array
         fields are
+        index: index in the input galaxy catalog
         ra, dec: sky position of input galaxies
         z: redshift of input galaxies
         image_x, image_y: image position of input galaxies
@@ -566,9 +584,13 @@ def _draw_objects(
         # set redshifts to -1 if not sepcified
         redshifts = np.ones(len(objlist)) * -1.0
 
+    if indexes is None:
+        # set input galaxy indexes to -1 if not sepcified
+        indexes = np.ones(len(objlist)) * -1.0
+
     truth_info = []
 
-    for obj, shift, z in zip(objlist, shifts, redshifts):
+    for obj, shift, z, ind in zip(objlist, shifts, redshifts, indexes):
 
         if theta0 is not None:
             ang = theta0 * galsim.radians
@@ -599,11 +621,12 @@ def _draw_objects(
             image[b] += stamp[b]
 
         info = get_truth_info_struct()
+        info["index"] = (ind,)
         info["ra"] = world_pos.ra / galsim.degrees
         info["dec"] = world_pos.dec / galsim.degrees
         info["z"] = (z,)
-        info["image_x"] = (image_pos.x,)
-        info["image_y"] = (image_pos.y,)
+        info["image_x"] = (image_pos.x - 1,)
+        info["image_y"] = (image_pos.y - 1,)
 
         truth_info.append(info)
 
@@ -627,7 +650,7 @@ def _draw_bright_objects(
     draw_stars,
 ):
     """
-    draw bright objects.
+    draw bright objects and return bright object information.
 
     Returns
     -------
@@ -865,6 +888,7 @@ def get_bright_info_struct():
 
 def get_truth_info_struct():
     dt = [
+        ("index", "i4"),
         ("ra", "f8"),
         ("dec", "f8"),
         ("z", "f8"),
