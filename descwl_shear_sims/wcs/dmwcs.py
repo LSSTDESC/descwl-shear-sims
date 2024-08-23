@@ -98,8 +98,8 @@ def make_coadd_dm_wcs(coadd_dim, pixel_scale=SCALE):
     coadd_origin = big_coadd_bbox.getCenter()
 
     gs_coadd_origin = galsim.PositionD(
-        x=coadd_origin.x,
-        y=coadd_origin.y,
+        x=coadd_origin.x + 1,
+        y=coadd_origin.y + 1,
     )
     coadd_wcs = make_dm_wcs(
         make_wcs(
@@ -132,8 +132,8 @@ def make_coadd_dm_wcs_simple(coadd_dim, pixel_scale=SCALE):
     coadd_origin = coadd_bbox.getCenter()
 
     gs_coadd_origin = galsim.PositionD(
-        x=coadd_origin.x,
-        y=coadd_origin.y,
+        x=coadd_origin.x + 1,
+        y=coadd_origin.y + 1,
     )
     coadd_wcs = make_dm_wcs(
         make_wcs(
