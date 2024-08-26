@@ -12,7 +12,9 @@ def make_sim_wcs(dim):
 
     dims = [dim]*2
     cen = (np.array(dims)-1)/2
-    image_origin = galsim.PositionD(x=cen[1], y=cen[0])
+    # this is the center in 0 offset
+    # need to add 1 for the galsim convention
+    image_origin = galsim.PositionD(x=cen[1]+1, y=cen[0]+1)
 
     mat = np.array(
         [[SCALE, 0.0],

@@ -25,6 +25,8 @@ def make_dm_wcs(galsim_wcs):
     if galsim_wcs.wcs_type == 'TAN':
         crpix = galsim_wcs.crpix
         # DM uses 0 offset, galsim uses FITS 1 offset
+        # we are converting from a galsim position to a dm position
+        # so we need to subtract 1
         stack_crpix = Point2D(crpix[0]-1, crpix[1]-1)
         cd_matrix = galsim_wcs.cd
 
@@ -67,7 +69,9 @@ def make_dm_wcs(galsim_wcs):
     return stack_wcs
 
 
-def make_coadd_dm_wcs(coadd_dim, pixel_scale=SCALE, big_coadd_dim_padding=3000, xoff=1000, yoff=450):
+def make_coadd_dm_wcs(coadd_dim, pixel_scale=SCALE, 
+                      big_coadd_dim_padding=3000, 
+                      xoff=1000, yoff=450):
     """
     make a coadd wcs, using the default world origin.  Create
     a bbox within larger box
@@ -86,7 +90,7 @@ def make_coadd_dm_wcs(coadd_dim, pixel_scale=SCALE, big_coadd_dim_padding=3000, 
         y offset of the coadd image within the larger image
     Returns
     --------
-    A dm stack wcs, see make_dm_wcs for return type
+    (coadd dm wcs, coadd dm bbox), see make_dm_wcs for return wcs type
     """
 
     # make a larger coadd region
@@ -99,10 +103,14 @@ def make_coadd_dm_wcs(coadd_dim, pixel_scale=SCALE, big_coadd_dim_padding=3000, 
     # center the coadd wcs in the bigger coord system
     coadd_origin = big_coadd_bbox.getCenter()
 
+    # DM uses 0 offset, galsim uses FITS 1 offset
+    # we are converting from a dm position to a galsim position
+    # so we need to add 1
     gs_coadd_origin = galsim.PositionD(
         x=coadd_origin.x + 1,
         y=coadd_origin.y + 1,
     )
+    print("gs_coadd_origin", gs_coadd_origin)
     coadd_wcs = make_dm_wcs(
         make_wcs(
             scale=pixel_scale,
@@ -115,7 +123,7 @@ def make_coadd_dm_wcs(coadd_dim, pixel_scale=SCALE, big_coadd_dim_padding=3000, 
 
 def make_coadd_dm_wcs_simple(coadd_dim, pixel_scale=SCALE):
     """
-    make a coadd wcs, using the default world origin.
+    make a coadd wcs without big coadd bbox padding, using the default world origin.
 
     Parameters
     ----------
@@ -126,7 +134,9 @@ def make_coadd_dm_wcs_simple(coadd_dim, pixel_scale=SCALE):
 
     Returns
     --------
-    A dm stack wcs, see make_dm_wcs for return type
+    (coadd dm wcs, coadd dm bbox), see make_dm_wcs for return wcs type
     """
 
-    return make_coadd_dm_wcs(coadd_dim, pixel_scale=SCALE, big_coadd_dim_padding=0, xoff=0, yoff=0)
+    return make_coadd_dm_wcs(coadd_dim, pixel_scale=pixel_scale, 
+                             big_coadd_dim_padding=0,
+                             xoff=0, yoff=0)
