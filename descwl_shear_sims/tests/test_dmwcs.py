@@ -81,8 +81,8 @@ def test_coadd_dmwcs_simple():
     y = 10.1
 
     gs_pos = galsim.PositionD(x=x, y=y)
-    pos = geom.Point2D(x=x - 1, y=y - 1)
- 
+
+    pos = geom.Point2D(x=x - 1, y=y - 1) 
     skypos = dm_coadd_wcs_simple.pixelToSky(pos)
 
     print("type of dm skypos", type(skypos))
