@@ -34,14 +34,14 @@ def test_dmwcs():
 
     skypos = dm_wcs.pixelToSky(pos)
 
-    print("type of dm skypos",type(skypos))
-    print("dm skypos",skypos)
-    print("dm skypos ra and dec",skypos.getRa(), skypos.getDec())
+    print("type of dm skypos", type(skypos))
+    print("dm skypos", skypos)
+    print("dm skypos ra and dec", skypos.getRa(), skypos.getDec())
     print("type of dm skypos ra", type(skypos.getRa()))
 
     gs_skypos = galsim_wcs.toWorld(gs_pos)
 
-    print("type of galsim skypos",type(gs_skypos))
+    print("type of galsim skypos", type(gs_skypos))
     print("galsim skypos", gs_skypos)
     print("galsim skypos ra and dec", gs_skypos.ra, gs_skypos.dec)
     # stop
@@ -82,10 +82,10 @@ def test_coadd_dmwcs_simple():
 
     gs_pos = galsim.PositionD(x=x, y=y)
     pos = geom.Point2D(x=x - 1, y=y - 1)
-    
+ 
     skypos = dm_coadd_wcs_simple.pixelToSky(pos)
 
-    print("type of dm skypos",type(skypos))
+    print("type of dm skypos", type(skypos))
     print("dm skypos", skypos)
     print("dm skypos ra and dec", skypos.getRa(), skypos.getDec())
     print("type of dm skypos ra", type(skypos.getRa()))

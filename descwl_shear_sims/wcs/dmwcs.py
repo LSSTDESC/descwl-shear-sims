@@ -69,8 +69,8 @@ def make_dm_wcs(galsim_wcs):
     return stack_wcs
 
 
-def make_coadd_dm_wcs(coadd_dim, pixel_scale=SCALE, 
-                      big_coadd_dim_padding=3000, 
+def make_coadd_dm_wcs(coadd_dim, pixel_scale=SCALE,
+                      big_coadd_dim_padding=3000,
                       xoff=1000, yoff=450):
     """
     make a coadd wcs, using the default world origin.  Create
@@ -137,6 +137,6 @@ def make_coadd_dm_wcs_simple(coadd_dim, pixel_scale=SCALE):
     (coadd dm wcs, coadd dm bbox), see make_dm_wcs for return wcs type
     """
 
-    return make_coadd_dm_wcs(coadd_dim, pixel_scale=pixel_scale, 
+    return make_coadd_dm_wcs(coadd_dim, pixel_scale=pixel_scale,
                              big_coadd_dim_padding=0,
                              xoff=0, yoff=0)
