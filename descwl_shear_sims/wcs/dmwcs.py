@@ -25,6 +25,8 @@ def make_dm_wcs(galsim_wcs):
     if galsim_wcs.wcs_type == 'TAN':
         crpix = galsim_wcs.crpix
         # DM uses 0 offset, galsim uses FITS 1 offset
+        # we are converting from a galsim position to a dm position
+        # so we need to subtract 1
         stack_crpix = Point2D(crpix[0]-1, crpix[1]-1)
         cd_matrix = galsim_wcs.cd
 
@@ -67,40 +69,48 @@ def make_dm_wcs(galsim_wcs):
     return stack_wcs
 
 
-def make_coadd_dm_wcs(coadd_dim, pixel_scale=SCALE):
+def make_coadd_dm_wcs(coadd_dim, pixel_scale=SCALE,
+                      big_coadd_dim_padding=3000,
+                      xoff=1000, yoff=450):
     """
     make a coadd wcs, using the default world origin.  Create
     a bbox within larger box
 
     Parameters
     ----------
-    coadd_origin: int
-        Origin in pixels of the coadd, can be within a larger
-        pixel grid e.g. tract surrounding the patch
+    coadd_dim: int
+        Pixel dimension of the coadd image
     pixel_scale: float
         pixel scale
-
+    big_coadd_dim_padding: int
+        padding for the larger coadd image. dim(big_coadd) = dim(coadd) + padding
+    xoff: int
+        x offset of the coadd image within the larger image
+    yoff: int
+        y offset of the coadd image within the larger image
     Returns
     --------
-    A galsim wcs, see make_wcs for return type
+    (coadd dm wcs, coadd dm bbox), see make_dm_wcs for return wcs type
     """
 
     # make a larger coadd region
-    big_coadd_dim = 3000 + coadd_dim
+    big_coadd_dim = big_coadd_dim_padding + coadd_dim
     big_coadd_bbox = Box2I(Point2I(0), Extent2I(big_coadd_dim))
 
     # make this coadd a subset of larger coadd
-    xoff = 1000
-    yoff = 450
     coadd_bbox = Box2I(Point2I(xoff, yoff), Extent2I(coadd_dim))
 
     # center the coadd wcs in the bigger coord system
     coadd_origin = big_coadd_bbox.getCenter()
 
+    # DM uses 0 offset, galsim uses FITS 1 offset
+    # we are converting from a dm position to a galsim position
+    # so we need to add 1
     gs_coadd_origin = galsim.PositionD(
-        x=coadd_origin.x,
-        y=coadd_origin.y,
+        x=coadd_origin.x + 1,
+        y=coadd_origin.y + 1,
     )
+
     coadd_wcs = make_dm_wcs(
         make_wcs(
             scale=pixel_scale,
@@ -113,33 +123,20 @@ def make_coadd_dm_wcs(coadd_dim, pixel_scale=SCALE):
 
 def make_coadd_dm_wcs_simple(coadd_dim, pixel_scale=SCALE):
     """
-    make a coadd wcs, using the default world origin.
+    make a coadd wcs without big coadd bbox padding, using the default world origin.
 
     Parameters
     ----------
-    coadd_origin: int
-        Origin in pixels of the coadd, can be within a larger
-        pixel grid e.g. tract surrounding the patch
+    coadd_dim: int
+        Pixel dimension of the coadd image
     pixel_scale: float
         pixel scale
 
     Returns
     --------
-    A galsim wcs, see make_wcs for return type
+    (coadd dm wcs, coadd dm bbox), see make_dm_wcs for return wcs type
     """
 
-    coadd_bbox = Box2I(Point2I(0), Extent2I(coadd_dim))
-    coadd_origin = coadd_bbox.getCenter()
-
-    gs_coadd_origin = galsim.PositionD(
-        x=coadd_origin.x,
-        y=coadd_origin.y,
-    )
-    coadd_wcs = make_dm_wcs(
-        make_wcs(
-            scale=pixel_scale,
-            image_origin=gs_coadd_origin,
-            world_origin=WORLD_ORIGIN,
-        )
-    )
-    return coadd_wcs, coadd_bbox
+    return make_coadd_dm_wcs(coadd_dim, pixel_scale=pixel_scale,
+                             big_coadd_dim_padding=0,
+                             xoff=0, yoff=0)
