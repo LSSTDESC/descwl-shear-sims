@@ -17,7 +17,7 @@ from .masking import (
 )
 from .objlists import get_objlist
 from .psfs import make_dm_psf
-from .wcs import make_wcs, make_dm_wcs, make_coadd_dm_wcs
+from .wcs import make_wcs, make_dm_wcs, make_coadd_dm_wcs, make_coadd_dm_wcs_simple
 from .shear import ShearConstant
 
 
@@ -78,6 +78,7 @@ def make_sim(
     g1=None,
     g2=None,
     coadd_dim=None,
+    simple_coadd_bbox=False,
     draw_noise=True,
 ):
     """
@@ -134,6 +135,12 @@ def make_sim(
         Dimensions for planned final coadd.  This is used for generating
         the final coadd WCS and deteremines some properties of
         the single epoch images.
+    simple_coadd_bbox: optional, bool. Default False
+        If set to True, the coadd bbox is a simple box bounded by 
+        (0,0,coadd_dim,coadd_dim), and the coadd and SE WCS have the same 
+        world origin. If set to False, the coadd bbox is embeded in a larger 
+        box bounded by (xoff, yoff, xoff+coadd_dim, yoff+coadd_dim) and 
+        the SE WCS has a different world origin as coadd WCS.  
     draw_noise: optional, bool
         Whether draw image noise
 
@@ -174,10 +181,17 @@ def make_sim(
                 "coadd_dim should be int when galaxy catalog does not",
                 "have attribute 'layout'",
             )
-        coadd_wcs, coadd_bbox = make_coadd_dm_wcs(
-            coadd_dim,
-            pixel_scale=pixel_scale,
-        )
+        if simple_coadd_bbox:
+            coadd_wcs, coadd_bbox = make_coadd_dm_wcs_simple(
+                coadd_dim,
+                pixel_scale=pixel_scale,
+            )
+        else:
+            coadd_wcs, coadd_bbox = make_coadd_dm_wcs(
+                coadd_dim,
+                pixel_scale=pixel_scale,
+            )
+
     coadd_bbox_cen_gs_skypos = get_coadd_center_gs_pos(
         coadd_wcs=coadd_wcs,
         coadd_bbox=coadd_bbox,
