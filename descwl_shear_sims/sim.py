@@ -136,11 +136,11 @@ def make_sim(
         the final coadd WCS and deteremines some properties of
         the single epoch images.
     simple_coadd_bbox: optional, bool. Default False
-        If set to True, the coadd bbox is a simple box bounded by 
-        (0,0,coadd_dim,coadd_dim), and the coadd and SE WCS have the same 
-        world origin. If set to False, the coadd bbox is embeded in a larger 
-        box bounded by (xoff, yoff, xoff+coadd_dim, yoff+coadd_dim) and 
-        the SE WCS has a different world origin as coadd WCS.  
+        If set to True, the coadd bbox is a simple box bounded by
+        (0,0,coadd_dim,coadd_dim), and the coadd and SE WCS have the same
+        world origin. If set to False, the coadd bbox is embeded in a larger
+        box bounded by (xoff, yoff, xoff+coadd_dim, yoff+coadd_dim) and
+        the SE WCS has a different world origin as coadd WCS.
     draw_noise: optional, bool
         Whether draw image noise
 
