@@ -123,7 +123,6 @@ def test_same_world_origin_se_coadd_wcs_simple():
     cen = (np.array(dims) + 1) / 2
     se_origin = galsim.PositionD(x=cen[1], y=cen[0])
 
-
     masked_image = afw_image.MaskedImageF(coadd_dim, coadd_dim)
     exp = afw_image.ExposureF(masked_image)
 
