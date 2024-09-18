@@ -273,6 +273,7 @@ def make_sim(
                 calib_mag_zero=calib_mag_zero,
                 draw_noise=draw_noise,
                 indexes=lists["indexes"],
+                simple_coadd_bbox=simple_coadd_bbox,
             )
             if epoch == 0:
                 bright_info += this_bright_info
@@ -353,6 +354,7 @@ def make_exp(
     calib_mag_zero=ZERO_POINT,
     draw_noise=True,
     indexes=None,
+    simple_coadd_bbox=False,
 ):
     """
     Make an SEObs
@@ -419,6 +421,9 @@ def make_exp(
         magnitude zero point after calibration
     indexes: list
         list of indexes in the input galaxy catalog
+    simple_coadd_bbox: optional, bool. Default False
+        If set to True, the SE WCS sky origin is forced to be WORLD_ORIGIN,
+        which is consistent with the simple coadd wcs.
     Returns
     -------
     exp: lsst.afw.image.ExposureF
