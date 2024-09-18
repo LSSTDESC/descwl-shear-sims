@@ -459,8 +459,8 @@ def make_exp(
         theta = None
 
     # galsim wcs
-    # if simple coadd bbox, force the SE WCS to share the same 
-    # world origin as the coadd WCS 
+    # if simple coadd bbox, force the SE WCS to share the same
+    # world origin as the coadd WCS
     if simple_coadd_bbox:
         se_wcs = make_wcs(
             scale=pixel_scale,
