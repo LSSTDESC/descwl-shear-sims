@@ -140,7 +140,7 @@ def make_sim(
         (0,0,coadd_dim,coadd_dim), and the coadd and SE WCS have the same
         world origin. If set to False, the coadd bbox is embeded in a larger
         box bounded by (xoff, yoff, xoff+coadd_dim, yoff+coadd_dim) and
-        the SE WCS has a different world origin as coadd WCS.
+        the SE WCS has a different world origin compared to the coadd WCS.
     draw_noise: optional, bool
         Whether draw image noise
 
@@ -454,12 +454,22 @@ def make_exp(
         theta = None
 
     # galsim wcs
-    se_wcs = make_wcs(
-        scale=pixel_scale,
-        theta=theta,
-        image_origin=se_origin,
-        world_origin=coadd_bbox_cen_gs_skypos,
-    )
+    # if simple coadd bbox, force the SE WCS to share the same 
+    # world origin as the coadd WCS 
+    if simple_coadd_bbox:
+        se_wcs = make_wcs(
+            scale=pixel_scale,
+            theta=theta,
+            image_origin=se_origin,
+            world_origin=WORLD_ORIGIN,
+        )
+    else:
+        se_wcs = make_wcs(
+            scale=pixel_scale,
+            theta=theta,
+            image_origin=se_origin,
+            world_origin=coadd_bbox_cen_gs_skypos,
+        )
 
     image = galsim.Image(dim, dim, wcs=se_wcs)
 
