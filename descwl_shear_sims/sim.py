@@ -18,7 +18,7 @@ from .masking import (
 from .objlists import get_objlist
 from .psfs import make_dm_psf
 from .wcs import make_wcs, make_dm_wcs, make_coadd_dm_wcs
-from .shear import ShearConstant
+from .shear import ShearConstant, ShearRedshift
 
 
 DEFAULT_SIM_CONFIG = {
@@ -599,7 +599,15 @@ def _draw_objects(
             shift = _roate_pos(shift, theta0)
 
         if shear_obj is not None:
-            obj, shift, orignal_shift, gamma1, gamma2, kappa = shear_obj.distort_galaxy(obj, shift, z)
+            if isinstance(shear_obj, ShearConstant) or isinstance(
+                shear_obj, ShearRedshift
+            ):
+                obj, shift = shear_obj.distort_galaxy(obj, shift, z)
+            else:
+                shear_halo = True
+                obj, shift, orignal_shift, gamma1, gamma2, kappa = (
+                    shear_obj.distort_galaxy(obj, shift, z)
+                )
 
         # Deproject from u,v onto sphere. Then use wcs to get to image pos.
         world_pos = coadd_bbox_cen_gs_skypos.deproject(
@@ -624,19 +632,22 @@ def _draw_objects(
         b = stamp.bounds & image.bounds
         if b.isDefined():
             image[b] += stamp[b]
-
-        info = get_truth_info_struct()
+        if shear_halo:
+            info = get_truth_info_struct(type="cluster")
+        else:
+            info = get_truth_info_struct()
         info["index"] = (ind,)
         info["ra"] = world_pos.ra / galsim.degrees
         info["dec"] = world_pos.dec / galsim.degrees
-        info["original_ra"] = original_world_pos.ra / galsim.degrees
-        info["original_dec"] = original_world_pos.dec / galsim.degrees
-        info["gamma1"] = (gamma1,)
-        info["gamma2"] = (gamma2,)
-        info["kappa"] = (kappa,)
         info["z"] = (z,)
         info["image_x"] = (image_pos.x - 1,)
-        info["image_y"] = (image_pos.y - 1,)
+        info["image_y"] = (image_pos.y - 1,) 
+        if shear_halo:
+            info["original_ra"] = original_world_pos.ra / galsim.degrees
+            info["original_dec"] = original_world_pos.dec / galsim.degrees
+            info["gamma1"] = (gamma1,)
+            info["gamma2"] = (gamma2,)
+            info["kappa"] = (kappa,)
 
         truth_info.append(info)
 
@@ -896,7 +907,7 @@ def get_bright_info_struct():
     return np.zeros(1, dtype=dt)
 
 
-def get_truth_info_struct():
+def get_truth_info_struct(type="shear"):
     dt = [
         ("index", "i4"),
         ("ra", "f8"),
@@ -904,12 +915,15 @@ def get_truth_info_struct():
         ("z", "f8"),
         ("image_x", "f8"),
         ("image_y", "f8"),
-        ("original_ra", "f8"),
-        ("original_dec", "f8"),
-        ("kappa", "f8"),
-        ("gamma1", "f8"),
-        ("gamma2", "f8"),
     ]
+    if type == "cluster":
+        dt += [
+            ("original_ra", "f8"),
+            ("original_dec", "f8"),
+            ("kappa", "f8"),
+            ("gamma1", "f8"),
+            ("gamma2", "f8"),
+        ]
     return np.zeros(1, dtype=dt)
 
 
