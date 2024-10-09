@@ -906,7 +906,7 @@ def get_truth_info_struct():
         ("image_y", "f8"),
         ("original_ra", "f8"),
         ("original_dec", "f8"),
-        ("kappa", "f8")
+        ("kappa", "f8"),
         ("gamma1", "f8"),
         ("gamma2", "f8"),
     ]
