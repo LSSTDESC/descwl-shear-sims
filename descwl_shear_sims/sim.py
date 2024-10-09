@@ -599,12 +599,17 @@ def _draw_objects(
             shift = _roate_pos(shift, theta0)
 
         if shear_obj is not None:
-            obj, shift = shear_obj.distort_galaxy(obj, shift, z)
+            obj, shift, orignal_shift, gamma1, gamma2, kappa = shear_obj.distort_galaxy(obj, shift, z)
 
         # Deproject from u,v onto sphere. Then use wcs to get to image pos.
         world_pos = coadd_bbox_cen_gs_skypos.deproject(
             shift.x * galsim.arcsec,
             shift.y * galsim.arcsec,
+        )
+
+        original_world_pos = coadd_bbox_cen_gs_skypos.deproject(
+            orignal_shift.x * galsim.arcsec,
+            orignal_shift.y * galsim.arcsec,
         )
 
         image_pos = wcs.toImage(world_pos)
@@ -624,6 +629,11 @@ def _draw_objects(
         info["index"] = (ind,)
         info["ra"] = world_pos.ra / galsim.degrees
         info["dec"] = world_pos.dec / galsim.degrees
+        info["original_ra"] = original_world_pos.ra / galsim.degrees
+        info["original_dec"] = original_world_pos.dec / galsim.degrees
+        info["gamma1"] = (gamma1,)
+        info["gamma2"] = (gamma2,)
+        info["kappa"] = (kappa,)
         info["z"] = (z,)
         info["image_x"] = (image_pos.x - 1,)
         info["image_y"] = (image_pos.y - 1,)
@@ -894,6 +904,11 @@ def get_truth_info_struct():
         ("z", "f8"),
         ("image_x", "f8"),
         ("image_y", "f8"),
+        ("original_ra", "f8"),
+        ("original_dec", "f8"),
+        ("kappa", "f8")
+        ("gamma1", "f8"),
+        ("gamma2", "f8"),
     ]
     return np.zeros(1, dtype=dt)
 
