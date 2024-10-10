@@ -621,6 +621,8 @@ def _draw_objects(
         )
 
         image_pos = wcs.toImage(world_pos)
+        original_image_pos = wcs.toImage(original_world_pos)
+
         local_wcs = wcs.local(image_pos=image_pos)
 
         convolved_object = get_convolved_object(obj, psf, image_pos)
@@ -642,6 +644,8 @@ def _draw_objects(
         info["z"] = (z,)
         info["image_x"] = (image_pos.x - 1,)
         info["image_y"] = (image_pos.y - 1,) 
+        info["original_image_x"] = (original_image_pos.x - 1,)
+        info["original_image_y"] = (original_image_pos.y - 1,)
         if shear_halo:
             info["original_ra"] = original_world_pos.ra / galsim.degrees
             info["original_dec"] = original_world_pos.dec / galsim.degrees
@@ -918,6 +922,8 @@ def get_truth_info_struct(type="shear"):
     ]
     if type == "cluster":
         dt += [
+            ("original_image_x", "f8"),
+            ("original_image_y", "f8"),
             ("original_ra", "f8"),
             ("original_dec", "f8"),
             ("kappa", "f8"),
