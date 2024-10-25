@@ -174,7 +174,9 @@ def make_sim(
         survey_name=survey_name,
     ).pixel_scale
 
-    if hasattr(galaxy_catalog.layout, "wcs") and hasattr(galaxy_catalog.layout, "bbox") and not simple_coadd_bbox:
+    if (hasattr(galaxy_catalog.layout, "wcs") 
+        and hasattr(galaxy_catalog.layout, "bbox") 
+        and not simple_coadd_bbox):
         coadd_wcs = galaxy_catalog.layout.wcs
         coadd_bbox = galaxy_catalog.layout.bbox
     else:
