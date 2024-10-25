@@ -141,6 +141,8 @@ def make_sim(
         world origin. If set to False, the coadd bbox is embeded in a larger
         box bounded by (xoff, yoff, xoff+coadd_dim, yoff+coadd_dim) and
         the SE WCS has a different world origin compared to the coadd WCS.
+        This option overrides the wcs in galaxy catalog layout and requires
+        an input coadd_dim.
     draw_noise: optional, bool
         Whether draw image noise
 
@@ -172,7 +174,7 @@ def make_sim(
         survey_name=survey_name,
     ).pixel_scale
 
-    if hasattr(galaxy_catalog.layout, "wcs") and hasattr(galaxy_catalog.layout, "bbox"):
+    if hasattr(galaxy_catalog.layout, "wcs") and hasattr(galaxy_catalog.layout, "bbox") and not simple_coadd_bbox:
         coadd_wcs = galaxy_catalog.layout.wcs
         coadd_bbox = galaxy_catalog.layout.bbox
     else:
