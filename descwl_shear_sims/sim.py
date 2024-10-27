@@ -639,7 +639,7 @@ def _draw_objects(
                 obj, shift, prelensed_shift, gamma1, gamma2, kappa = (
                     shear_obj.distort_galaxy(obj, shift, z)
                 )
-            
+
         # Deproject from u,v onto sphere. Then use wcs to get to image pos.
         world_pos = coadd_bbox_cen_gs_skypos.deproject(
             shift.x * galsim.arcsec,
