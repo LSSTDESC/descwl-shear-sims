@@ -627,7 +627,9 @@ def _draw_objects(
             obj = obj.rotate(ang)
             shift = _roate_pos(shift, theta0)
 
+        shear_halo = False
         if shear_obj is not None:
+            shear_halo = False
             if isinstance(shear_obj, ShearConstant) or isinstance(
                 shear_obj, ShearRedshift
             ):
@@ -637,7 +639,7 @@ def _draw_objects(
                 obj, shift, prelensed_shift, gamma1, gamma2, kappa = (
                     shear_obj.distort_galaxy(obj, shift, z)
                 )
-
+            
         # Deproject from u,v onto sphere. Then use wcs to get to image pos.
         world_pos = coadd_bbox_cen_gs_skypos.deproject(
             shift.x * galsim.arcsec,
@@ -646,12 +648,12 @@ def _draw_objects(
 
         image_pos = wcs.toImage(world_pos)
 
-        if prelensed_shift is not None:
+        if shear_halo:
             prelensed_world_pos = coadd_bbox_cen_gs_skypos.deproject(
                 prelensed_shift.x * galsim.arcsec,
                 prelensed_shift.y * galsim.arcsec,
             )
-            original_image_pos = wcs.toImage(prelensed_world_pos)
+            prelensed_image_pos = wcs.toImage(prelensed_world_pos)
 
         local_wcs = wcs.local(image_pos=image_pos)
 
@@ -668,15 +670,16 @@ def _draw_objects(
             info = get_truth_info_struct(type="halo")
         else:
             info = get_truth_info_struct()
+
         info["index"] = (ind,)
         info["ra"] = world_pos.ra / galsim.degrees
         info["dec"] = world_pos.dec / galsim.degrees
         info["z"] = (z,)
         info["image_x"] = (image_pos.x - 1,)
         info["image_y"] = (image_pos.y - 1,)
-        info["prelensed_image_x"] = (original_image_pos.x - 1,)
-        info["prelensed_image_y"] = (original_image_pos.y - 1,)
         if shear_halo:
+            info["prelensed_image_x"] = (prelensed_image_pos.x - 1,)
+            info["prelensed_image_y"] = (prelensed_image_pos.y - 1,)
             info["prelensed_ra"] = prelensed_world_pos.ra / galsim.degrees
             info["prelensed_dec"] = prelensed_world_pos.dec / galsim.degrees
             info["gamma1"] = (gamma1,)
@@ -952,10 +955,10 @@ def get_truth_info_struct(type="shear"):
     ]
     if type == "halo":
         dt += [
-            ("original_image_x", "f8"),
-            ("original_image_y", "f8"),
-            ("original_ra", "f8"),
-            ("original_dec", "f8"),
+            ("prelensed_image_x", "f8"),
+            ("prelensed_image_y", "f8"),
+            ("prelensed_ra", "f8"),
+            ("prelensed_dec", "f8"),
             ("kappa", "f8"),
             ("gamma1", "f8"),
             ("gamma2", "f8"),
