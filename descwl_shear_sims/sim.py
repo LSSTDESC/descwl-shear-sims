@@ -630,15 +630,16 @@ def _draw_objects(
         shear_halo = False
         if shear_obj is not None:
             shear_halo = False
-            if isinstance(shear_obj, ShearConstant) or isinstance(
-                shear_obj, ShearRedshift
-            ):
-                obj, shift = shear_obj.distort_galaxy(obj, shift, z)
-            else:
+            distort_res = shear_obj.distort_galaxy(obj, shift, z)
+            # figure out if the result is from halo or constant shear 
+            if len(distort_res) == 2:
+                shear_halo = False
+                obj, shift = distort_res
+            elif len(distort_res) == 6:
                 shear_halo = True
-                obj, shift, prelensed_shift, gamma1, gamma2, kappa = (
-                    shear_obj.distort_galaxy(obj, shift, z)
-                )
+                obj, shift, prelensed_shift, gamma1, gamma2, kappa = distort_res
+            else:
+                raise ValueError("Distortion returns invalid number of values")
 
         # Deproject from u,v onto sphere. Then use wcs to get to image pos.
         world_pos = coadd_bbox_cen_gs_skypos.deproject(
@@ -666,10 +667,8 @@ def _draw_objects(
         b = stamp.bounds & image.bounds
         if b.isDefined():
             image[b] += stamp[b]
-        if shear_halo:
-            info = get_truth_info_struct(type="halo")
-        else:
-            info = get_truth_info_struct()
+            
+        info = get_truth_info_struct()
 
         info["index"] = (ind,)
         info["ra"] = world_pos.ra / galsim.degrees
@@ -685,6 +684,14 @@ def _draw_objects(
             info["gamma1"] = (gamma1,)
             info["gamma2"] = (gamma2,)
             info["kappa"] = (kappa,)
+        else:
+            info["prelensed_image_x"] = (-1,)
+            info["prelensed_image_y"] = (-1,)
+            info["prelensed_ra"] = -1
+            info["prelensed_dec"] = -1
+            info["gamma1"] = -1
+            info["gamma2"] = -1
+            info["kappa"] = -1
 
         truth_info.append(info)
 
@@ -944,7 +951,7 @@ def get_bright_info_struct():
     return np.zeros(1, dtype=dt)
 
 
-def get_truth_info_struct(type="shear"):
+def get_truth_info_struct():
     dt = [
         ("index", "i4"),
         ("ra", "f8"),
@@ -952,16 +959,13 @@ def get_truth_info_struct(type="shear"):
         ("z", "f8"),
         ("image_x", "f8"),
         ("image_y", "f8"),
-    ]
-    if type == "halo":
-        dt += [
-            ("prelensed_image_x", "f8"),
-            ("prelensed_image_y", "f8"),
-            ("prelensed_ra", "f8"),
-            ("prelensed_dec", "f8"),
-            ("kappa", "f8"),
-            ("gamma1", "f8"),
-            ("gamma2", "f8"),
+        ("prelensed_image_x", "f8"),
+        ("prelensed_image_y", "f8"),
+        ("prelensed_ra", "f8"),
+        ("prelensed_dec", "f8"),
+        ("kappa", "f8"),
+        ("gamma1", "f8"),
+        ("gamma2", "f8"),
         ]
     return np.zeros(1, dtype=dt)
 
