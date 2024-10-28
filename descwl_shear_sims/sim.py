@@ -18,7 +18,7 @@ from .masking import (
 from .objlists import get_objlist
 from .psfs import make_dm_psf
 from .wcs import make_wcs, make_dm_wcs, make_coadd_dm_wcs, make_coadd_dm_wcs_simple
-from .shear import ShearConstant, ShearRedshift
+from .shear import ShearConstant
 
 
 DEFAULT_SIM_CONFIG = {
@@ -631,7 +631,7 @@ def _draw_objects(
         if shear_obj is not None:
             shear_halo = False
             distort_res = shear_obj.distort_galaxy(obj, shift, z)
-            # figure out if the result is from halo or constant shear 
+            # figure out if the result is from halo or constant shear
             if len(distort_res) == 2:
                 shear_halo = False
                 obj, shift = distort_res
@@ -667,7 +667,6 @@ def _draw_objects(
         b = stamp.bounds & image.bounds
         if b.isDefined():
             image[b] += stamp[b]
-            
         info = get_truth_info_struct()
 
         info["index"] = (ind,)
@@ -965,8 +964,7 @@ def get_truth_info_struct():
         ("prelensed_dec", "f8"),
         ("kappa", "f8"),
         ("gamma1", "f8"),
-        ("gamma2", "f8"),
-        ]
+        ("gamma2", "f8"),]
     return np.zeros(1, dtype=dt)
 
 
