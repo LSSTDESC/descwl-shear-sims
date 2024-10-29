@@ -1,4 +1,4 @@
-from ..shear import ShearHalo, _get_shear_res_dict
+from ..shear import ShearHalo
 import galsim
 
 
