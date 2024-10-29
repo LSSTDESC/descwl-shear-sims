@@ -18,7 +18,7 @@ from .masking import (
 from .objlists import get_objlist
 from .psfs import make_dm_psf
 from .wcs import make_wcs, make_dm_wcs, make_coadd_dm_wcs, make_coadd_dm_wcs_simple
-from .shear import ShearConstant
+from .shear import ShearConstant, ShearHalo
 
 
 DEFAULT_SIM_CONFIG = {
@@ -629,17 +629,14 @@ def _draw_objects(
 
         shear_halo = False
         if shear_obj is not None:
-            shear_halo = False
             distort_res = shear_obj.distort_galaxy(obj, shift, z)
             # figure out if the result is from halo or constant shear
-            if len(distort_res) == 2:
-                shear_halo = False
-                obj, shift = distort_res
-            elif len(distort_res) == 6:
+            if isinstance(shear_obj, ShearHalo):
                 shear_halo = True
                 obj, shift, prelensed_shift, gamma1, gamma2, kappa = distort_res
             else:
-                raise ValueError("Distortion returns invalid number of values")
+                shear_halo = False
+                obj, shift = distort_res
 
         # Deproject from u,v onto sphere. Then use wcs to get to image pos.
         world_pos = coadd_bbox_cen_gs_skypos.deproject(
