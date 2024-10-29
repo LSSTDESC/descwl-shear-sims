@@ -18,7 +18,7 @@ from .masking import (
 from .objlists import get_objlist
 from .psfs import make_dm_psf
 from .wcs import make_wcs, make_dm_wcs, make_coadd_dm_wcs, make_coadd_dm_wcs_simple
-from .shear import ShearConstant, ShearHalo
+from .shear import ShearConstant
 
 
 DEFAULT_SIM_CONFIG = {
@@ -627,31 +627,30 @@ def _draw_objects(
             obj = obj.rotate(ang)
             shift = _roate_pos(shift, theta0)
 
-        shear_halo = False
         if shear_obj is not None:
-            distort_res = shear_obj.distort_galaxy(obj, shift, z)
-            # figure out if the result is from halo or constant shear
-            if isinstance(shear_obj, ShearHalo):
-                shear_halo = True
-                obj, shift, prelensed_shift, gamma1, gamma2, kappa = distort_res
-            else:
-                shear_halo = False
-                obj, shift = distort_res
+            distor_res = shear_obj.distort_galaxy(obj, shift, z)
+            obj = distor_res["gso"]
+            lensed_shift = distor_res["lensed_shift"]
+            gamma1 = distor_res["gamma1"]
+            gamma2 = distor_res["gamma2"]
+            kappa = distor_res["kappa"]
+        else:
+            lensed_shift = shift
+            gamma1, gamma2, kappa = 0.0, 0.0, 0.0
 
         # Deproject from u,v onto sphere. Then use wcs to get to image pos.
         world_pos = coadd_bbox_cen_gs_skypos.deproject(
-            shift.x * galsim.arcsec,
-            shift.y * galsim.arcsec,
+            lensed_shift.x * galsim.arcsec,
+            lensed_shift.y * galsim.arcsec,
         )
 
         image_pos = wcs.toImage(world_pos)
 
-        if shear_halo:
-            prelensed_world_pos = coadd_bbox_cen_gs_skypos.deproject(
-                prelensed_shift.x * galsim.arcsec,
-                prelensed_shift.y * galsim.arcsec,
-            )
-            prelensed_image_pos = wcs.toImage(prelensed_world_pos)
+        prelensed_world_pos = coadd_bbox_cen_gs_skypos.deproject(
+            shift.x * galsim.arcsec,
+            shift.y * galsim.arcsec,
+        )
+        prelensed_image_pos = wcs.toImage(prelensed_world_pos)
 
         local_wcs = wcs.local(image_pos=image_pos)
 
@@ -672,22 +671,13 @@ def _draw_objects(
         info["z"] = (z,)
         info["image_x"] = (image_pos.x - 1,)
         info["image_y"] = (image_pos.y - 1,)
-        if shear_halo:
-            info["prelensed_image_x"] = (prelensed_image_pos.x - 1,)
-            info["prelensed_image_y"] = (prelensed_image_pos.y - 1,)
-            info["prelensed_ra"] = prelensed_world_pos.ra / galsim.degrees
-            info["prelensed_dec"] = prelensed_world_pos.dec / galsim.degrees
-            info["gamma1"] = (gamma1,)
-            info["gamma2"] = (gamma2,)
-            info["kappa"] = (kappa,)
-        else:
-            info["prelensed_image_x"] = (-1,)
-            info["prelensed_image_y"] = (-1,)
-            info["prelensed_ra"] = -1
-            info["prelensed_dec"] = -1
-            info["gamma1"] = -1
-            info["gamma2"] = -1
-            info["kappa"] = -1
+        info["gamma1"] = (gamma1,)
+        info["gamma2"] = (gamma2,)
+        info["kappa"] = (kappa,)
+        info["prelensed_image_x"] = (prelensed_image_pos.x - 1,)
+        info["prelensed_image_y"] = (prelensed_image_pos.y - 1,)
+        info["prelensed_ra"] = (prelensed_world_pos.ra / galsim.degrees,)
+        info["prelensed_dec"] = (prelensed_world_pos.dec / galsim.degrees,)
 
         truth_info.append(info)
 

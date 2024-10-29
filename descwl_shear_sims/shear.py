@@ -59,7 +59,7 @@ class ShearConstant(object):
         shear = self.get_shear(redshift, shift)
         gso = gso.shear(shear)
         shift = shift.shear(shear)
-        return gso, shift
+        return _get_shear_res_dict(gso, shift)
 
 
 class ShearRedshift(ShearConstant):
@@ -150,7 +150,7 @@ class ShearHalo(object):
         self.pos_lens = galsim.PositionD(ra_lens, dec_lens)
         return
 
-    def distort_galaxy(self, gso, shift, redshift):
+    def distort_galaxy(self, gso, prelensed_shift, redshift):
         """This function distorts the galaxy's shape and position
         Parameters
         ---------
@@ -164,7 +164,7 @@ class ShearHalo(object):
             distorted galaxy object and shift
         """
         if redshift > self.z_lens:
-            r = shift - self.pos_lens
+            r = prelensed_shift - self.pos_lens
 
             lens_cosmo = LensCosmo(
                 z_lens=self.z_lens,
@@ -188,9 +188,24 @@ class ShearHalo(object):
             mu = 1.0 / ((1 - kappa) ** 2 - gamma1**2 - gamma2**2)
 
             if g1**2.0 + g2**2.0 > 0.95:
-                return gso, shift, shift, gamma1, gamma2, kappa
+                return _get_shear_res_dict(gso, prelensed_shift,
+                                           prelensed_shift, gamma1, gamma2,
+                                           kappa)
 
             dra, ddec = self.lens.alpha(r.x, r.y, kwargs)
             gso = gso.lens(g1=g1, g2=g2, mu=mu)
-            lensed_shift = shift + galsim.PositionD(dra, ddec)
-        return gso, lensed_shift, shift, gamma1, gamma2, kappa
+            lensed_shift = prelensed_shift + galsim.PositionD(dra, ddec)
+        return _get_shear_res_dict(gso, lensed_shift, gamma1, gamma2,
+                                   kappa)
+
+
+def _get_shear_res_dict(gso, lensed_shift,
+                        gamma1=-1, gamma2=-1, kappa=-1):
+    shear_res_dict = {
+        "gso": gso,
+        "lensed_shift": lensed_shift,
+        "gamma1": gamma1,
+        "gamma2": gamma2,
+        "kappa": kappa,
+    }
+    return shear_res_dict
