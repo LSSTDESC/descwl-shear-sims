@@ -11,7 +11,7 @@ def test_shear_halo():
     z_source = 1.0
     ra_lens, dec_lens = 0.0, 0.0
 
-    shear_halo = ShearHalo(mass=mass, conc=conc, z_lens=z_lens)
+    shear_halo = ShearHalo(mass=mass, conc=conc, z_lens=z_lens, ra_lens=ra_lens, dec_lens=dec_lens)
     gso = galsim.Gaussian(sigma=1)
     input_shift = galsim.PositionD(1, 0)
     gso, lensed_shift, shift, gamma1, gamma2, kappa = shear_halo.distort_galaxy(gso, input_shift, z_source)
@@ -25,7 +25,7 @@ def test_shear_halo():
     gso = galsim.Gaussian(sigma=1)
     input_shift = galsim.PositionD(1, 0)
     gso, lensed_shift, shift, gamma1, gamma2, kappa = shear_halo_no_kappa.distort_galaxy(gso, input_shift, z_source)
-    
-    assert kappa ==0, "Kappa should be zero for ShearHalo with no_kappa=True"
-    
+
+    assert kappa == 0, "Kappa should be zero for ShearHalo with no_kappa=True"
+
     return

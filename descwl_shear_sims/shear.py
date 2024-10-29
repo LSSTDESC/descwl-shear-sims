@@ -113,6 +113,8 @@ class ShearRedshift(ShearConstant):
 
         shear_obj = galsim.Shear(g1=gamma1, g2=gamma2)
         return shear_obj
+
+
 class ShearHalo(object):
     def __init__(
         self,
