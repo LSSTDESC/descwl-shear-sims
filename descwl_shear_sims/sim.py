@@ -628,15 +628,30 @@ def _draw_objects(
             shift = _roate_pos(shift, theta0)
 
         if shear_obj is not None:
-            obj, shift = shear_obj.distort_galaxy(obj, shift, z)
+            distor_res = shear_obj.distort_galaxy(obj, shift, z)
+            obj = distor_res["gso"]
+            lensed_shift = distor_res["lensed_shift"]
+            gamma1 = distor_res["gamma1"]
+            gamma2 = distor_res["gamma2"]
+            kappa = distor_res["kappa"]
+        else:
+            lensed_shift = shift
+            gamma1, gamma2, kappa = 0.0, 0.0, 0.0
 
         # Deproject from u,v onto sphere. Then use wcs to get to image pos.
         world_pos = coadd_bbox_cen_gs_skypos.deproject(
-            shift.x * galsim.arcsec,
-            shift.y * galsim.arcsec,
+            lensed_shift.x * galsim.arcsec,
+            lensed_shift.y * galsim.arcsec,
         )
 
         image_pos = wcs.toImage(world_pos)
+
+        prelensed_world_pos = coadd_bbox_cen_gs_skypos.deproject(
+            shift.x * galsim.arcsec,
+            shift.y * galsim.arcsec,
+        )
+        prelensed_image_pos = wcs.toImage(prelensed_world_pos)
+
         local_wcs = wcs.local(image_pos=image_pos)
 
         convolved_object = get_convolved_object(obj, psf, image_pos)
@@ -648,14 +663,21 @@ def _draw_objects(
         b = stamp.bounds & image.bounds
         if b.isDefined():
             image[b] += stamp[b]
-
         info = get_truth_info_struct()
+
         info["index"] = (ind,)
         info["ra"] = world_pos.ra / galsim.degrees
         info["dec"] = world_pos.dec / galsim.degrees
         info["z"] = (z,)
         info["image_x"] = (image_pos.x - 1,)
         info["image_y"] = (image_pos.y - 1,)
+        info["gamma1"] = (gamma1,)
+        info["gamma2"] = (gamma2,)
+        info["kappa"] = (kappa,)
+        info["prelensed_image_x"] = (prelensed_image_pos.x - 1,)
+        info["prelensed_image_y"] = (prelensed_image_pos.y - 1,)
+        info["prelensed_ra"] = (prelensed_world_pos.ra / galsim.degrees,)
+        info["prelensed_dec"] = (prelensed_world_pos.dec / galsim.degrees,)
 
         truth_info.append(info)
 
@@ -923,7 +945,13 @@ def get_truth_info_struct():
         ("z", "f8"),
         ("image_x", "f8"),
         ("image_y", "f8"),
-    ]
+        ("prelensed_image_x", "f8"),
+        ("prelensed_image_y", "f8"),
+        ("prelensed_ra", "f8"),
+        ("prelensed_dec", "f8"),
+        ("kappa", "f8"),
+        ("gamma1", "f8"),
+        ("gamma2", "f8"),]
     return np.zeros(1, dtype=dt)
 
 
