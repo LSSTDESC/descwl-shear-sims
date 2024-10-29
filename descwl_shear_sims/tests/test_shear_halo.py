@@ -19,7 +19,6 @@ def test_shear_halo():
     distor_res = \
         shear_halo.distort_galaxy(gso, input_shift, z_source)
 
-    obj = distor_res["gso"]
     lensed_shift = distor_res["lensed_shift"]
     gamma1 = distor_res["gamma1"]
     gamma2 = distor_res["gamma2"]
@@ -34,7 +33,7 @@ def test_shear_halo():
                                     z_lens=z_lens, no_kappa=True)
     distor_res_no_kappa = \
         shear_halo_no_kappa.distort_galaxy(gso, input_shift, z_source)
-        
+
     kappa = distor_res_no_kappa["kappa"]
 
     assert kappa == 0, "Kappa should be zero for ShearHalo with no_kappa=True"
