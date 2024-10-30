@@ -164,3 +164,29 @@ class BasicSurvey(object):
         get the flux for the input mag using the standard zero point
         """
         return 10**(0.4 * (ZERO_POINT - mag))
+
+## this is minimally implemented for now and will evolve
+class AugmentedSurvey(BasicSurvey):
+    """
+    similar as BasicSurvey with augmented attributes with common interface.
+    Note, this is for calibrated images with magnitude zero point set to
+    ZERO_POINT = 30 (see the constant.py file)
+
+    Parameters
+    ----------
+    band: str
+        e.g. 'r' (lsst) 'H158' (roman)
+    name: str
+        survey name -- e.g. "lsst" or "roman" 
+        (should be lowercase for these two)
+    pixel_scale: float
+        pixel scale
+    noise: float
+        noise level in the flux unit
+    """
+    def __init__(self, *, band, name, pixel_scale, noise):
+        self.band = band
+        self.name = name
+        self.noise = noise
+        self.filter_band = band
+        self.pixel_scale: float = pixel_scale

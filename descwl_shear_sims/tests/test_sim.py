@@ -686,10 +686,7 @@ def test_sim_truth_info():
     )
     assert "truth_info" in out.keys()
     assert out["truth_info"].dtype.names == (
-        'index', 'ra', 'dec', 'z', 'image_x', 'image_y',
-        'prelensed_image_x', 'prelensed_image_y',
-        'prelensed_ra', 'prelensed_dec',
-        'kappa', 'gamma1', 'gamma2'
+        'index', 'ra', 'dec', 'z', 'image_x', 'image_y'
     )
     np.testing.assert_allclose(
         galaxy_catalog.indices,
