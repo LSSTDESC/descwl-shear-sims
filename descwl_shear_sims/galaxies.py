@@ -53,7 +53,7 @@ def make_galaxy_catalog(
         Separation of pair in arcsec for layout='pair'
     """
 
-    if layout is None and gal_type == 'wldeblend':
+    if layout is None and ((gal_type == 'wldeblend')|(gal_type=='ou2024rubinroman')):
         layout = 'random'
 
     if isinstance(layout, str):
@@ -92,6 +92,13 @@ def make_galaxy_catalog(
                 rng=rng,
                 layout=layout,
             )
+
+        elif gal_type =='ou2024rubinroman':
+            galaxy_catalog = OpenUniverse2024RubinRomanCatalog(
+                rng=rng,
+                layout=layout,
+            )
+
         elif gal_type in ['fixed', 'varying', 'exp']:  # TODO remove exp
             gal_config = get_fixed_gal_config(config=gal_config)
 
@@ -845,7 +852,7 @@ class OpenUniverse2024RubinRomanCatalog(object):
         select_lower_limit=None,
         select_upper_limit=None,
     ):
-        self.gal_type = 'rubinroman'
+        self.gal_type = 'ou2024rubinroman'
         self.rng = rng
 
         self._ou2024rubinroman_cat, self.sed_cat, self.mask = read_ou2024rubinroman_cat(
@@ -914,7 +921,6 @@ class OpenUniverse2024RubinRomanCatalog(object):
         shifts = []
         redshifts = []
         for i in range(len(self)):
-            print(len(self),i)
             objlist.append(self._get_galaxy(survey, i))
             shifts.append(galsim.PositionD(sarray['dx'][i], sarray['dy'][i]))
             index = self.indices[i]
