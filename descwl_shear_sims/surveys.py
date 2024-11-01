@@ -33,6 +33,14 @@ def get_survey(*, gal_type, band, survey_name="LSST"):
         survey = WLDeblendSurvey(band=band, survey_name=survey_name)
     elif gal_type in ['fixed', 'varying']:
         survey = BasicSurvey(band=band)
+    elif gal_type == "ou2024rubinroman":
+        # TODO: need changes
+        survey = AugmentedSurvey(
+            band=band,
+            name=survey_name.lower(),
+            pixel_scale=SCALE,
+            noise=0.23,
+        )
     else:
         raise ValueError("bad gal_type: '%s'" % gal_type)
 
@@ -165,7 +173,7 @@ class BasicSurvey(object):
         """
         return 10**(0.4 * (ZERO_POINT - mag))
 
-## this is minimally implemented for now and will evolve
+
 class AugmentedSurvey(BasicSurvey):
     """
     similar as BasicSurvey with augmented attributes with common interface.
@@ -177,7 +185,7 @@ class AugmentedSurvey(BasicSurvey):
     band: str
         e.g. 'r' (lsst) 'H158' (roman)
     name: str
-        survey name -- e.g. "lsst" or "roman" 
+        survey name -- e.g. "lsst" or "roman"
         (should be lowercase for these two)
     pixel_scale: float
         pixel scale
