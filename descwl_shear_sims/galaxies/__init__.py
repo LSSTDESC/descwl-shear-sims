@@ -9,6 +9,7 @@ from .FixedGalaxy import (
 )
 from .skyCatalog import OpenUniverse2024RubinRomanCatalog
 from .WLDeblendGalaxy import WLDeblendGalaxyCatalog
+from .utils import _prepare_rubinroman_catalog
 
 
 def make_galaxy_catalog(
@@ -26,7 +27,7 @@ def make_galaxy_catalog(
     rng: numpy.random.RandomState
         Numpy random state
     gal_type: string
-        'fixed', 'varying', 'wldeblend' or 'roman_ou2024'
+        'fixed', 'varying', 'wldeblend' or 'ou2024rubinroman'
     coadd_dim: int
         Dimensions of coadd
     buff: int, optional

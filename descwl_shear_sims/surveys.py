@@ -186,7 +186,7 @@ class AugmentedSurvey(BasicSurvey):
         e.g. 'r' (lsst) 'H158' (roman)
     name: str
         survey name -- e.g. "lsst" or "roman"
-        (should be lowercase for these two)
+        (should be lowercase)
     pixel_scale: float
         pixel scale
     noise: float
