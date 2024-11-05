@@ -1,6 +1,6 @@
 import numpy as np
 import descwl
-from .constants import SCALE, ZERO_POINT
+from .constants import SCALE, SCALE_ROMAN_COADD, ZERO_POINT
 
 DEFAULT_SURVEY_BANDS = {
     "LSST": "r",
@@ -8,6 +8,7 @@ DEFAULT_SURVEY_BANDS = {
     "DES": "r",
     "Euclid": "VIS",
     "CFHT": "i",
+    "Roman": "H158",
 }
 
 
@@ -18,9 +19,9 @@ def get_survey(*, gal_type, band, survey_name="LSST"):
     Parameters
     ----------
     gal_type: string
-        'fixed', 'varying', or 'wldeblend'
+        'fixed', 'varying', 'wldeblend' or 'ou2024rubinroman'
     band: string
-        e.g. 'r'
+        e.g. 'r' (for LSST), 'H158' (for Roman)
     survey_name: string
         The name of the survey, e.g., LSST, HSC
 
@@ -34,11 +35,15 @@ def get_survey(*, gal_type, band, survey_name="LSST"):
     elif gal_type in ['fixed', 'varying']:
         survey = BasicSurvey(band=band)
     elif gal_type == "ou2024rubinroman":
-        # TODO: need changes
+        # TODO: need changes including noise realization
+        if survey_name == "LSST":
+            pixel_scale = SCALE
+        if survey_name == "Roman":
+            pixel_scale = SCALE_ROMAN_COADD
         survey = AugmentedSurvey(
             band=band,
             name=survey_name.lower(),
-            pixel_scale=SCALE,
+            pixel_scale=pixel_scale,
             noise=0.23,
         )
     else:
