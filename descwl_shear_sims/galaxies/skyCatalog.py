@@ -142,6 +142,34 @@ class OpenUniverse2024RubinRomanCatalog(object):
             "indexes": indexes,
         }
 
+    def _resize_dimension(self, 
+        *, 
+        new_coadd_dim, 
+        new_buff, 
+        new_pixel_scale, 
+        new_layout="random"
+    ):
+        """
+        resize the pixel scale,
+        preserving all the galaxy properties
+
+        Parameters
+        ----------
+        new_coadd_dim: int
+        new coadd dimension
+
+        new_buff: int
+        new buffer length
+
+        new_pixel_scale: float
+        new pixel scale
+        """
+        self.layout = Layout(new_layout, 
+            new_coadd_dim, 
+            new_buff, 
+            new_pixel_scale
+        )
+
     def _get_galaxy(self, survey, i):
         """
         Get a galaxy

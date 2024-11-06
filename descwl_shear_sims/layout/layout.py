@@ -70,9 +70,14 @@ class Layout(object):
                     'hex', 'grid' or 'pair'!")
         self.coadd_dim = coadd_dim
         self.buff = buff
+        # How should we control xoff, yoff and paddings properly?
+        # For now, I set it to zero (Tae)
         self.wcs, self.bbox = make_coadd_dm_wcs(
             coadd_dim,
             pixel_scale=pixel_scale,
+            big_coadd_dim_padding=0,
+            xoff=0, 
+            yoff=0,
         )
         return
 

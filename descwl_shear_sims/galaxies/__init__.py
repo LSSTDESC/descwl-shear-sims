@@ -89,6 +89,9 @@ def make_galaxy_catalog(
             galaxy_catalog = OpenUniverse2024RubinRomanCatalog(
                 rng=rng,
                 layout=layout,
+                coadd_dim=coadd_dim,
+                buff=buff,
+                pixel_scale=pixel_scale,
             )
         elif gal_type in ['fixed', 'varying', 'exp']:  # TODO remove exp
             gal_config = get_fixed_gal_config(config=gal_config)
