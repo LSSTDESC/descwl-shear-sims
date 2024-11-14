@@ -1,5 +1,5 @@
 # descwl-shear-sims
-[![Build Status](https://travis-ci.com/LSSTDESC/descwl-shear-sims.svg?branch=master)](https://travis-ci.com/LSSTDESC/descwl-shear-sims) [![shear-meas-tests](https://github.com/LSSTDESC/descwl-shear-sims/actions/workflows/shear_meas_tests.yml/badge.svg)](https://github.com/LSSTDESC/descwl-shear-sims/actions/workflows/shear_meas_tests.yml)
+[![tests](https://github.com/LSSTDESC/descwl-shear-sims/actions/workflows/test.yml/badge.svg)](https://github.com/LSSTDESC/descwl-shear-sims/actions/workflows/test.yml) [![shear-meas-tests](https://github.com/LSSTDESC/descwl-shear-sims/actions/workflows/shear_meas_tests.yml/badge.svg)](https://github.com/LSSTDESC/descwl-shear-sims/actions/workflows/shear_meas_tests.yml)
 
 Simulations for testing weak lensing shear measurement
 
