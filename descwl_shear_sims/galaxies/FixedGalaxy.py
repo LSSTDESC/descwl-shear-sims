@@ -68,18 +68,20 @@ class FixedGalaxyCatalog(object):
     pixel_scale: float, optional
         pixel scale in arcsec
     """
+
     def __init__(
-        self, *,
+        self,
+        *,
         rng,
         mag,
         hlr,
-        morph='exp',
+        morph="exp",
         layout=None,
         coadd_dim=None,
         buff=0,
         pixel_scale=SCALE,
     ):
-        self.gal_type = 'fixed'
+        self.gal_type = "fixed"
         self.morph = morph
         self.mag = mag
         self.hlr = hlr
@@ -120,7 +122,7 @@ class FixedGalaxyCatalog(object):
         redshifts = None
         for i in range(len(self)):
             objlist.append(self._get_galaxy(flux))
-            shifts.append(galsim.PositionD(sarray['dx'][i], sarray['dy'][i]))
+            shifts.append(galsim.PositionD(sarray["dx"][i], sarray["dy"][i]))
 
         return {
             "objlist": objlist,
@@ -143,13 +145,13 @@ class FixedGalaxyCatalog(object):
         galsim.GSObject
         """
 
-        if self.morph == 'exp':
+        if self.morph == "exp":
             gal = _generate_exp(hlr=self.hlr, flux=flux)
-        elif self.morph == 'dev':
+        elif self.morph == "dev":
             gal = _generate_dev(hlr=self.hlr, flux=flux)
-        elif self.morph == 'bd':
+        elif self.morph == "bd":
             gal = _generate_bd(hlr=self.hlr, flux=flux)
-        elif self.morph == 'bdk':
+        elif self.morph == "bdk":
             gal = _generate_bdk(hlr=self.hlr, flux=flux)
         else:
             raise ValueError(f"bad gal type '{self.morph}'")
@@ -188,12 +190,14 @@ class GalaxyCatalog(FixedGalaxyCatalog):
     pixel_scale: float
         pixel scale in arcsec
     """
+
     def __init__(
-        self, *,
+        self,
+        *,
         rng,
         mag,
         hlr,
-        morph='exp',
+        morph="exp",
         layout=None,
         coadd_dim=None,
         buff=0,
@@ -209,7 +213,7 @@ class GalaxyCatalog(FixedGalaxyCatalog):
             hlr=hlr,
             morph=morph,
         )
-        self.gal_type = 'varying'
+        self.gal_type = "varying"
 
         # we use this to ensure the same galaxies are generated in different
         # bands
@@ -249,24 +253,34 @@ class GalaxyCatalog(FixedGalaxyCatalog):
         galsim.GSObject
         """
 
-        if self.morph == 'exp':
+        if self.morph == "exp":
             gal = _generate_exp(
-                hlr=self.hlr, flux=flux, vary=True, rng=self._morph_rng,
-            )
-        elif self.morph == 'dev':
-            gal = _generate_dev(
-                hlr=self.hlr, flux=flux, vary=True, rng=self._morph_rng,
-            )
-        elif self.morph == 'bd':
-            gal = _generate_bd(
-                hlr=self.hlr, flux=flux,
-                vary=True, rng=self._morph_rng,
-            )
-        elif self.morph == 'bdk':
-            gal = _generate_bdk(
-                hlr=self.hlr, flux=flux,
+                hlr=self.hlr,
+                flux=flux,
                 vary=True,
-                rng=self._morph_rng, gsrng=self._gs_morph_rng,
+                rng=self._morph_rng,
+            )
+        elif self.morph == "dev":
+            gal = _generate_dev(
+                hlr=self.hlr,
+                flux=flux,
+                vary=True,
+                rng=self._morph_rng,
+            )
+        elif self.morph == "bd":
+            gal = _generate_bd(
+                hlr=self.hlr,
+                flux=flux,
+                vary=True,
+                rng=self._morph_rng,
+            )
+        elif self.morph == "bdk":
+            gal = _generate_bdk(
+                hlr=self.hlr,
+                flux=flux,
+                vary=True,
+                rng=self._morph_rng,
+                gsrng=self._gs_morph_rng,
             )
         else:
             raise ValueError(f"bad morph '{self.morph}'")
@@ -294,11 +308,12 @@ def _generate_dev(hlr, flux, vary=False, rng=None):
 
 
 def _generate_bd(
-    hlr, flux,
+    hlr,
+    flux,
     vary=False,
     rng=None,
     max_bulge_shift_frac=0.1,  # fraction of hlr
-    max_bulge_rot=np.pi/4,
+    max_bulge_rot=np.pi / 4,
 ):
 
     if vary:
@@ -306,7 +321,7 @@ def _generate_bd(
     else:
         bulge_frac = 0.5
 
-    disk_frac = (1.0 - bulge_frac)
+    disk_frac = 1.0 - bulge_frac
 
     bulge = DeVaucouleurs(half_light_radius=hlr, flux=flux * bulge_frac)
     disk = Exponential(half_light_radius=hlr, flux=flux * disk_frac)
@@ -328,14 +343,15 @@ def _generate_bd(
 
 
 def _generate_bdk(
-    hlr, flux,
+    hlr,
+    flux,
     vary=False,
     rng=None,
     gsrng=None,
     knots_hlr_frac=0.25,
     max_knots_disk_frac=0.1,  # fraction of disk light
     max_bulge_shift_frac=0.1,  # fraction of hlr
-    max_bulge_rot=np.pi/4,
+    max_bulge_rot=np.pi / 4,
 ):
 
     if vary:
@@ -343,7 +359,7 @@ def _generate_bdk(
     else:
         bulge_frac = 0.5
 
-    all_disk_frac = (1.0 - bulge_frac)
+    all_disk_frac = 1.0 - bulge_frac
 
     knots_hlr = knots_hlr_frac * hlr
     if vary:
@@ -386,12 +402,12 @@ def _generate_bdk(
 
 
 def _generate_bulge_frac(rng):
-    assert rng is not None, 'send rng to generate bulge fraction'
+    assert rng is not None, "send rng to generate bulge fraction"
     return rng.uniform(low=0.0, high=1.0)
 
 
 def _generate_g1g2(rng, std=0.2):
-    assert rng is not None, 'send rng to vary shape'
+    assert rng is not None, "send rng to vary shape"
     while True:
         g1, g2 = rng.normal(scale=std, size=2)
         g = np.sqrt(g1**2 + g2**2)
@@ -402,8 +418,8 @@ def _generate_g1g2(rng, std=0.2):
 
 
 def _generate_bulge_shift(rng, hlr, max_bulge_shift_frac):
-    bulge_shift = rng.uniform(low=0.0, high=max_bulge_shift_frac*hlr)
-    bulge_shift_angle = rng.uniform(low=0, high=2*np.pi)
+    bulge_shift = rng.uniform(low=0.0, high=max_bulge_shift_frac * hlr)
+    bulge_shift_angle = rng.uniform(low=0, high=2 * np.pi)
     bulge_shiftx = bulge_shift * np.cos(bulge_shift_angle)
     bulge_shifty = bulge_shift * np.sin(bulge_shift_angle)
 
@@ -412,14 +428,16 @@ def _generate_bulge_shift(rng, hlr, max_bulge_shift_frac):
 
 def _shift_bulge(rng, bulge, hlr, max_bulge_shift_frac):
     bulge_shiftx, bulge_shifty = _generate_bulge_shift(
-        rng, hlr, max_bulge_shift_frac,
+        rng,
+        hlr,
+        max_bulge_shift_frac,
     )
     return bulge.shift(bulge_shiftx, bulge_shifty)
 
 
 def _rotate_bulge(rng, max_bulge_rot, g1, g2):
-    assert rng is not None, 'send rng to rotate bulge'
-    bulge_rot = rng.uniform(low=-max_bulge_rot, high=max_bulge_rot/4)
+    assert rng is not None, "send rng to rotate bulge"
+    bulge_rot = rng.uniform(low=-max_bulge_rot, high=max_bulge_rot / 4)
     return _rotate_shape(g1, g2, bulge_rot)
 
 
@@ -435,7 +453,7 @@ def _rotate_shape(g1, g2, theta_radians):
 
 
 def _generate_knots_sub_frac(rng, max_knots_disk_frac):
-    assert rng is not None, 'send rng to generate knots sub frac'
+    assert rng is not None, "send rng to generate knots sub frac"
     return rng.uniform(low=0.0, high=max_knots_disk_frac)
 
 
@@ -463,8 +481,9 @@ class FixedPairGalaxyCatalog(FixedGalaxyCatalog):
     morph: str
         Galaxy morphology, 'exp', 'dev' or 'bd', 'bdk'.  Default 'exp'
     """
-    def __init__(self, *, rng, mag, hlr, sep, morph='exp'):
-        self.gal_type = 'fixed'
+
+    def __init__(self, *, rng, mag, hlr, sep, morph="exp"):
+        self.gal_type = "fixed"
         self.morph = morph
         self.mag = mag
         self.hlr = hlr
@@ -501,8 +520,9 @@ class PairGalaxyCatalog(GalaxyCatalog):
     morph: str
         Galaxy morphology, 'exp', 'dev' or 'bd', 'bdk'.  Default 'exp'
     """
-    def __init__(self, *, rng, mag, hlr, sep, morph='exp'):
-        self.gal_type = 'varying'
+
+    def __init__(self, *, rng, mag, hlr, sep, morph="exp"):
+        self.gal_type = "varying"
         self.morph = morph
         self.mag = mag
         self.hlr = hlr

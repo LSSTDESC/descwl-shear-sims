@@ -1,9 +1,6 @@
 import os
 import galsim
-from galsim import roman
 import numpy as np
-import pyarrow as pa
-from tqdm import tqdm
 
 from ..constants import SCALE
 from ..layout import Layout
@@ -46,16 +43,11 @@ class OpenUniverse2024RubinRomanCatalog(object):
         select_observable=None,
         select_lower_limit=None,
         select_upper_limit=None,
-        build_from_sed=False,
     ):
         self.gal_type = "ou2024rubinroman"
         self.rng = rng
-        self.build_from_sed = build_from_sed
 
-        (
-            self._ou2024rubinroman_cat,
-            self.sed_cat,
-        ) = read_ou2024rubinroman_cat(
+        self._ou2024rubinroman_cat = read_ou2024rubinroman_cat(
             select_observable=select_observable,
             select_lower_limit=select_lower_limit,
             select_upper_limit=select_upper_limit,
@@ -66,7 +58,7 @@ class OpenUniverse2024RubinRomanCatalog(object):
             60.0**2 * (180.0 / np.pi) ** 2 * 4.0 * np.pi / (12.0 * 32.0**2)
         )
         density = len(self._ou2024rubinroman_cat) / area_tot_arcmin
-        
+
         if isinstance(layout, str):
             self.layout = Layout(layout, coadd_dim, buff, pixel_scale)
         else:
@@ -105,22 +97,6 @@ class OpenUniverse2024RubinRomanCatalog(object):
         [galsim objects], [shifts], [redshifts], [indexes]
         """
 
-        if self.build_from_sed:
-            # Define galsim bandpass object
-            if survey.name == "roman":
-                filters = roman.getBandpasses(AB_zeropoint=True)
-                self.bandpass = filters[survey.band]
-            elif survey.name == "lsst":
-                fname_bandpass = os.path.join(
-                    os.environ.get("CATSIM_DIR", "."),
-                    f"LSST_{survey.band}.dat",
-                )
-                self.bandpass = galsim.Bandpass(
-                    fname_bandpass, wave_type="nm"
-                ).withZeropoint('AB')
-            else:
-                raise ValueError("survey name not supported")
-
         sarray = self.shifts_array
         indexes = []
         objlist = []
@@ -131,9 +107,7 @@ class OpenUniverse2024RubinRomanCatalog(object):
             shifts.append(galsim.PositionD(sarray["dx"][i], sarray["dy"][i]))
             index = self.indices[i]
             indexes.append(index)
-            redshifts.append(
-                self._ou2024rubinroman_cat["redshift"][index].as_py()
-            )
+            redshifts.append(self._ou2024rubinroman_cat["redshift"][index].as_py())
 
         return {
             "objlist": objlist,
@@ -142,12 +116,8 @@ class OpenUniverse2024RubinRomanCatalog(object):
             "indexes": indexes,
         }
 
-    def _resize_dimension(self, 
-        *, 
-        new_coadd_dim, 
-        new_buff, 
-        new_pixel_scale, 
-        new_layout="random"
+    def _resize_dimension(
+        self, *, new_coadd_dim, new_buff, new_pixel_scale, new_layout="random"
     ):
         """
         resize the pixel scale,
@@ -156,18 +126,16 @@ class OpenUniverse2024RubinRomanCatalog(object):
         Parameters
         ----------
         new_coadd_dim: int
-        new coadd dimension
+            new coadd dimension
 
         new_buff: int
-        new buffer length
+            new buffer length
 
         new_pixel_scale: float
-        new pixel scale
+            new pixel scale
         """
-        self.layout = Layout(new_layout, 
-            new_coadd_dim, 
-            new_buff, 
-            new_pixel_scale
+        self.layout = Layout(
+            new_layout, new_coadd_dim, new_buff, new_pixel_scale,
         )
 
     def _get_galaxy(self, survey, i):
@@ -188,39 +156,22 @@ class OpenUniverse2024RubinRomanCatalog(object):
         index = self.indices[i]
         entry = self._ou2024rubinroman_cat.slice(index, 1)
 
-        if self.build_from_sed:
-            # From the SED data, read the SED for the galaxy.
-            # Note that how SEDs are stored can be a bit confusing.
-            gal_id = str(self.gal_ids[index])
-            f_sed = self.sed_cat["galaxy"][str(int(gal_ids[index])//100000)][gal_id][()]
-            wave_list = self.sed_cat["meta"]["wave_list"][()]
-            galaxy = _generate_rubinroman_galaxies(
-                self.rng,
-                survey=survey,
-                entry=entry,
-                f_sed=f_sed,
-                wave_list=wave_list,
-                bandpass=self.bandpass,
-                build_from_sed=True,
-            )
-        else:
-            galaxy = _generate_rubinroman_galaxies(
-                self.rng,
-                survey=survey,
-                entry=entry,
-            )
+        galaxy = _generate_rubinroman_galaxies(
+            self.rng,
+            survey=survey,
+            entry=entry,
+        )
         return galaxy
 
 
 def _generate_rubinroman_galaxies(
-    rng, 
+    rng,
     *,
-    survey, 
-    entry, 
-    f_sed = None, 
-    wave_list = None, 
-    bandpass = None, 
-    build_from_sed=False
+    survey,
+    entry,
+    f_sed=None,
+    wave_list=None,
+    bandpass=None,
 ):
     """
     Generate a GSObject from an entry
@@ -238,9 +189,6 @@ def _generate_rubinroman_galaxies(
         List of wavelengths corresponding to f_sed
     bandpass: galsim bandpass object
         Bandpass corresponding to this simulation
-    build_from_sed: bool
-        whether want to build galaxies out of SED (slow)
-        if False, it generate a random bulge fraction
 
     Returns
     -------
@@ -263,45 +211,15 @@ def _generate_rubinroman_galaxies(
     mag = np.array(entry[sname + "_mag_" + band])[0]
     flux = survey.get_flux(mag)
 
-    if build_from_sed:
-        redshift = np.array(entry["redshift"])[0]
-        # set up bulge and disk for sed
-        bulge_lookup = galsim.LookupTable(x=wave_list, f=f_sed[0])
-        disk_lookup = galsim.LookupTable(x=wave_list, f=f_sed[1])
-        knots_lookup = galsim.LookupTable(x=wave_list, f=f_sed[2])
-        bulge_sed = galsim.SED(
-            bulge_lookup, wave_type="Ang", flux_type="fnu", redshift=redshift
-        )
-        disk_sed = galsim.SED(
-            disk_lookup, wave_type="Ang", flux_type="fnu", redshift=redshift
-        )
-        knots_sed = galsim.SED(
-            knots_lookup, wave_type="Ang", flux_type="fnu", redshift=redshift
-        )
-
-        # light profile
-        bulge = galsim.Sersic(4, half_light_radius=bulge_hlr).shear(
-            e1=bulge_e1, e2=bulge_e2,
-        )
-        disk = galsim.Sersic(1, half_light_radius=disk_hlr).shear(
-            e1=disk_e1, e2=disk_e2,
-        )
-
-        # Make galaxy object. Note that we are not drawing with knots,
-        # so we add the knots' SED to the
-        # disk SED to preserve the correct flux.
-        gal = bulge * bulge_sed + disk * (disk_sed + knots_sed)
-        gal = gal.withFlux(flux, bandpass)
-    else:
-        bulge_frac = np.array(entry[sname + "_bulgefrac_" + band])[0]
-        bulge = galsim.Sersic(
-            4, half_light_radius=bulge_hlr, flux=flux * bulge_frac
-        ).shear(e1=bulge_e1, e2=bulge_e2)
-        disk = galsim.Sersic(
-            1, half_light_radius=disk_hlr, flux=flux * (1.0 - bulge_frac)
-        ).shear(e1=disk_e1, e2=disk_e2)
-        gal = bulge + disk
-        gal = gal.withFlux(flux)
+    bulge_frac = np.array(entry[sname + "_bulgefrac_" + band])[0]
+    bulge = galsim.Sersic(
+        4, half_light_radius=bulge_hlr, flux=flux * bulge_frac
+    ).shear(e1=bulge_e1, e2=bulge_e2)
+    disk = galsim.Sersic(
+        1, half_light_radius=disk_hlr, flux=flux * (1.0 - bulge_frac)
+    ).shear(e1=disk_e1, e2=disk_e2)
+    gal = bulge + disk
+    gal = gal.withFlux(flux)
     return gal
 
 
@@ -329,16 +247,10 @@ def read_ou2024rubinroman_cat(
     # galaxy catalog
     fname = os.path.join(
         os.environ.get("CATSIM_DIR", "."),
-        "galaxy_combined_10307.parquet",
+        "rubinroman_nside32_10307.parquet",
     )
 
-    fname_sed = os.path.join(
-        os.environ.get("CATSIM_DIR", "."),
-        "galaxy_sed_10307.hdf5",
-    )
     cat = cached_catalog_read(fname, format="parquet")
-    cat_sed = cached_catalog_read(fname_sed, format="h5py")
-
     if select_observable is not None:
         select_observable = np.atleast_1d(select_observable)
         if not set(select_observable) < set(cat.column_names):
@@ -355,5 +267,5 @@ def read_ou2024rubinroman_cat(
             for nn, ul in zip(select_observable, select_upper_limit):
                 mask = mask & (cat[nn] <= ul)
         cat = cat[mask]
-    
-    return cat, cat_sed
+
+    return cat

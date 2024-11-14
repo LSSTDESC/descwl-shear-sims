@@ -76,7 +76,7 @@ class Layout(object):
             coadd_dim,
             pixel_scale=pixel_scale,
             big_coadd_dim_padding=0,
-            xoff=0, 
+            xoff=0,
             yoff=0,
         )
         return

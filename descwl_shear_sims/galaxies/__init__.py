@@ -3,13 +3,14 @@ from ..layout import Layout
 from .FixedGalaxy import (
     FixedGalaxyCatalog,
     FixedPairGalaxyCatalog,
-    GalaxyCatalog, PairGalaxyCatalog,
+    GalaxyCatalog,
+    PairGalaxyCatalog,
     get_fixed_gal_config,
     DEFAULT_FIXED_GAL_CONFIG,
 )
 from .skyCatalog import OpenUniverse2024RubinRomanCatalog
 from .WLDeblendGalaxy import WLDeblendGalaxyCatalog
-from .utils import _prepare_rubinroman_catalog
+from .utils import prepare_rubinroman_catalog
 
 
 def make_galaxy_catalog(
@@ -45,10 +46,8 @@ def make_galaxy_catalog(
         Separation of pair in arcsec for layout='pair'
     """
 
-    if (layout is None) and (
-        gal_type in ['wldeblend', 'ou2024rubinroman']
-    ):
-        layout = 'random'
+    if (layout is None) and (gal_type in ["wldeblend", "ou2024rubinroman"]):
+        layout = "random"
 
     if isinstance(layout, str):
         layout = Layout(
@@ -60,32 +59,30 @@ def make_galaxy_catalog(
     else:
         assert isinstance(layout, Layout)
 
-    if layout.layout_name == 'pair':
+    if layout.layout_name == "pair":
         if sep is None:
-            raise ValueError(
-                f'send sep= for gal_type {gal_type} and layout {layout}'
-            )
+            raise ValueError(f"send sep= for gal_type {gal_type} and layout {layout}")
         gal_config = get_fixed_gal_config(config=gal_config)
 
-        if gal_type in ['fixed', 'exp']:  # TODO remove exp
+        if gal_type in ["fixed", "exp"]:  # TODO remove exp
             cls = FixedPairGalaxyCatalog
         else:
             cls = PairGalaxyCatalog
 
         galaxy_catalog = cls(
             rng=rng,
-            mag=gal_config['mag'],
-            hlr=gal_config['hlr'],
-            morph=gal_config['morph'],
+            mag=gal_config["mag"],
+            hlr=gal_config["hlr"],
+            morph=gal_config["morph"],
             sep=sep,
         )
     else:
-        if gal_type == 'wldeblend':
+        if gal_type == "wldeblend":
             galaxy_catalog = WLDeblendGalaxyCatalog(
                 rng=rng,
                 layout=layout,
             )
-        elif gal_type == 'ou2024rubinroman':
+        elif gal_type == "ou2024rubinroman":
             galaxy_catalog = OpenUniverse2024RubinRomanCatalog(
                 rng=rng,
                 layout=layout,
@@ -93,19 +90,19 @@ def make_galaxy_catalog(
                 buff=buff,
                 pixel_scale=pixel_scale,
             )
-        elif gal_type in ['fixed', 'varying', 'exp']:  # TODO remove exp
+        elif gal_type in ["fixed", "varying", "exp"]:  # TODO remove exp
             gal_config = get_fixed_gal_config(config=gal_config)
 
-            if gal_type == 'fixed':
+            if gal_type == "fixed":
                 cls = FixedGalaxyCatalog
             else:
                 cls = GalaxyCatalog
 
             galaxy_catalog = cls(
                 rng=rng,
-                mag=gal_config['mag'],
-                hlr=gal_config['hlr'],
-                morph=gal_config['morph'],
+                mag=gal_config["mag"],
+                hlr=gal_config["hlr"],
+                morph=gal_config["morph"],
                 layout=layout,
             )
 
@@ -114,4 +111,7 @@ def make_galaxy_catalog(
     return galaxy_catalog
 
 
-__all__ = ["make_galaxy_catalog", "DEFAULT_FIXED_GAL_CONFIG"]
+__all__ = [
+    "make_galaxy_catalog", "DEFAULT_FIXED_GAL_CONFIG",
+    "prepare_rubinroman_catalog",
+]

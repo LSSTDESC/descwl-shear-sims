@@ -1,6 +1,6 @@
 import numpy as np
 import descwl
-from .constants import SCALE, SCALE_ROMAN_COADD, ZERO_POINT
+from .constants import SCALE, ZERO_POINT
 
 DEFAULT_SURVEY_BANDS = {
     "LSST": "r",
@@ -12,7 +12,7 @@ DEFAULT_SURVEY_BANDS = {
 }
 
 
-def get_survey(*, gal_type, band, survey_name="LSST"):
+def get_survey(*, gal_type, band, survey_name="LSST", **kwargs):
     """
     Get a survey object
 
@@ -35,16 +35,10 @@ def get_survey(*, gal_type, band, survey_name="LSST"):
     elif gal_type in ['fixed', 'varying']:
         survey = BasicSurvey(band=band)
     elif gal_type == "ou2024rubinroman":
-        # TODO: need changes including noise realization
-        if survey_name == "LSST":
-            pixel_scale = SCALE
-        if survey_name == "Roman":
-            pixel_scale = SCALE_ROMAN_COADD
-        survey = AugmentedSurvey(
+        survey = WLSurvey(
             band=band,
-            name=survey_name.lower(),
-            pixel_scale=pixel_scale,
-            noise=0.23,
+            survey_name=survey_name.lower(),
+            **kwargs,
         )
     else:
         raise ValueError("bad gal_type: '%s'" % gal_type)
@@ -179,7 +173,7 @@ class BasicSurvey(object):
         return 10**(0.4 * (ZERO_POINT - mag))
 
 
-class AugmentedSurvey(BasicSurvey):
+class WLSurvey(BasicSurvey):
     """
     similar as BasicSurvey with augmented attributes with common interface.
     Note, this is for calibrated images with magnitude zero point set to
@@ -189,17 +183,41 @@ class AugmentedSurvey(BasicSurvey):
     ----------
     band: str
         e.g. 'r' (lsst) 'H158' (roman)
-    name: str
+    survey_name: str
         survey name -- e.g. "lsst" or "roman"
         (should be lowercase)
-    pixel_scale: float
-        pixel scale
+    calib_mag_zero: float
+        magnitude zero point of calibrated image
     noise: float
         noise level in the flux unit
     """
-    def __init__(self, *, band, name, pixel_scale, noise):
+    def __init__(
+        self,
+        *,
+        band,
+        survey_name,
+        calib_mag_zero=ZERO_POINT,
+        **kwargs,
+    ):
         self.band = band
-        self.name = name
-        self.noise = noise
+        self.name = survey_name
+        # TODO: noise needs to be updated
+        self.noise = 1.0
         self.filter_band = band
-        self.pixel_scale: float = pixel_scale
+        if survey_name == "lsst":
+            self.pixel_scale = 0.2
+        elif survey_name == "hsc":
+            self.pixel_scale = 0.168
+        elif survey_name == "roman":
+            self.pixel_scale = 0.04
+        else:
+            raise ValueError(
+                "Cannot make simulation for survey %s" % survey_name
+            )
+        self.calib_mag_zero = calib_mag_zero
+
+    def get_flux(self, mag):
+        """
+        get the flux for the input mag using the standard zero point
+        """
+        return 10**(0.4 * (self.calib_mag_zero - mag))

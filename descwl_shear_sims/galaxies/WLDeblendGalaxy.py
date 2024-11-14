@@ -31,11 +31,12 @@ class WLDeblendGalaxyCatalog(object):
     select_upper_limit: list | ndarray
         upper limits of the slection cuts
     """
+
     def __init__(
         self,
         *,
         rng,
-        layout='random',
+        layout="random",
         coadd_dim=None,
         buff=None,
         pixel_scale=SCALE,
@@ -43,7 +44,7 @@ class WLDeblendGalaxyCatalog(object):
         select_lower_limit=None,
         select_upper_limit=None,
     ):
-        self.gal_type = 'wldeblend'
+        self.gal_type = "wldeblend"
         self.rng = rng
 
         self._wldeblend_cat = read_wldeblend_cat(
@@ -108,7 +109,7 @@ class WLDeblendGalaxyCatalog(object):
         redshifts = []
         for i in range(len(self)):
             objlist.append(self._get_galaxy(builder, band, i))
-            shifts.append(galsim.PositionD(sarray['dx'][i], sarray['dy'][i]))
+            shifts.append(galsim.PositionD(sarray["dx"][i], sarray["dy"][i]))
             index = self.indices[i]
             indexes.append(index)
             redshifts.append(self._wldeblend_cat[index]["redshift"])
@@ -175,8 +176,8 @@ def read_wldeblend_cat(
     array with fields
     """
     fname = os.path.join(
-        os.environ.get('CATSIM_DIR', '.'),
-        'OneDegSq.fits',
+        os.environ.get("CATSIM_DIR", "."),
+        "OneDegSq.fits",
     )
 
     # not thread safe
