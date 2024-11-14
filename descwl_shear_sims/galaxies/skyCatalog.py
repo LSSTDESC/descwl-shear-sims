@@ -200,6 +200,8 @@ def _generate_rubinroman_galaxies(
 
     bulge_hlr = np.array(entry["spheroidHalfLightRadiusArcsec"])[0]
     disk_hlr = np.array(entry["diskHalfLightRadiusArcsec"])[0]
+    # The ellipticity in the catalog is shear ellipticity
+    # e = 1-q / 1+q
     disk_e1, disk_e2 = (
         np.array(entry["diskEllipticity1"])[0],
         np.array(entry["diskEllipticity2"])[0],
