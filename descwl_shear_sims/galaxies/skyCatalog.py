@@ -249,6 +249,11 @@ def read_ou2024rubinroman_cat(
         os.environ.get("CATSIM_DIR", "."),
         "rubinroman_nside32_10307.parquet",
     )
+    if not os.path.isfile(fname):
+        raise FileNotFoundError(
+            "Cannot find 'rubinroman_nside32_10307.parquet'",
+            "Please donwload it from and place it under $CATSIM_DIR"
+        )
 
     cat = cached_catalog_read(fname, format="parquet")
     if select_observable is not None:
