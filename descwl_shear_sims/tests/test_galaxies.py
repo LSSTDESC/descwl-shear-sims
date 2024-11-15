@@ -157,4 +157,3 @@ def test_wlgalaxies_selection():
     assert np.min(galaxy_catalog._wldeblend_cat["z_ab"]) >= 22.0
     assert np.max(galaxy_catalog._wldeblend_cat["z_ab"]) <= 26.0
     return
-

@@ -21,7 +21,7 @@ def get_survey(*, gal_type, band, survey_name="LSST", **kwargs):
     gal_type: string
         'fixed', 'varying', 'wldeblend' or 'ou2024rubinroman'
     band: string
-        e.g. 'r' (for LSST), 'H158' (for Roman)
+        e.g. 'r'
     survey_name: string
         The name of the survey, e.g., LSST, HSC
 
@@ -34,12 +34,6 @@ def get_survey(*, gal_type, band, survey_name="LSST", **kwargs):
         survey = WLDeblendSurvey(band=band, survey_name=survey_name)
     elif gal_type in ['fixed', 'varying']:
         survey = BasicSurvey(band=band)
-    elif gal_type == "ou2024rubinroman":
-        survey = WLSurvey(
-            band=band,
-            survey_name=survey_name.lower(),
-            **kwargs,
-        )
     else:
         raise ValueError("bad gal_type: '%s'" % gal_type)
 
@@ -171,53 +165,3 @@ class BasicSurvey(object):
         get the flux for the input mag using the standard zero point
         """
         return 10**(0.4 * (ZERO_POINT - mag))
-
-
-class WLSurvey(BasicSurvey):
-    """
-    similar as BasicSurvey with augmented attributes with common interface.
-    Note, this is for calibrated images with magnitude zero point set to
-    ZERO_POINT = 30 (see the constant.py file)
-
-    Parameters
-    ----------
-    band: str
-        e.g. 'r' (lsst) 'H158' (roman)
-    survey_name: str
-        survey name -- e.g. "lsst" or "roman"
-        (should be lowercase)
-    calib_mag_zero: float
-        magnitude zero point of calibrated image
-    noise: float
-        noise level in the flux unit
-    """
-    def __init__(
-        self,
-        *,
-        band,
-        survey_name,
-        calib_mag_zero=ZERO_POINT,
-        **kwargs,
-    ):
-        self.band = band
-        self.name = survey_name
-        # TODO: noise needs to be updated
-        self.noise = 1.0
-        self.filter_band = band
-        if survey_name == "lsst":
-            self.pixel_scale = 0.2
-        elif survey_name == "hsc":
-            self.pixel_scale = 0.168
-        elif survey_name == "roman":
-            self.pixel_scale = 0.04
-        else:
-            raise ValueError(
-                "Cannot make simulation for survey %s" % survey_name
-            )
-        self.calib_mag_zero = calib_mag_zero
-
-    def get_flux(self, mag):
-        """
-        get the flux for the input mag using the standard zero point
-        """
-        return 10**(0.4 * (self.calib_mag_zero - mag))

@@ -26,6 +26,7 @@ class Layout(object):
     ):
         """
         Layout object to make position shifts for galaxy and star objects
+        The scale of the layout is coadd_dim * pixel_scale
 
         Parameters
         ----------
@@ -36,11 +37,13 @@ class Layout(object):
         buff: int, optional
             Buffer region where no objects will be drawn.  Default 0.
         pixel_scale: float
-            pixel scale
+            pixel scale (arcsec)
         """
         self.pixel_scale = pixel_scale
         self.layout_name = layout_name
         if layout_name == 'random':
+            if coadd_dim is None:
+                raise ValueError("Please input `coadd_dim` for random layout")
             # need to calculate number of objects first this layout is random
             # in a square
             if (coadd_dim - 2*buff) < 2:
@@ -50,6 +53,10 @@ class Layout(object):
                 # [arcmin^2]
                 self.area = ((coadd_dim - 2*buff)*pixel_scale/60)**2
         elif layout_name == 'random_disk':
+            if coadd_dim is None:
+                raise ValueError(
+                    "Please input `coadd_dim` for random_disk layout"
+                )
             # need to calculate number of objects first
             # this layout_name is random in a circle
             if (coadd_dim - 2*buff) < 2:
@@ -75,9 +82,6 @@ class Layout(object):
         self.wcs, self.bbox = make_coadd_dm_wcs(
             coadd_dim,
             pixel_scale=pixel_scale,
-            big_coadd_dim_padding=0,
-            xoff=0,
-            yoff=0,
         )
         return
 
