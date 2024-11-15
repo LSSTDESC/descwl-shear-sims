@@ -12,14 +12,14 @@ DEFAULT_SURVEY_BANDS = {
 }
 
 
-def get_survey(*, gal_type, band, survey_name="LSST", **kwargs):
+def get_survey(*, gal_type, band, survey_name="LSST"):
     """
     Get a survey object
 
     Parameters
     ----------
     gal_type: string
-        'fixed', 'varying', 'wldeblend' or 'ou2024rubinroman'
+        'fixed', 'varying', 'wldeblend'
     band: string
         e.g. 'r'
     survey_name: string
