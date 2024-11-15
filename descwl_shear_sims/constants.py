@@ -5,7 +5,6 @@ ZERO_POINT = 30.0
 
 # pixel scale for all images in arcseconds/pixel
 SCALE = 0.2
-SCALE_ROMAN_COADD = 0.04
 
 # density of random layout (not wldeblend) per square arcmin
 RANDOM_DENSITY = 80
