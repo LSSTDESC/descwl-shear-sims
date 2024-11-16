@@ -33,7 +33,7 @@ def make_se_wcs(
         whether to do rotation or not, default: False
     theta: float
         rotation angle, optional, default: None
-    rng:
+    rng: numpy.random.RandomState
         random number generator, optional, default: None
 
     Returns
@@ -41,6 +41,7 @@ def make_se_wcs(
     Galsim WCS of the single exposure
     """
 
+    # The se origin is set to the center of the image
     # Galsim uses 1 offset. An array with length =dim=5
     # The center is at 3=(5+1)/2
     cen = (np.array(dims) + 1) / 2
@@ -62,10 +63,9 @@ def make_se_wcs(
     else:
         theta = None
 
-    se_wcs = make_wcs(
+    return make_wcs(
         scale=pixel_scale,
         theta=theta,
         image_origin=se_origin,
         world_origin=world_origin,
     )
-    return se_wcs

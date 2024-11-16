@@ -4,6 +4,7 @@ from ..constants import (
     GRID_SPACING,
     HEX_SPACING,
     SCALE,
+    WORLD_ORIGIN,
 )
 from .shifts import (
     get_pair_shifts,
@@ -12,7 +13,7 @@ from .shifts import (
     get_random_shifts,
     get_random_disk_shifts,
 )
-from ..wcs import make_coadd_dm_wcs
+from ..wcs import make_coadd_dm_wcs, make_coadd_dm_wcs_simple
 import numpy as np
 
 
@@ -23,10 +24,14 @@ class Layout(object):
         coadd_dim=None,
         buff=0.0,
         pixel_scale=SCALE,
+        world_origin=WORLD_ORIGIN,
+        simple_coadd_bbox=False,
     ):
         """
         Layout object to make position shifts for galaxy and star objects
-        The scale of the layout is coadd_dim * pixel_scale
+        The scale of the layout is coadd_dim * pixel_scale. The shifts is
+        defined on coadd image (flat sky) with repect to the center of coadd
+        boundary box.
 
         Parameters
         ----------
@@ -37,7 +42,15 @@ class Layout(object):
         buff: int, optional
             Buffer region where no objects will be drawn.  Default 0.
         pixel_scale: float
-            pixel scale
+            pixel scale of coadd image
+        world_origin: galsim.CelestialCoord
+            sky coordinate of the reference point (sky coordinate of the center
+            of large box)
+        simple_coadd_bbox: bool. Default: False
+            If set to True, the coadd boundary box is centered at world_origin;
+            that is, the center of the coadd boundary box is the image origin;
+            else the center of the coadd boundary box has an offset to the
+            world_orgin, and it is not the image origin
         """
         self.pixel_scale = pixel_scale
         self.layout_name = layout_name
@@ -77,10 +90,17 @@ class Layout(object):
                     'hex', 'grid' or 'pair'!")
         self.coadd_dim = coadd_dim
         self.buff = buff
-        self.wcs, self.bbox = make_coadd_dm_wcs(
-            coadd_dim,
-            pixel_scale=pixel_scale,
-        )
+
+        if simple_coadd_bbox:
+            self.wcs, self.bbox = make_coadd_dm_wcs_simple(
+                coadd_dim,
+                pixel_scale=pixel_scale,
+            )
+        else:
+            self.wcs, self.bbox = make_coadd_dm_wcs(
+                coadd_dim,
+                pixel_scale=pixel_scale,
+            )
         return
 
     def get_shifts(

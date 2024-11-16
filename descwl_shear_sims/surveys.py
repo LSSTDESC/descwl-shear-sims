@@ -19,7 +19,7 @@ def get_survey(*, gal_type, band, survey_name="LSST"):
     Parameters
     ----------
     gal_type: string
-        'fixed', 'varying', 'wldeblend'
+        'fixed', 'varying', or 'wldeblend'
     band: string
         e.g. 'r'
     survey_name: string

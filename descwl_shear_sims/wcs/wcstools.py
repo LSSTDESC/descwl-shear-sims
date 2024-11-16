@@ -60,7 +60,7 @@ def make_coadd_wcs(coadd_dim, pixel_scale=SCALE):
     --------
     A galsim wcs, see make_wcs for return type
     """
-    coadd_dims = [coadd_dim]*2
+    coadd_dims = [int(coadd_dim)]*2
     coadd_cen = (np.array(coadd_dims)-1)/2
     coadd_origin = galsim.PositionD(x=coadd_cen[1], y=coadd_cen[0])
     return make_wcs(
