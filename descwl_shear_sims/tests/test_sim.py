@@ -737,6 +737,15 @@ def test_make_exp():
         coadd_bbox=galaxy_catalog.layout.bbox,
     )
 
+    np.testing.assert_allclose(
+        world_origin.ra.deg,
+        WORLD_ORIGIN.ra.deg,
+    )
+    np.testing.assert_allclose(
+        world_origin.dec.deg,
+        WORLD_ORIGIN.dec.deg,
+    )
+
     cen = (np.array(dims) + 1) / 2
     se_origin = galsim.PositionD(x=cen[1] - 100, y=cen[0] + 100)
 

@@ -204,8 +204,8 @@ def make_sim(
             )
 
     # get the sky position of the coadd image center. For simple_coadd_bbox ==
-    # True, coadd_bbox_cen_gs_skypos is WORLD_ORIGIN (see unit test in
-    # test_wcs.py)
+    # True, coadd_bbox_cen_gs_skypos is WORLD_ORIGIN (see unit test_make_exp in
+    # test_sim.py)
     coadd_bbox_cen_gs_skypos = get_coadd_center_gs_pos(
         coadd_wcs=coadd_wcs,
         coadd_bbox=coadd_bbox,
