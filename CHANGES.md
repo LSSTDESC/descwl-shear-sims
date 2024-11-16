@@ -1,3 +1,12 @@
+# 0.4.4
+### new features
+    - add support for passing se_wcs to make_exp function in sim.py
+    - enable user to define the world origin of the layout when defining galaxy
+      catalog
+    - add option to force the center of coadd boundary box to be at
+      world_origin (simple_coadd_bbox=True)
+
+
 ## 0.4.3
 ### new features
     - add support for ring test
