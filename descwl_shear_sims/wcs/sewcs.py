@@ -9,9 +9,9 @@ from . import make_wcs
 
 def make_se_wcs(
     *,
-    dims: List[int] | Tuple[int],
     pixel_scale: float = SCALE,
-    world_origin=WORLD_ORIGIN,
+    image_origin: galsim.PositionD,
+    world_origin: galsim.CelestialCoord = WORLD_ORIGIN,
     dither: bool = False,
     rotate: bool = False,
     theta: float | None = None,
@@ -23,10 +23,12 @@ def make_se_wcs(
     Parameters
     ----------
 
-    dims: list | tuple
-        the dimensions (ny, nx) of the exposure
     pixel_scale: float
         image pixel scale, default: 0.2
+    image_origin: galsim.PositionD
+        Image origin position
+    world_origin: galsim.CelestialCoord
+        Origin on the sky
     dither: bool, optional
         whether to do dither or not, default: False
     rotate: bool
@@ -41,19 +43,13 @@ def make_se_wcs(
     Galsim WCS of the single exposure
     """
 
-    # The se origin is set to the center of the image
-    # Galsim uses 1 offset. An array with length =dim=5
-    # The center is at 3=(5+1)/2
-    cen = (np.array(dims) + 1) / 2
-    se_origin = galsim.PositionD(x=cen[1], y=cen[0])
-
     if dither:
         # do a small offset of the origin
         assert rng is not None
         dither_range = 0.5
         off = rng.uniform(low=-dither_range, high=dither_range, size=2)
         offset = galsim.PositionD(x=off[0], y=off[1])
-        se_origin = se_origin + offset
+        image_origin = image_origin + offset
 
     if rotate:
         # roate the single exposure
@@ -66,6 +62,6 @@ def make_se_wcs(
     return make_wcs(
         scale=pixel_scale,
         theta=theta,
-        image_origin=se_origin,
+        image_origin=image_origin,
         world_origin=world_origin,
     )

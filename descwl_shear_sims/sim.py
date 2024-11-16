@@ -456,15 +456,20 @@ def make_exp(
 
     """
     dims = [int(dim)] * 2
-    cen = (np.array(dims) + 1) / 2
-    se_origin = galsim.PositionD(x=cen[1], y=cen[0])
 
     if se_wcs is None:
         # If no se_wcs input, we make a wcs with world origin set to the center
         # of the coadds (the center of the galaxy_catalog.layout)
+
+        # The se origin is set to the center of the image
+        # Galsim image uses 1 offset. An array with length =dim=5
+        # The center is at 3=(5+1)/2
+        cen = (np.array(dims) + 1) / 2
+        se_origin = galsim.PositionD(x=cen[1], y=cen[0])
         se_wcs = make_se_wcs(
             dims=dims,
             pixel_scale=pixel_scale,
+            image_origin=se_origin,
             world_origin=coadd_bbox_cen_gs_skypos,
             dither=dither,
             rotate=rotate,
@@ -473,11 +478,11 @@ def make_exp(
     else:
         # if with se_wcs input, we make sure the wcs is consistent with the
         # other inputs
+        cen = se_wcs.crpix
+        se_origin = galsim.PositionD(x=cen[1], y=cen[0])
         pixel_area = se_wcs.pixelArea(se_origin)
         if not (pixel_area - pixel_scale ** 2.0) < pixel_scale ** 2.0 / 100.0:
             raise ValueError("The input se_wcs has wrong pixel scale")
-        if not se_wcs.crpix == cen:
-            raise ValueError("The input se_wcs has wrong crpix")
 
     image = galsim.Image(dim, dim, wcs=se_wcs)
 
