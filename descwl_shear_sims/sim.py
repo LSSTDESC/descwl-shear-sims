@@ -429,7 +429,7 @@ def make_exp(
         rotation angle of intrinsic galaxies and positions [for ring test],
         default 0, in units of radians
     pixel_scale: float
-        pixel scale in arcsec
+        pixel scale of single exposure in arcsec
     calib_mag_zero: float
         magnitude zero point after calibration
     indexes: list
@@ -467,7 +467,6 @@ def make_exp(
         cen = (np.array(dims) + 1) / 2
         se_origin = galsim.PositionD(x=cen[1], y=cen[0])
         se_wcs = make_se_wcs(
-            dims=dims,
             pixel_scale=pixel_scale,
             image_origin=se_origin,
             world_origin=coadd_bbox_cen_gs_skypos,
@@ -660,17 +659,21 @@ def _draw_objects(
         )
         prelensed_image_pos = wcs.toImage(prelensed_world_pos)
 
-        local_wcs = wcs.local(image_pos=image_pos)
+        if (
+            (image.bounds.xmin - 80) < image_pos.x < (image.bounds.xmax + 80)
+        ) and (
+            (image.bounds.ymin - 80) < image_pos.y < (image.bounds.ymax + 80)
+        ):
+            local_wcs = wcs.local(image_pos=image_pos)
+            convolved_object = get_convolved_object(obj, psf, image_pos)
+            stamp = convolved_object.drawImage(
+                center=image_pos, wcs=local_wcs, method=draw_method, **kw
+            )
 
-        convolved_object = get_convolved_object(obj, psf, image_pos)
+            b = stamp.bounds & image.bounds
+            if b.isDefined():
+                image[b] += stamp[b]
 
-        stamp = convolved_object.drawImage(
-            center=image_pos, wcs=local_wcs, method=draw_method, **kw
-        )
-
-        b = stamp.bounds & image.bounds
-        if b.isDefined():
-            image[b] += stamp[b]
         info = get_truth_info_struct()
 
         info["index"] = (ind,)

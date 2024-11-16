@@ -1,5 +1,3 @@
-from typing import List, Tuple
-
 import galsim
 import numpy as np
 
