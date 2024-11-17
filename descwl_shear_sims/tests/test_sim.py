@@ -708,6 +708,11 @@ def test_sim_truth_info():
 
 
 def test_make_exp():
+    """
+    Unit test for make_exp
+    """
+
+    # Random number generator
     seed = 74321
     rng = np.random.RandomState(seed)
 
@@ -716,6 +721,9 @@ def test_make_exp():
     pixel_scale = SCALE
     psf_dim = 51
 
+    # Define a Layout on tagent plane
+    # the size of the plane is SCAL * dim = 80 arcsec
+    # The world origin of the tangent plane is set to WORLD_ORIGIN
     layout = Layout(
         "grid",
         coadd_dim=dim,
@@ -729,14 +737,24 @@ def test_make_exp():
         gal_type="fixed",
         layout=layout,
     )
+    # Define the Survey
+    band = "r"
+    survey = get_survey(
+        gal_type=galaxy_catalog.gal_type,
+        band=band,
+        survey_name="lsst",
+    )
+    lists = get_objlist(
+        galaxy_catalog=galaxy_catalog,
+        survey=survey,
+    )
 
-    psf = make_fixed_psf(psf_type="gauss")
-
+    # assert that the world orgin is WORLD_ORIGIN
+    # NOTE: this is not the case for simple_coadd_bbox=False
     world_origin = get_coadd_center_gs_pos(
         coadd_wcs=galaxy_catalog.layout.wcs,
         coadd_bbox=galaxy_catalog.layout.bbox,
     )
-
     np.testing.assert_allclose(
         world_origin.ra.deg,
         WORLD_ORIGIN.ra.deg,
@@ -746,9 +764,13 @@ def test_make_exp():
         WORLD_ORIGIN.dec.deg,
     )
 
+    # Define a PSF model for the simulation
+    psf = make_fixed_psf(psf_type="gauss")
+
+    # Define WCS for single exposure
+    # image origin for single exposure
     cen = (np.array(dims) + 1) / 2
     se_origin = galsim.PositionD(x=cen[1] - 100, y=cen[0] + 100)
-
     se_wcs = make_se_wcs(
         pixel_scale=pixel_scale,
         image_origin=se_origin,
@@ -756,17 +778,6 @@ def test_make_exp():
         dither=False,
         rotate=False,
         rng=rng,
-    )
-    band = "r"
-    survey = get_survey(
-        gal_type=galaxy_catalog.gal_type,
-        band=band,
-        survey_name="lsst",
-    )
-
-    lists = get_objlist(
-        galaxy_catalog=galaxy_catalog,
-        survey=survey,
     )
 
     exp, this_bright_info, this_truth_info, this_se_wcs = make_exp(
