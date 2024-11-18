@@ -32,3 +32,7 @@ WORLD_ORIGIN = galsim.CelestialCoord(
     ra=200 * galsim.degrees,
     dec=0 * galsim.degrees,
 )
+
+# When drawing galaxies, exclude those with centers falling
+# SIM_INCLUSION_PADDING away from the single exposure boundaries
+SIM_INCLUSION_PADDING = 200

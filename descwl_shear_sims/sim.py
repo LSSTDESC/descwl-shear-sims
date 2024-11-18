@@ -9,7 +9,7 @@ from lsst.afw.cameraGeom.testUtils import DetectorWrapper
 from .lsst_bits import get_flagval
 from .saturation import saturate_image_and_mask, BAND_SAT_VALS
 from .surveys import get_survey, rescale_wldeblend_exp, DEFAULT_SURVEY_BANDS
-from .constants import SCALE, WORLD_ORIGIN, ZERO_POINT
+from .constants import SCALE, WORLD_ORIGIN, ZERO_POINT, SIM_INCLUSION_PADDING
 from .artifacts import add_bleed, get_max_mag_with_bleed
 from .masking import (
     get_bmask_and_set_image,
@@ -660,9 +660,11 @@ def _draw_objects(
         prelensed_image_pos = wcs.toImage(prelensed_world_pos)
 
         if (
-            (image.bounds.xmin - 80) < image_pos.x < (image.bounds.xmax + 80)
+            (image.bounds.xmin - SIM_INCLUSION_PADDING) <
+            image_pos.x < (image.bounds.xmax + SIM_INCLUSION_PADDING)
         ) and (
-            (image.bounds.ymin - 80) < image_pos.y < (image.bounds.ymax + 80)
+            (image.bounds.ymin - SIM_INCLUSION_PADDING)
+            < image_pos.y < (image.bounds.ymax + SIM_INCLUSION_PADDING)
         ):
             local_wcs = wcs.local(image_pos=image_pos)
             convolved_object = get_convolved_object(obj, psf, image_pos)
