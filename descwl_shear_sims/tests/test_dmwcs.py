@@ -2,7 +2,7 @@ import numpy as np
 import galsim
 import lsst.afw.image as afw_image
 import lsst.geom as geom
-from ..wcs import make_wcs, make_dm_wcs, make_coadd_dm_wcs_simple
+from ..wcs import make_wcs, make_se_wcs, make_dm_wcs, make_coadd_dm_wcs_simple
 from ._wcs import make_sim_wcs, SCALE
 from ..sim import get_coadd_center_gs_pos
 
@@ -160,3 +160,46 @@ def test_same_world_origin_se_coadd_wcs_simple():
         se_sky_origin.getDec().asRadians(),
         coadd_sky_origin.getDec().asRadians(),
     )
+
+
+def test_make_se_wcs():
+    se_dim = 30
+    coadd_dim = 20
+
+    dims = [se_dim] * 2
+    # Galsim uses 1 offset. An array with length =dim=5
+    # The center is at 3=(5+1)/2
+    cen = (np.array(dims) + 1) / 2
+    se_origin = galsim.PositionD(x=cen[1], y=cen[0])
+
+    masked_image = afw_image.MaskedImageF(coadd_dim, coadd_dim)
+    exp = afw_image.ExposureF(masked_image)
+
+    tcoadd_dm_wcs_simple, coadd_bbox = make_coadd_dm_wcs_simple(coadd_dim, SCALE)
+
+    exp.setWcs(tcoadd_dm_wcs_simple)
+
+    dm_coadd_wcs_simple = exp.getWcs()
+
+    coadd_bbox_cen_gs_skypos = get_coadd_center_gs_pos(
+        coadd_wcs=dm_coadd_wcs_simple,
+        coadd_bbox=coadd_bbox,
+    )
+
+    wcs = make_wcs(
+        scale=SCALE,
+        theta=0,
+        image_origin=se_origin,
+        world_origin=coadd_bbox_cen_gs_skypos,
+    )
+
+    se_wcs = make_se_wcs(
+        pixel_scale=SCALE,
+        theta=0,
+        image_origin=se_origin,
+        world_origin=coadd_bbox_cen_gs_skypos,
+        rotate=False,
+        dither=False,
+    )
+
+    assert wcs == se_wcs

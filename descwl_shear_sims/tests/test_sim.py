@@ -1,17 +1,23 @@
 import os
+import galsim
 import pytest
 import numpy as np
 from copy import deepcopy
 import lsst.afw.image as afw_image
 import lsst.afw.geom as afw_geom
+
+from descwl_shear_sims.layout.layout import Layout
 from ..surveys import get_survey, DEFAULT_SURVEY_BANDS
 
 from ..galaxies import make_galaxy_catalog, DEFAULT_FIXED_GAL_CONFIG
 from ..stars import StarCatalog, make_star_catalog
 from ..psfs import make_fixed_psf, make_ps_psf
+from ..wcs import make_se_wcs
 
-from ..sim import make_sim, get_se_dim
-from ..constants import ZERO_POINT
+from ..sim import (
+    make_sim, make_exp, get_se_dim, get_coadd_center_gs_pos, get_objlist
+)
+from ..constants import SCALE, ZERO_POINT, WORLD_ORIGIN
 
 from ..shear import ShearConstant
 
@@ -698,6 +704,95 @@ def test_sim_truth_info():
     np.testing.assert_allclose(
         galaxy_catalog._wldeblend_cat[galaxy_catalog.indices]["redshift"],
         out["truth_info"]["z"],
+    )
+
+
+def test_make_exp():
+    """
+    Unit test for make_exp
+    """
+
+    # Random number generator
+    seed = 74321
+    rng = np.random.RandomState(seed)
+
+    dim = 400
+    dims = [int(dim)] * 2
+    pixel_scale = SCALE
+    psf_dim = 51
+
+    # Define a Layout on tagent plane
+    # the size of the plane is SCAL * dim = 80 arcsec
+    # The world origin of the tangent plane is set to WORLD_ORIGIN
+    layout = Layout(
+        "grid",
+        coadd_dim=dim,
+        buff=0.0,
+        pixel_scale=SCALE,
+        world_origin=WORLD_ORIGIN,
+        simple_coadd_bbox=True,
+    )
+    galaxy_catalog = make_galaxy_catalog(
+        rng=rng,
+        gal_type="fixed",
+        layout=layout,
+    )
+    # Define the Survey
+    band = "r"
+    survey = get_survey(
+        gal_type=galaxy_catalog.gal_type,
+        band=band,
+        survey_name="lsst",
+    )
+    lists = get_objlist(
+        galaxy_catalog=galaxy_catalog,
+        survey=survey,
+    )
+
+    # assert that the world orgin is WORLD_ORIGIN
+    # NOTE: this is not the case for simple_coadd_bbox=False
+    world_origin = get_coadd_center_gs_pos(
+        coadd_wcs=galaxy_catalog.layout.wcs,
+        coadd_bbox=galaxy_catalog.layout.bbox,
+    )
+    np.testing.assert_allclose(
+        world_origin.ra.deg,
+        WORLD_ORIGIN.ra.deg,
+    )
+    np.testing.assert_allclose(
+        world_origin.dec.deg,
+        WORLD_ORIGIN.dec.deg,
+    )
+
+    # Define a PSF model for the simulation
+    psf = make_fixed_psf(psf_type="gauss")
+
+    # Define WCS for single exposure
+    # image origin for single exposure
+    cen = (np.array(dims) + 1) / 2
+    se_origin = galsim.PositionD(x=cen[1] - 100, y=cen[0] + 100)
+    se_wcs = make_se_wcs(
+        pixel_scale=pixel_scale,
+        image_origin=se_origin,
+        world_origin=world_origin,
+        dither=False,
+        rotate=False,
+        rng=rng,
+    )
+
+    exp, this_bright_info, this_truth_info, this_se_wcs = make_exp(
+        rng=rng,
+        band=band,
+        noise=0,
+        objlist=lists["objlist"],
+        shifts=lists["shifts"],
+        redshifts=lists["redshifts"],
+        dim=dim,
+        se_wcs=se_wcs,
+        psf=psf,
+        psf_dim=psf_dim,
+        shear_obj=shear_obj,
+        coadd_bbox_cen_gs_skypos=world_origin,
     )
 
 

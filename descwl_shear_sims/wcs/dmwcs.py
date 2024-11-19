@@ -69,9 +69,12 @@ def make_dm_wcs(galsim_wcs):
     return stack_wcs
 
 
-def make_coadd_dm_wcs(coadd_dim, pixel_scale=SCALE,
-                      big_coadd_dim_padding=3000,
-                      xoff=1000, yoff=450):
+def make_coadd_dm_wcs(
+    coadd_dim, pixel_scale=SCALE,
+    world_origin=WORLD_ORIGIN,
+    big_coadd_dim_padding=3000,
+    xoff=1000, yoff=450
+):
     """
     make a coadd wcs, using the default world origin.  Create
     a bbox within larger box
@@ -82,6 +85,9 @@ def make_coadd_dm_wcs(coadd_dim, pixel_scale=SCALE,
         Pixel dimension of the coadd image
     pixel_scale: float
         pixel scale
+    world_origin: galsim.CelestialCoord
+        sky coordinate of the world origin (it is the sky coordinate of the
+        center of large box)
     big_coadd_dim_padding: int
         padding for the larger coadd image. dim(big_coadd) = dim(coadd) + padding
     xoff: int
@@ -115,13 +121,17 @@ def make_coadd_dm_wcs(coadd_dim, pixel_scale=SCALE,
         make_wcs(
             scale=pixel_scale,
             image_origin=gs_coadd_origin,
-            world_origin=WORLD_ORIGIN,
+            world_origin=world_origin,
         )
     )
     return coadd_wcs, coadd_bbox
 
 
-def make_coadd_dm_wcs_simple(coadd_dim, pixel_scale=SCALE):
+def make_coadd_dm_wcs_simple(
+    coadd_dim,
+    pixel_scale=SCALE,
+    world_origin=WORLD_ORIGIN,
+):
     """
     make a coadd wcs without big coadd bbox padding, using the default world origin.
 
@@ -131,12 +141,18 @@ def make_coadd_dm_wcs_simple(coadd_dim, pixel_scale=SCALE):
         Pixel dimension of the coadd image
     pixel_scale: float
         pixel scale
+    world_origin: galsim.CelestialCoord
+        sky coordinate of the world origin (it is the sky coordinate of the
+        center of coadd boundary box)
 
     Returns
     --------
     (coadd dm wcs, coadd dm bbox), see make_dm_wcs for return wcs type
     """
 
-    return make_coadd_dm_wcs(coadd_dim, pixel_scale=pixel_scale,
-                             big_coadd_dim_padding=0,
-                             xoff=0, yoff=0)
+    return make_coadd_dm_wcs(
+        coadd_dim, pixel_scale=pixel_scale,
+        world_origin=WORLD_ORIGIN,
+        big_coadd_dim_padding=0,
+        xoff=0, yoff=0
+    )

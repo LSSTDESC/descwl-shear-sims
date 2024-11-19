@@ -9,7 +9,7 @@ from lsst.afw.cameraGeom.testUtils import DetectorWrapper
 from .lsst_bits import get_flagval
 from .saturation import saturate_image_and_mask, BAND_SAT_VALS
 from .surveys import get_survey, rescale_wldeblend_exp, DEFAULT_SURVEY_BANDS
-from .constants import SCALE, ZERO_POINT, WORLD_ORIGIN
+from .constants import SCALE, WORLD_ORIGIN, ZERO_POINT, SIM_INCLUSION_PADDING
 from .artifacts import add_bleed, get_max_mag_with_bleed
 from .masking import (
     get_bmask_and_set_image,
@@ -17,7 +17,9 @@ from .masking import (
 )
 from .objlists import get_objlist
 from .psfs import make_dm_psf
-from .wcs import make_wcs, make_dm_wcs, make_coadd_dm_wcs, make_coadd_dm_wcs_simple
+from .wcs import (
+    make_dm_wcs, make_se_wcs, make_coadd_dm_wcs, make_coadd_dm_wcs_simple
+)
 from .shear import ShearConstant
 
 
@@ -135,14 +137,9 @@ def make_sim(
         Dimensions for planned final coadd.  This is used for generating
         the final coadd WCS and deteremines some properties of
         the single epoch images.
-    simple_coadd_bbox: optional, bool. Default False
-        If set to True, the coadd bbox is a simple box bounded by
-        (0,0,coadd_dim,coadd_dim), and the coadd and SE WCS have the same
-        world origin. If set to False, the coadd bbox is embeded in a larger
-        box bounded by (xoff, yoff, xoff+coadd_dim, yoff+coadd_dim) and
-        the SE WCS has a different world origin compared to the coadd WCS.
-        This option overrides the wcs in galaxy catalog layout and requires
-        an input coadd_dim.
+    simple_coadd_bbox: optional, bool. Default: False
+        Whether to force the center of coadd boundary box (which is the default
+        center single exposure) at the world_origin
     draw_noise: optional, bool
         Whether draw image noise
 
@@ -174,30 +171,41 @@ def make_sim(
         survey_name=survey_name,
     ).pixel_scale
 
-    if (
-        hasattr(galaxy_catalog.layout, "wcs")
-        and hasattr(galaxy_catalog.layout, "bbox")
-        and not simple_coadd_bbox
-    ):
-        coadd_wcs = galaxy_catalog.layout.wcs
-        coadd_bbox = galaxy_catalog.layout.bbox
+    if simple_coadd_bbox:
+        # Force to use a simple coadd boundary box
+        # where the center of the boundary box is the image origin and it
+        # matches to the world origin of the catalog's layout. Note that he
+        # center of the boundary box is the image_origin of the single exposure
+        # (SE).
+        if hasattr(galaxy_catalog.layout, "wcs"):
+            origin = galaxy_catalog.layout.wcs.getSkyOrigin()
+            world_origin = galsim.CelestialCoord(
+                ra=origin.getRa().asDegrees() * galsim.degrees,
+                dec=origin.getDec().asDegrees() * galsim.degrees,
+            )
+        else:
+            world_origin = WORLD_ORIGIN
+        coadd_wcs, coadd_bbox = make_coadd_dm_wcs_simple(
+            coadd_dim,
+            pixel_scale=pixel_scale,
+            world_origin=world_origin,
+        )
     else:
-        if not isinstance(coadd_dim, int):
-            raise ValueError(
-                "coadd_dim should be int when galaxy catalog does not",
-                "have attribute 'layout'",
-            )
-        if simple_coadd_bbox:
-            coadd_wcs, coadd_bbox = make_coadd_dm_wcs_simple(
-                coadd_dim,
-                pixel_scale=pixel_scale,
-            )
+        if (
+            hasattr(galaxy_catalog.layout, "wcs")
+            and hasattr(galaxy_catalog.layout, "bbox")
+        ):
+            coadd_wcs = galaxy_catalog.layout.wcs
+            coadd_bbox = galaxy_catalog.layout.bbox
         else:
             coadd_wcs, coadd_bbox = make_coadd_dm_wcs(
                 coadd_dim,
                 pixel_scale=pixel_scale,
             )
 
+    # get the sky position of the coadd image center. For simple_coadd_bbox ==
+    # True, coadd_bbox_cen_gs_skypos is WORLD_ORIGIN (see unit test_make_exp in
+    # test_sim.py)
     coadd_bbox_cen_gs_skypos = get_coadd_center_gs_pos(
         coadd_wcs=coadd_wcs,
         coadd_bbox=coadd_bbox,
@@ -279,7 +287,6 @@ def make_sim(
                 calib_mag_zero=calib_mag_zero,
                 draw_noise=draw_noise,
                 indexes=lists["indexes"],
-                simple_coadd_bbox=simple_coadd_bbox,
             )
             if epoch == 0:
                 bright_info += this_bright_info
@@ -360,10 +367,10 @@ def make_exp(
     calib_mag_zero=ZERO_POINT,
     draw_noise=True,
     indexes=None,
-    simple_coadd_bbox=False,
+    se_wcs=None,
 ):
     """
-    Make an SEObs
+    Make an Signle Exposure (SE) observation
 
     Parameters
     ----------
@@ -422,14 +429,13 @@ def make_exp(
         rotation angle of intrinsic galaxies and positions [for ring test],
         default 0, in units of radians
     pixel_scale: float
-        pixel scale in arcsec
+        pixel scale of single exposure in arcsec
     calib_mag_zero: float
         magnitude zero point after calibration
     indexes: list
-        list of indexes in the input galaxy catalog
-    simple_coadd_bbox: optional, bool. Default False
-        If set to True, the SE WCS sky origin is forced to be WORLD_ORIGIN,
-        which is consistent with the simple coadd wcs.
+        list of indexes in the input galaxy catalog, default: None
+    se_wcs: galsim WCS
+        wcs for single exposure, default: None
     Returns
     -------
     exp: lsst.afw.image.ExposureF
@@ -445,42 +451,37 @@ def make_exp(
         ra, dec: sky position of input galaxies
         z: redshift of input galaxies
         image_x, image_y: image position of input galaxies
+    se_wcs: galsim wcs
+        the wcs of the single exposure
+
     """
-    dims = [dim] * 2
-    # Galsim uses 1 offset. An array with length =dim=5
-    # The center is at 3=(5+1)/2
-    cen = (np.array(dims) + 1) / 2
-    se_origin = galsim.PositionD(x=cen[1], y=cen[0])
-    if coadd_bbox_cen_gs_skypos is None:
-        coadd_bbox_cen_gs_skypos = WORLD_ORIGIN
-    if dither:
-        dither_range = 0.5
-        off = rng.uniform(low=-dither_range, high=dither_range, size=2)
-        offset = galsim.PositionD(x=off[0], y=off[1])
-        se_origin = se_origin + offset
+    dims = [int(dim)] * 2
 
-    if rotate:
-        theta = rng.uniform(low=0, high=2 * np.pi)
-    else:
-        theta = None
+    if se_wcs is None:
+        # If no se_wcs input, we make a wcs with world origin set to the center
+        # of the coadds (the center of the galaxy_catalog.layout)
 
-    # galsim wcs
-    # if simple coadd bbox, force the SE WCS to share the same
-    # world origin as the coadd WCS
-    if simple_coadd_bbox:
-        se_wcs = make_wcs(
-            scale=pixel_scale,
-            theta=theta,
-            image_origin=se_origin,
-            world_origin=WORLD_ORIGIN,
-        )
-    else:
-        se_wcs = make_wcs(
-            scale=pixel_scale,
-            theta=theta,
+        # The se origin is set to the center of the image
+        # Galsim image uses 1 offset. An array with length =dim=5
+        # The center is at 3=(5+1)/2
+        cen = (np.array(dims) + 1) / 2
+        se_origin = galsim.PositionD(x=cen[1], y=cen[0])
+        se_wcs = make_se_wcs(
+            pixel_scale=pixel_scale,
             image_origin=se_origin,
             world_origin=coadd_bbox_cen_gs_skypos,
+            dither=dither,
+            rotate=rotate,
+            rng=rng,
         )
+    else:
+        # if with se_wcs input, we make sure the wcs is consistent with the
+        # other inputs
+        cen = se_wcs.crpix
+        se_origin = galsim.PositionD(x=cen[1], y=cen[0])
+        pixel_area = se_wcs.pixelArea(se_origin)
+        if not (pixel_area - pixel_scale ** 2.0) < pixel_scale ** 2.0 / 100.0:
+            raise ValueError("The input se_wcs has wrong pixel scale")
 
     image = galsim.Image(dim, dim, wcs=se_wcs)
 
@@ -564,7 +565,7 @@ def make_exp(
 
     # Prepare the frc, and save it to the DM exposure
     # It can be retrieved as follow
-    # zero_flux=  exposure.getPhotoCalib().getInstFluxAtZeroMagnitude()
+    # zero_flux =  exposure.getPhotoCalib().getInstFluxAtZeroMagnitude()
     # magz    =   np.log10(zero_flux)*2.5 # magnitude zero point
     zero_flux = 10.0 ** (0.4 * calib_mag_zero)
     photoCalib = afw_image.makePhotoCalibFromCalibZeroPoint(zero_flux)
@@ -658,17 +659,23 @@ def _draw_objects(
         )
         prelensed_image_pos = wcs.toImage(prelensed_world_pos)
 
-        local_wcs = wcs.local(image_pos=image_pos)
+        if (
+            (image.bounds.xmin - SIM_INCLUSION_PADDING) <
+            image_pos.x < (image.bounds.xmax + SIM_INCLUSION_PADDING)
+        ) and (
+            (image.bounds.ymin - SIM_INCLUSION_PADDING)
+            < image_pos.y < (image.bounds.ymax + SIM_INCLUSION_PADDING)
+        ):
+            local_wcs = wcs.local(image_pos=image_pos)
+            convolved_object = get_convolved_object(obj, psf, image_pos)
+            stamp = convolved_object.drawImage(
+                center=image_pos, wcs=local_wcs, method=draw_method, **kw
+            )
 
-        convolved_object = get_convolved_object(obj, psf, image_pos)
+            b = stamp.bounds & image.bounds
+            if b.isDefined():
+                image[b] += stamp[b]
 
-        stamp = convolved_object.drawImage(
-            center=image_pos, wcs=local_wcs, method=draw_method, **kw
-        )
-
-        b = stamp.bounds & image.bounds
-        if b.isDefined():
-            image[b] += stamp[b]
         info = get_truth_info_struct()
 
         info["index"] = (ind,)

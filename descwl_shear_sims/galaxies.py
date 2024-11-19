@@ -25,7 +25,7 @@ def make_galaxy_catalog(
     coadd_dim=None,
     buff=0,
     pixel_scale=SCALE,
-    layout=None,
+    layout: Layout | str | None = None,
     gal_config=None,
     sep=None,
 ):
@@ -642,7 +642,7 @@ class WLDeblendGalaxyCatalog(object):
         self,
         *,
         rng,
-        layout='random',
+        layout: Layout | str = 'random',
         coadd_dim=None,
         buff=None,
         pixel_scale=SCALE,

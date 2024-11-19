@@ -8,6 +8,7 @@ DEFAULT_SURVEY_BANDS = {
     "DES": "r",
     "Euclid": "VIS",
     "CFHT": "i",
+    "Roman": "H158",
 }
 
 
