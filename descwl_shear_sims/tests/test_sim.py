@@ -132,7 +132,6 @@ def test_sim_exp_mag(rotate, show=False):
     # use fixed single epoch dim so we can look in the same spot for the object
     se_dim = get_se_dim(
         coadd_dim=coadd_dim,
-        dither=False,
         rotate=True,
     )
 
@@ -204,7 +203,7 @@ def test_sim_psf_type(psf_type):
     )
 
     if psf_type == "ps":
-        se_dim = get_se_dim(coadd_dim=coadd_dim, dither=dither, rotate=rotate)
+        se_dim = get_se_dim(coadd_dim=coadd_dim, rotate=rotate)
         psf = make_ps_psf(rng=rng, dim=se_dim)
     else:
         psf = make_fixed_psf(psf_type=psf_type)
