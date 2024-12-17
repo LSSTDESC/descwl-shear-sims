@@ -108,7 +108,8 @@ def make_sim(
     dither: bool, optional
         Whether to dither the images at the pixel level, default False
     dither_amp: float, optional
-        The amplitude of dithering in unit of a fraction of a pixel for testing pixel interpolation.
+        The amplitude of dithering in unit of a fraction of a pixel
+        for testing pixel interpolation.
         All se WCS will be dithered by this amount in both x and y directions.
         Value must be between 0 and 1.  default None.
     rotate: bool, optional

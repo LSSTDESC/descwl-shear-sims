@@ -52,6 +52,9 @@ def make_se_wcs(
         assert rng is not None
 
         if dither_amp is not None:
+            assert (
+                dither_amp > 0 and dither_amp < 1
+            ), "dither_amp should be in range (0, 1)"
             sign = 1 if rng.uniform() > 0.5 else -1
             offset = galsim.PositionD(x=sign * dither_amp, y=sign * dither_amp)
         else:
