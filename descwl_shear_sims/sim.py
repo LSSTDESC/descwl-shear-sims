@@ -399,6 +399,11 @@ def make_exp(
         Dimensions of psf image that will be drawn when psf func is called
     dither: bool
         If set to True, dither randomly by a pixel width
+    dither_amp: float, optional
+        The amplitude of dithering in unit of a fraction of a pixel
+        for testing pixel interpolation.
+        All se WCS will be dithered by this amount in both x and y directions.
+        Value must be between 0 and 1.  default None.
     rotate: bool
         If set to True, rotate the image exposure randomly, note, this is not
         the rotation of intrinsic galaxies in ring test
