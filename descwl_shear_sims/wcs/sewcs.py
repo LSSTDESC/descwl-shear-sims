@@ -11,6 +11,7 @@ def make_se_wcs(
     image_origin: galsim.PositionD,
     world_origin: galsim.CelestialCoord = WORLD_ORIGIN,
     dither: bool = False,
+    dither_amp: float = None,
     rotate: bool = False,
     theta: float | None = None,
     rng=None,
@@ -29,6 +30,8 @@ def make_se_wcs(
         Origin on the sky
     dither: bool, optional
         whether to do dither or not, default: False
+    dither_amp: float, optional
+        dither range in unit of a fraction of a pixel, default: None
     rotate: bool
         whether to do rotation or not, default: False
     theta: float
@@ -44,9 +47,15 @@ def make_se_wcs(
     if dither:
         # do a small offset of the origin
         assert rng is not None
-        dither_range = 0.5
-        off = rng.uniform(low=-dither_range, high=dither_range, size=2)
-        offset = galsim.PositionD(x=off[0], y=off[1])
+
+        if dither_amp is not None:
+            sign = 1 if rng.uniform() > 0.5 else -1
+            offset = galsim.PositionD(x=sign * dither_amp, y=sign * dither_amp)
+        else:
+            dither_range = 0.5
+            off = rng.uniform(low=-dither_range, high=dither_range, size=2)
+            offset = galsim.PositionD(x=off[0], y=off[1])
+            
         image_origin = image_origin + offset
 
     if rotate:
