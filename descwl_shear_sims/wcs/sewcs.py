@@ -51,15 +51,11 @@ def make_se_wcs(
         # do a small offset of the origin
         assert rng is not None
 
-        if dither_size is not None:
-            assert (
-                dither_size > 0 and dither_size < 1
-            ), "dither_size should be in range (0, 1)"
-            offset = galsim.PositionD(x=dither_size, y=dither_size)
-        else:
-            dither_range = 0.5
-            off = rng.uniform(low=-dither_range, high=dither_range, size=2)
-            offset = galsim.PositionD(x=off[0], y=off[1])
+        if dither_size is None:
+            dither_size = 0.5
+
+        off = rng.uniform(low=-dither_size, high=dither_size, size=2)
+        offset = galsim.PositionD(x=off[0], y=off[1])
 
         image_origin = image_origin + offset
 
