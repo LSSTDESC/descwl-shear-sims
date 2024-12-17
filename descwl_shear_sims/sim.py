@@ -65,7 +65,7 @@ def make_sim(
     draw_bright=True,
     psf_dim=51,
     dither=False,
-    dither_amp=None,
+    dither_size=None,
     rotate=False,
     bands=["i"],
     epochs_per_band=1,
@@ -107,10 +107,10 @@ def make_sim(
         Dimensions of psf image.  Default 51
     dither: bool, optional
         Whether to dither the images at the pixel level, default False
-    dither_amp: float, optional
+    dither_size: float, optional
         The amplitude of dithering in unit of a fraction of a pixel
         for testing pixel interpolation.
-        All se WCS will be dithered by this amount in both x and y directions.
+        All se WCS will be dithered by this amount in both +x and +y directions.
         Value must be between 0 and 1.  default None.
     rotate: bool, optional
         Whether to randomly rotate the image exposures randomly [not the
@@ -280,7 +280,7 @@ def make_sim(
                 bright_mags=lists["bright_mags"],
                 coadd_bbox_cen_gs_skypos=coadd_bbox_cen_gs_skypos,
                 dither=dither,
-                dither_amp=dither_amp,
+                dither_size=dither_size,
                 rotate=rotate,
                 mask_threshold=mask_threshold,
                 cosmic_rays=cosmic_rays,
@@ -361,7 +361,7 @@ def make_exp(
     bright_mags=None,
     coadd_bbox_cen_gs_skypos=None,
     dither=False,
-    dither_amp=None,
+    dither_size=None,
     rotate=False,
     mask_threshold=None,
     cosmic_rays=False,
@@ -399,7 +399,7 @@ def make_exp(
         Dimensions of psf image that will be drawn when psf func is called
     dither: bool
         If set to True, dither randomly by a pixel width
-    dither_amp: float, optional
+    dither_size: float, optional
         The amplitude of dithering in unit of a fraction of a pixel
         for testing pixel interpolation.
         All se WCS will be dithered by this amount in both x and y directions.
@@ -483,7 +483,7 @@ def make_exp(
             image_origin=se_origin,
             world_origin=coadd_bbox_cen_gs_skypos,
             dither=dither,
-            dither_amp=dither_amp,
+            dither_size=dither_size,
             rotate=rotate,
             rng=rng,
         )
@@ -873,8 +873,6 @@ def get_se_dim(
         pixel scale of coadd
     se_scale: float, optional
         pixel scale of single exposure
-    dither: bool, optional
-        Whether there is dithering or not
     rotate: bool, optional
         Whether there are random rotations of image exposure or not
 
