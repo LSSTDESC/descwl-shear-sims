@@ -27,7 +27,7 @@ jobs:
 
       - name: roll back libmamba?
         shell: bash -l {0}
-        run:
+        run: |
           conda activate base
           conda list
           conda install "libmamba<2" --yes
