@@ -44,15 +44,9 @@ def make_se_wcs(
     Galsim WCS of the single exposure
     """
 
-    if dither_size is not None and not dither:
-        raise ValueError("dither_size is set but dither is False")
-
     if dither:
         # do a small offset of the origin
         assert rng is not None
-
-        if dither_size is None:
-            dither_size = 0.5
 
         off = rng.uniform(low=-dither_size, high=dither_size, size=2)
         offset = galsim.PositionD(x=off[0], y=off[1])

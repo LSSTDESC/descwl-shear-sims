@@ -65,7 +65,7 @@ def make_sim(
     draw_bright=True,
     psf_dim=51,
     dither=False,
-    dither_size=None,
+    dither_size=0.5,
     rotate=False,
     bands=["i"],
     epochs_per_band=1,
@@ -110,8 +110,9 @@ def make_sim(
     dither_size: float, optional
         The amplitude of dithering in unit of a fraction of a pixel
         for testing pixel interpolation.
-        All se WCS will be dithered by this amount in both +x and +y directions.
-        Value must be between 0 and 1.  default None.
+        All SE WCS will be given random dithers with this amplitude in both image
+        x and y direction.
+        Value must be between 0 and 1.  default 0.5.
     rotate: bool, optional
         Whether to randomly rotate the image exposures randomly [not the
         rotation of intrinsic galaxies], default False
