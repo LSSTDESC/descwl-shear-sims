@@ -33,7 +33,7 @@ DEFAULT_SIM_CONFIG = {
     "se_dim": None,
     "buff": 0,
     "layout": "grid",
-    "sep": None,  # sep in arcsec for layout=pair
+    "sep": None,
     "dither": False,
     "rotate": False,
     "bands": ["i"],

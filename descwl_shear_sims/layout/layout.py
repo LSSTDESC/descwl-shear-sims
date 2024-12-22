@@ -31,7 +31,7 @@ class Layout(object):
         ----------
         layout_name: string
             'grid', 'pair', 'hex', or 'random'
-        coadd_dim: int
+        coadd_dim: int | None
             Dimensions of final coadd
         buff: int, optional
             Buffer region where no objects will be drawn.  Default 0.
@@ -41,6 +41,7 @@ class Layout(object):
         self.pixel_scale = pixel_scale
         self.layout_name = layout_name
         if layout_name == 'random':
+            assert coadd_dim is not None, "coadd_dim should be int"
             # need to calculate number of objects first this layout is random
             # in a square
             if (coadd_dim - 2*buff) < 2:
@@ -50,6 +51,7 @@ class Layout(object):
                 # [arcmin^2]
                 self.area = ((coadd_dim - 2*buff)*pixel_scale/60)**2
         elif layout_name == 'random_disk':
+            assert coadd_dim is not None, "coadd_dim should be int"
             # need to calculate number of objects first
             # this layout_name is random in a circle
             if (coadd_dim - 2*buff) < 2:
@@ -90,7 +92,7 @@ class Layout(object):
         density: float, optional
             galaxy number density [/arcmin^2] ,default set to RANDOM_DENSITY
         sep: float, optional
-            The separation in arcseconds for layout='pair'
+            The separation in arcseconds for layout='pair', 'grid' or 'hex'
         """
 
         if self.layout_name == 'pair':
@@ -103,20 +105,24 @@ class Layout(object):
             )
         else:
             if self.layout_name == 'grid':
+                if sep is None:
+                    sep = GRID_SPACING
                 shifts = get_grid_shifts(
                     rng=rng,
                     dim=self.coadd_dim,
                     buff=self.buff,
                     pixel_scale=self.pixel_scale,
-                    spacing=GRID_SPACING,
+                    spacing=sep,
                 )
             elif self.layout_name == 'hex':
+                if sep is None:
+                    sep = HEX_SPACING
                 shifts = get_hex_shifts(
                     rng=rng,
                     dim=self.coadd_dim,
                     buff=self.buff,
                     pixel_scale=self.pixel_scale,
-                    spacing=HEX_SPACING,
+                    spacing=sep,
                 )
             elif self.layout_name == 'random':
                 # area covered by objects

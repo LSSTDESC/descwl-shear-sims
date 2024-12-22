@@ -41,7 +41,7 @@ def make_galaxy_catalog(
         Can be sent for fixed galaxy catalog.  See DEFAULT_FIXED_GAL_CONFIG
         for defaults mag, hlr and morph
     sep: float, optional
-        Separation of pair in arcsec for layout='pair'
+        Separation of pair in arcsec for layout='pair', 'grid' or 'hex'
     """
 
     if (layout is None) and (
