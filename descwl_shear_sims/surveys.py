@@ -8,6 +8,7 @@ DEFAULT_SURVEY_BANDS = {
     "DES": "r",
     "Euclid": "VIS",
     "CFHT": "i",
+    "Roman": "H158",
 }
 
 
@@ -33,14 +34,6 @@ def get_survey(*, gal_type, band, survey_name="LSST"):
         survey = WLDeblendSurvey(band=band, survey_name=survey_name)
     elif gal_type in ['fixed', 'varying']:
         survey = BasicSurvey(band=band)
-    elif gal_type == "ou2024rubinroman":
-        # TODO: need changes
-        survey = AugmentedSurvey(
-            band=band,
-            name=survey_name.lower(),
-            pixel_scale=SCALE,
-            noise=0.23,
-        )
     else:
         raise ValueError("bad gal_type: '%s'" % gal_type)
 
@@ -172,29 +165,3 @@ class BasicSurvey(object):
         get the flux for the input mag using the standard zero point
         """
         return 10**(0.4 * (ZERO_POINT - mag))
-
-
-class AugmentedSurvey(BasicSurvey):
-    """
-    similar as BasicSurvey with augmented attributes with common interface.
-    Note, this is for calibrated images with magnitude zero point set to
-    ZERO_POINT = 30 (see the constant.py file)
-
-    Parameters
-    ----------
-    band: str
-        e.g. 'r' (lsst) 'H158' (roman)
-    name: str
-        survey name -- e.g. "lsst" or "roman"
-        (should be lowercase for these two)
-    pixel_scale: float
-        pixel scale
-    noise: float
-        noise level in the flux unit
-    """
-    def __init__(self, *, band, name, pixel_scale, noise):
-        self.band = band
-        self.name = name
-        self.noise = noise
-        self.filter_band = band
-        self.pixel_scale: float = pixel_scale

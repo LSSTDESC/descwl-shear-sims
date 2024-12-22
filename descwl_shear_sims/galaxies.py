@@ -1,17 +1,114 @@
-import copy
-
-import galsim
 import numpy as np
-from galsim import DeVaucouleurs, Exponential
+import os
+import copy
+import galsim
+from galsim import DeVaucouleurs
+from galsim import Exponential
+import descwl
 
-from ..constants import SCALE
-from ..layout import Layout
+from .layout import Layout
+from .constants import SCALE
+from .cache_tools import cached_catalog_read
+
 
 DEFAULT_FIXED_GAL_CONFIG = {
     "mag": 17.0,
     "hlr": 0.5,
     "morph": "exp",
 }
+
+
+def make_galaxy_catalog(
+    *,
+    rng,
+    gal_type,
+    coadd_dim=None,
+    buff=0,
+    pixel_scale=SCALE,
+    layout: Layout | str | None = None,
+    gal_config=None,
+    sep=None,
+):
+    """
+    rng: numpy.random.RandomState
+        Numpy random state
+    gal_type: string
+        'fixed', 'varying' or 'wldeblend'
+    coadd_dim: int
+        Dimensions of coadd
+    buff: int, optional
+        Buffer around the edge where no objects are drawn.  Ignored for
+        layout 'grid'.  Default 0.
+    pixel_scale: float
+        pixel scale in arcsec
+    layout: string, optional
+        'grid' or 'random'.  Ignored for gal_type "wldeblend", otherwise
+        required.
+    gal_config: dict or None
+        Can be sent for fixed galaxy catalog.  See DEFAULT_FIXED_GAL_CONFIG
+        for defaults mag, hlr and morph
+    sep: float, optional
+        Separation of pair in arcsec for layout='pair'
+    """
+
+    if layout is None and gal_type == 'wldeblend':
+        layout = 'random'
+
+    if isinstance(layout, str):
+        layout = Layout(
+            layout_name=layout,
+            coadd_dim=coadd_dim,
+            buff=buff,
+            pixel_scale=pixel_scale,
+        )
+    else:
+        assert isinstance(layout, Layout)
+
+    if layout.layout_name == 'pair':
+        if sep is None:
+            raise ValueError(
+                f'send sep= for gal_type {gal_type} and layout {layout}'
+            )
+        gal_config = get_fixed_gal_config(config=gal_config)
+
+        if gal_type in ['fixed', 'exp']:  # TODO remove exp
+            cls = FixedPairGalaxyCatalog
+        else:
+            cls = PairGalaxyCatalog
+
+        galaxy_catalog = cls(
+            rng=rng,
+            mag=gal_config['mag'],
+            hlr=gal_config['hlr'],
+            morph=gal_config['morph'],
+            sep=sep,
+        )
+
+    else:
+        if gal_type == 'wldeblend':
+            galaxy_catalog = WLDeblendGalaxyCatalog(
+                rng=rng,
+                layout=layout,
+            )
+        elif gal_type in ['fixed', 'varying', 'exp']:  # TODO remove exp
+            gal_config = get_fixed_gal_config(config=gal_config)
+
+            if gal_type == 'fixed':
+                cls = FixedGalaxyCatalog
+            else:
+                cls = GalaxyCatalog
+
+            galaxy_catalog = cls(
+                rng=rng,
+                mag=gal_config['mag'],
+                hlr=gal_config['hlr'],
+                morph=gal_config['morph'],
+                layout=layout,
+            )
+
+        else:
+            raise ValueError(f'bad gal_type "{gal_type}"')
+    return galaxy_catalog
 
 
 def get_fixed_gal_config(config=None):
@@ -516,3 +613,195 @@ class PairGalaxyCatalog(GalaxyCatalog):
             rng=rng,
             sep=sep,
         )
+
+
+class WLDeblendGalaxyCatalog(object):
+    """
+    Catalog of galaxies from wldeblend
+
+    Parameters
+    ----------
+    rng: np.random.RandomState
+        The random number generator
+    layout: str|Layout, optional
+    coadd_dim: int, optional
+        Dimensions of the coadd
+    buff: int, optional
+        Buffer region with no objects, on all sides of image.  Ingored
+        for layout 'grid'.  Default 0.
+    pixel_scale: float, optional
+        pixel scale
+    select_observable: list[str] | str
+        A list of observables to apply selection
+    select_lower_limit: list | ndarray
+        lower limits of the slection cuts
+    select_upper_limit: list | ndarray
+        upper limits of the slection cuts
+    """
+    def __init__(
+        self,
+        *,
+        rng,
+        layout: Layout | str = 'random',
+        coadd_dim=None,
+        buff=None,
+        pixel_scale=SCALE,
+        select_observable=None,
+        select_lower_limit=None,
+        select_upper_limit=None,
+    ):
+        self.gal_type = 'wldeblend'
+        self.rng = rng
+
+        self._wldeblend_cat = read_wldeblend_cat(
+            select_observable=select_observable,
+            select_lower_limit=select_lower_limit,
+            select_upper_limit=select_upper_limit,
+        )
+
+        # one square degree catalog, convert to arcmin
+        density = self._wldeblend_cat.size / (60 * 60)
+        if isinstance(layout, str):
+            self.layout = Layout(layout, coadd_dim, buff, pixel_scale)
+        else:
+            assert isinstance(layout, Layout)
+            self.layout = layout
+        self.shifts_array = self.layout.get_shifts(
+            rng=rng,
+            density=density,
+        )
+
+        # randomly sample from the catalog
+        num = len(self)
+        self.indices = self.rng.randint(
+            0,
+            self._wldeblend_cat.size,
+            size=num,
+        )
+        # do a random rotation for each galaxy
+        self.angles = self.rng.uniform(low=0, high=360, size=num)
+
+    def __len__(self):
+        return len(self.shifts_array)
+
+    def get_objlist(self, *, survey):
+        """
+        get a list of galsim objects, position shifts, redshifts and indexes
+
+        Parameters
+        ----------
+        survey: WLDeblendSurvey
+            The survey object
+
+        Returns
+        -------
+        [galsim objects], [shifts], [redshifts], [indexes]
+        """
+
+        builder = descwl.model.GalaxyBuilder(
+            survey=survey.descwl_survey,
+            no_disk=False,
+            no_bulge=False,
+            no_agn=False,
+            verbose_model=False,
+        )
+
+        band = survey.filter_band
+
+        sarray = self.shifts_array
+        indexes = []
+        objlist = []
+        shifts = []
+        redshifts = []
+        for i in range(len(self)):
+            objlist.append(self._get_galaxy(builder, band, i))
+            shifts.append(galsim.PositionD(sarray['dx'][i], sarray['dy'][i]))
+            index = self.indices[i]
+            indexes.append(index)
+            redshifts.append(self._wldeblend_cat[index]["redshift"])
+
+        return {
+            "objlist": objlist,
+            "shifts": shifts,
+            "redshifts": redshifts,
+            "indexes": indexes,
+        }
+
+    def _get_galaxy(self, builder, band, i):
+        """
+        Get a galaxy
+
+        Parameters
+        ----------
+        builder: descwl.model.GalaxyBuilder
+            Builder for this object
+        band: string
+            Band string, e.g. 'r'
+        i: int
+            Index of object
+
+        Returns
+        -------
+        galsim.GSObject
+        """
+        index = self.indices[i]
+
+        angle = self.angles[i]
+
+        galaxy = builder.from_catalog(
+            self._wldeblend_cat[index],
+            0,
+            0,
+            band,
+        ).model.rotate(
+            angle * galsim.degrees,
+        )
+
+        return galaxy
+
+
+def read_wldeblend_cat(
+    select_observable=None,
+    select_lower_limit=None,
+    select_upper_limit=None,
+):
+    """
+    Read the catalog from the cache, but update the position angles each time
+
+    Parameters
+    ----------
+    select_observable: list[str] | str
+        A list of observables to apply selection
+    select_lower_limit: list[float] | ndarray[float]
+        lower limits of the slection cuts
+    select_upper_limit: list[float] | ndarray[float]
+        upper limits of the slection cuts
+
+    Returns
+    -------
+    array with fields
+    """
+    fname = os.path.join(
+        os.environ.get('CATSIM_DIR', '.'),
+        'OneDegSq.fits',
+    )
+
+    # not thread safe
+    cat = cached_catalog_read(fname)
+    if select_observable is not None:
+        select_observable = np.atleast_1d(select_observable)
+        if not set(select_observable) < set(cat.dtype.names):
+            raise ValueError("Selection observables not in the catalog columns")
+        mask = np.ones(len(cat)).astype(bool)
+        if select_lower_limit is not None:
+            select_lower_limit = np.atleast_1d(select_lower_limit)
+            assert len(select_observable) == len(select_lower_limit)
+            for nn, ll in zip(select_observable, select_lower_limit):
+                mask = mask & (cat[nn] > ll)
+        if select_upper_limit is not None:
+            select_upper_limit = np.atleast_1d(select_upper_limit)
+            assert len(select_observable) == len(select_upper_limit)
+            for nn, ul in zip(select_observable, select_upper_limit):
+                mask = mask & (cat[nn] <= ul)
+        cat = cat[mask]
+    return cat
