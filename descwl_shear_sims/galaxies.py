@@ -48,7 +48,7 @@ def make_galaxy_catalog(
         Can be sent for fixed galaxy catalog.  See DEFAULT_FIXED_GAL_CONFIG
         for defaults mag, hlr and morph
     sep: float, optional
-        Separation of pair in arcsec for layout='pair'
+        Separation of pair in arcsec for layout='pair', 'grid' or 'hex'
     """
 
     if layout is None and gal_type == 'wldeblend':
@@ -89,6 +89,7 @@ def make_galaxy_catalog(
             galaxy_catalog = WLDeblendGalaxyCatalog(
                 rng=rng,
                 layout=layout,
+                sep=sep,
             )
         elif gal_type in ['fixed', 'varying', 'exp']:  # TODO remove exp
             gal_config = get_fixed_gal_config(config=gal_config)
@@ -104,6 +105,7 @@ def make_galaxy_catalog(
                 hlr=gal_config['hlr'],
                 morph=gal_config['morph'],
                 layout=layout,
+                sep=sep,
             )
 
         else:
@@ -164,6 +166,8 @@ class FixedGalaxyCatalog(object):
         for layout 'grid'.  Default 0.
     pixel_scale: float, optional
         pixel scale in arcsec
+    sep: float | None
+        Separation of galaxies in arcsec
     """
     def __init__(
         self, *,
@@ -175,6 +179,7 @@ class FixedGalaxyCatalog(object):
         coadd_dim=None,
         buff=0,
         pixel_scale=SCALE,
+        sep=None,
     ):
         self.gal_type = 'fixed'
         self.morph = morph
@@ -188,6 +193,7 @@ class FixedGalaxyCatalog(object):
             self.layout = layout
         self.shifts_array = self.layout.get_shifts(
             rng=rng,
+            sep=sep,
         )
 
     def __len__(self):
@@ -284,6 +290,8 @@ class GalaxyCatalog(FixedGalaxyCatalog):
         for layout 'grid'.  Default 0.
     pixel_scale: float
         pixel scale in arcsec
+    sep: float | None
+        Separation of galaxies in arcsec
     """
     def __init__(
         self, *,
@@ -295,6 +303,7 @@ class GalaxyCatalog(FixedGalaxyCatalog):
         coadd_dim=None,
         buff=0,
         pixel_scale=SCALE,
+        sep=None,
     ):
         super().__init__(
             rng=rng,
@@ -305,6 +314,7 @@ class GalaxyCatalog(FixedGalaxyCatalog):
             mag=mag,
             hlr=hlr,
             morph=morph,
+            sep=sep,
         )
         self.gal_type = 'varying'
 
@@ -637,6 +647,8 @@ class WLDeblendGalaxyCatalog(object):
         lower limits of the slection cuts
     select_upper_limit: list | ndarray
         upper limits of the slection cuts
+    sep: float
+        Separation of galaxies in arcsec
     """
     def __init__(
         self,
@@ -649,6 +661,7 @@ class WLDeblendGalaxyCatalog(object):
         select_observable=None,
         select_lower_limit=None,
         select_upper_limit=None,
+        sep=None,
     ):
         self.gal_type = 'wldeblend'
         self.rng = rng
@@ -661,6 +674,8 @@ class WLDeblendGalaxyCatalog(object):
 
         # one square degree catalog, convert to arcmin
         density = self._wldeblend_cat.size / (60 * 60)
+        if buff is None:
+            buff = 0
         if isinstance(layout, str):
             self.layout = Layout(layout, coadd_dim, buff, pixel_scale)
         else:
@@ -669,6 +684,7 @@ class WLDeblendGalaxyCatalog(object):
         self.shifts_array = self.layout.get_shifts(
             rng=rng,
             density=density,
+            sep=sep,
         )
 
         # randomly sample from the catalog
