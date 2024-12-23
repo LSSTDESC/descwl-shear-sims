@@ -649,9 +649,9 @@ class WLDeblendGalaxyCatalog(object):
         upper limits of the slection cuts
     sep: float
         Separation of galaxies in arcsec
-    indice_min: None | int
-        minimum of the index to use, use galaxies in the range [indice_min,
-        indice_min + num)
+    indice_id: None | int
+        galaxy index to use, use galaxies in the range between indice_id * num
+        and (indice_id + 1) * num
     """
     def __init__(
         self,
@@ -665,7 +665,7 @@ class WLDeblendGalaxyCatalog(object):
         select_lower_limit=None,
         select_upper_limit=None,
         sep=None,
-        indice_min=None,
+        indice_id=None,
     ):
         self.gal_type = 'wldeblend'
         self.rng = rng
@@ -693,18 +693,20 @@ class WLDeblendGalaxyCatalog(object):
 
         # randomly sample from the catalog
         num = len(self)
-        if indice_min is None:
+        if indice_id is None:
             self.indices = self.rng.randint(
                 0,
                 self._wldeblend_cat.size,
                 size=num,
             )
         else:
-            if indice_min + num > self._wldeblend_cat.size:
+            indice_min = indice_id * num
+            indice_max = min(indice_min + num, self._wldeblend_cat.size)
+            if indice_min >= self._wldeblend_cat.size:
                 raise ValueError("indice_min too large")
             self.indices = np.arange(
                 indice_min,
-                indice_min + num,
+                indice_max,
                 dtype=int,
             )
         # do a random rotation for each galaxy
