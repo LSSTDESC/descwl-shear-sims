@@ -701,14 +701,14 @@ class WLDeblendGalaxyCatalog(object):
             )
         else:
             indice_min = indice_id * num
-            indice_max = min(indice_min + num, self._wldeblend_cat.size)
+            indice_max = indice_min + num
             if indice_min >= self._wldeblend_cat.size:
                 raise ValueError("indice_min too large")
             self.indices = np.arange(
                 indice_min,
                 indice_max,
                 dtype=int,
-            )
+            ) % self._wldeblend_cat.size
         # do a random rotation for each galaxy
         self.angles = self.rng.uniform(low=0, high=360, size=num)
 
