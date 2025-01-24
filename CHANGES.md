@@ -1,3 +1,9 @@
+# 0.4.5
+### new features
+    - allow users to set separation distance for grid and hex layout
+    - fix mamba fail
+    - allow users to choose the indices of the input galaxies
+
 # 0.4.4
 ### new features
     - add support for passing se_wcs to make_exp function in sim.py
