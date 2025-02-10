@@ -675,6 +675,13 @@ class WLDeblendGalaxyCatalog(object):
             select_lower_limit=select_lower_limit,
             select_upper_limit=select_upper_limit,
         )
+        if "prob" in self._wldeblend_cat.dtype.names:
+            # noramlize probabilities to sum = 1
+            probabilities = self._wldeblend_cat["prob"] / np.sum(
+                self._wldeblend_cat["prob"]
+            )
+        else:
+            probabilities = None
 
         # one square degree catalog, convert to arcmin
         density = self._wldeblend_cat.size / (60 * 60)
@@ -693,12 +700,10 @@ class WLDeblendGalaxyCatalog(object):
 
         # randomly sample from the catalog
         num = len(self)
+
         if indice_id is None:
-            self.indices = self.rng.randint(
-                0,
-                self._wldeblend_cat.size,
-                size=num,
-            )
+            integers = np.arange(0, self._wldeblend_cat.size, dtype=int)
+            self.indices = self.rng.choice(integers, size=num, p=probabilities)
         else:
             indice_min = indice_id * num
             indice_max = indice_min + num
