@@ -113,9 +113,6 @@ class ShearRedshift(ShearConstant):
 
 
 class ShearHalo(object):
-    from astropy.cosmology import Planck18
-    from lenstronomy.Cosmo.lens_cosmo import LensCosmo
-    from lenstronomy.LensModel.lens_model import LensModel
     
     def __init__(
         self,
@@ -140,6 +137,10 @@ class ShearHalo(object):
         cosmo (astropy.cosmology):  cosmology object
         no_kappa (bool):            if True, turn off kappa field
         """
+        
+        from astropy.cosmology import Planck18
+        from lenstronomy.LensModel.lens_model import LensModel
+
         if cosmo is None:
             cosmo = Planck18
         self.cosmo = cosmo
@@ -164,6 +165,8 @@ class ShearHalo(object):
         gso, shift:
             distorted galaxy object and shift
         """
+        from lenstronomy.Cosmo.lens_cosmo import LensCosmo
+
         if redshift > self.z_lens:
             r = prelensed_shift - self.pos_lens
 
