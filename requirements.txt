@@ -7,3 +7,4 @@ pydantic
 
 # optional, but needed for tests to pass
 hexalattice
+lenstronomy
