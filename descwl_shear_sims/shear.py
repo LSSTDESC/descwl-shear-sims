@@ -113,7 +113,7 @@ class ShearRedshift(ShearConstant):
 
 
 class ShearHalo(object):
-    
+
     def __init__(
         self,
         mass,
@@ -137,7 +137,7 @@ class ShearHalo(object):
         cosmo (astropy.cosmology):  cosmology object
         no_kappa (bool):            if True, turn off kappa field
         """
-        
+
         from astropy.cosmology import Planck18
         from lenstronomy.LensModel.lens_model import LensModel
 
