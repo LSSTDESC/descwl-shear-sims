@@ -175,7 +175,7 @@ class FixedGalaxyCatalog(object):
         Separation of galaxies in arcsec
     simple_coadd_bbox: optional, bool. Default: False
         Whether to force the center of coadd boundary box (which is the default
-        center single exposure) at the world_origin 
+        center single exposure) at the world_origin
     """
     def __init__(
         self, *,
@@ -196,7 +196,8 @@ class FixedGalaxyCatalog(object):
         self.hlr = hlr
 
         if isinstance(layout, str):
-            self.layout = Layout(layout, coadd_dim, buff, pixel_scale, simple_coadd_bbox=simple_coadd_bbox)
+            self.layout = Layout(layout, coadd_dim, buff, pixel_scale,
+                                 simple_coadd_bbox=simple_coadd_bbox)
         else:
             assert isinstance(layout, Layout)
             self.layout = layout
