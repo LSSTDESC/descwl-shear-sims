@@ -694,6 +694,8 @@ def test_sim_truth_info():
         'index', 'ra', 'dec', 'z', 'image_x', 'image_y',
         'prelensed_image_x', 'prelensed_image_y',
         'prelensed_ra', 'prelensed_dec',
+        'shift_x', 'shift_y',
+        'lensed_shift_x', 'lensed_shift_y',
         'kappa', 'gamma1', 'gamma2'
     )
     np.testing.assert_allclose(
