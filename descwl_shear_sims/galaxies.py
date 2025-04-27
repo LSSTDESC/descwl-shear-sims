@@ -28,6 +28,7 @@ def make_galaxy_catalog(
     layout: Layout | str | None = None,
     gal_config=None,
     sep=None,
+    simple_coadd_bbox=False,
 ):
     """
     rng: numpy.random.RandomState
@@ -49,6 +50,9 @@ def make_galaxy_catalog(
         for defaults mag, hlr and morph
     sep: float, optional
         Separation of pair in arcsec for layout='pair', 'grid' or 'hex'
+    simple_coadd_bbox: optional, bool. Default: False
+        Whether to force the center of coadd boundary box (which is the default
+        center single exposure) at the world_origin
     """
 
     if layout is None and gal_type == 'wldeblend':
@@ -60,6 +64,7 @@ def make_galaxy_catalog(
             coadd_dim=coadd_dim,
             buff=buff,
             pixel_scale=pixel_scale,
+            simple_coadd_bbox=simple_coadd_bbox,
         )
     else:
         assert isinstance(layout, Layout)
@@ -168,6 +173,9 @@ class FixedGalaxyCatalog(object):
         pixel scale in arcsec
     sep: float | None
         Separation of galaxies in arcsec
+    simple_coadd_bbox: optional, bool. Default: False
+        Whether to force the center of coadd boundary box (which is the default
+        center single exposure) at the world_origin 
     """
     def __init__(
         self, *,
@@ -180,6 +188,7 @@ class FixedGalaxyCatalog(object):
         buff=0,
         pixel_scale=SCALE,
         sep=None,
+        simple_coadd_bbox=False,
     ):
         self.gal_type = 'fixed'
         self.morph = morph
@@ -187,7 +196,7 @@ class FixedGalaxyCatalog(object):
         self.hlr = hlr
 
         if isinstance(layout, str):
-            self.layout = Layout(layout, coadd_dim, buff, pixel_scale)
+            self.layout = Layout(layout, coadd_dim, buff, pixel_scale, simple_coadd_bbox=simple_coadd_bbox)
         else:
             assert isinstance(layout, Layout)
             self.layout = layout
@@ -292,6 +301,9 @@ class GalaxyCatalog(FixedGalaxyCatalog):
         pixel scale in arcsec
     sep: float | None
         Separation of galaxies in arcsec
+    simple_coadd_bbox: optional, bool. Default: False
+        Whether to force the center of coadd boundary box (which is the default
+        center single exposure) at the world_origin
     """
     def __init__(
         self, *,
@@ -304,6 +316,7 @@ class GalaxyCatalog(FixedGalaxyCatalog):
         buff=0,
         pixel_scale=SCALE,
         sep=None,
+        simple_coadd_bbox=False,
     ):
         super().__init__(
             rng=rng,
@@ -315,6 +328,7 @@ class GalaxyCatalog(FixedGalaxyCatalog):
             hlr=hlr,
             morph=morph,
             sep=sep,
+            simple_coadd_bbox=simple_coadd_bbox,
         )
         self.gal_type = 'varying'
 
@@ -569,15 +583,17 @@ class FixedPairGalaxyCatalog(FixedGalaxyCatalog):
         Separation of pair in arcsec
     morph: str
         Galaxy morphology, 'exp', 'dev' or 'bd', 'bdk'.  Default 'exp'
+    simple_coadd_bbox: optional, bool. Default: False
+        Whether to force the center of coadd boundary box (which is the default
+        center single exposure) at the world_origin
     """
-    def __init__(self, *, rng, mag, hlr, sep, morph='exp'):
+    def __init__(self, *, rng, mag, hlr, sep, morph='exp', simple_coadd_bbox=False):
         self.gal_type = 'fixed'
         self.morph = morph
         self.mag = mag
         self.hlr = hlr
         self.rng = rng
-
-        self.layout = Layout("pair")
+        self.layout = Layout("pair", simple_coadd_bbox=simple_coadd_bbox)
         self.shifts_array = self.layout.get_shifts(
             rng=rng,
             sep=sep,
