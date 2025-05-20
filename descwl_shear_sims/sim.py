@@ -695,6 +695,10 @@ def _draw_objects(
         info["index"] = (ind,)
         info["ra"] = world_pos.ra / galsim.degrees
         info["dec"] = world_pos.dec / galsim.degrees
+        info["shift_x"] = (shift.x,)
+        info["shift_y"] = (shift.y,)
+        info["lensed_shift_x"] = (lensed_shift.x,)
+        info["lensed_shift_y"] = (lensed_shift.y,)
         info["z"] = (z,)
         info["image_x"] = (image_pos.x - 1,)
         info["image_y"] = (image_pos.y - 1,)
@@ -967,6 +971,10 @@ def get_truth_info_struct():
         ("index", "i4"),
         ("ra", "f8"),
         ("dec", "f8"),
+        ("shift_x", "f8"),
+        ("shift_y", "f8"),
+        ("lensed_shift_x", "f8"),
+        ("lensed_shift_y", "f8"),
         ("z", "f8"),
         ("image_x", "f8"),
         ("image_y", "f8"),
