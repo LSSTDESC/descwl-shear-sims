@@ -676,7 +676,7 @@ class WLDeblendGalaxyCatalog(object):
             select_upper_limit=select_upper_limit,
         )
         ngal = len(self._wldeblend_cat)
-        if "prob" in self._wldeblend_cat.dtype.names and  ngal > 0:
+        if "prob" in self._wldeblend_cat.dtype.names and ngal > 0:
             # noramlize probabilities to sum = 1
             probabilities = self._wldeblend_cat["prob"] / np.sum(
                 self._wldeblend_cat["prob"]
