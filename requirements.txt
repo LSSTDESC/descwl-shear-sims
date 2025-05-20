@@ -4,7 +4,8 @@ lsstdesc.weaklensingdeblending
 numba
 galsim
 pydantic
-lenstronomy
 
 # optional, but needed for tests to pass
 hexalattice
+lenstronomy
+astropy
