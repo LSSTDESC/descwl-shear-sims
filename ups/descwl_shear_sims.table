@@ -1,0 +1,19 @@
+# List EUPS dependencies of this package here.
+# - Any package whose API is used directly should be listed explicitly.
+# - Common third-party packages can be assumed to be recursively included by
+#   the "base" package.
+setupRequired(afw)
+setupRequired(base)
+setupRequired(daf_base)
+setupRequired(descwl)
+setupRequired(geom)
+setupRequired(meas_algorithms)
+
+# Optional dependencies, for testing only
+setupOptional(descwl_coadd)
+setupOptional(metadetect)
+
+# The following is boilerplate for all packages.
+# See https://dmtn-001.lsst.io for details on LSST_LIBRARY_PATH.
+envPrepend(PYTHONPATH, ${PRODUCT_DIR})
+
