@@ -202,6 +202,7 @@ class ShearHalo(object):
         return _get_shear_res_dict(gso, lensed_shift, gamma1, gamma2,
                                    kappa)
 
+
 def _get_shear_res_dict(
     gso, lensed_shift, gamma1, gamma2, kappa
 ):
