@@ -56,7 +56,7 @@ class ShearConstant(object):
         shear = self.get_shear(redshift, shift)
         gso = gso.shear(shear)
         shift = shift.shear(shear)
-        return _get_shear_res_dict(gso, shift)
+        return _get_shear_res_dict(gso, shift, self.g1, self.g2, 0.0)
 
 
 class ShearRedshift(ShearConstant):
@@ -202,9 +202,12 @@ class ShearHalo(object):
         return _get_shear_res_dict(gso, lensed_shift, gamma1, gamma2,
                                    kappa)
 
+def _get_shear_res_dict(
+    gso, lensed_shift, gamma1, gamma2, kappa
+):
 
-def _get_shear_res_dict(gso, lensed_shift,
-                        gamma1=-1, gamma2=-1, kappa=-1):
+    assert kappa >= 0, "kappa must be non-negative"
+
     shear_res_dict = {
         "gso": gso,
         "lensed_shift": lensed_shift,
