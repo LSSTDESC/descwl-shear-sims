@@ -11,7 +11,6 @@ setupRequired(meas_algorithms)
 
 # Optional dependencies, for testing only
 setupOptional(descwl_coadd)
-setupOptional(metadetect)
 
 # The following is boilerplate for all packages.
 # See https://dmtn-001.lsst.io for details on LSST_LIBRARY_PATH.
