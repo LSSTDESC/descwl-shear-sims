@@ -588,18 +588,12 @@ def make_exp(
     variance = image.copy()
     variance.array[:, :] = noise**2
     
-    if im_dtype == np.float32:
-        afw_type = afw_image.ImageF
-        afw_mask_type = afw_image.MaskedImageF
-    else:
-        afw_type = afw_image.ImageD
-        afw_mask_type = afw_image.MaskedImageD
-    masked_image = afw_mask_type(dim, dim)
+    masked_image = afw_image.MaskedImage(dim, dim, dtype=im_dtype)
     masked_image.image.array[:, :] = image.array
     masked_image.variance.array[:, :] = variance.array
     masked_image.mask.array[:, :] = bmask.array
 
-    exp = afw_type(masked_image)
+    exp = afw_image.Exposure(masked_image, dtype=im_dtype)
 
     # Prepare the frc, and save it to the DM exposure
     # It can be retrieved as follow
