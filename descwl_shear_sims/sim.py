@@ -703,7 +703,8 @@ def _draw_objects(
             local_wcs = wcs.local(image_pos=image_pos)
             convolved_object = get_convolved_object(obj, psf, image_pos)
             stamp = convolved_object.drawImage(
-                center=image_pos, wcs=local_wcs, method=draw_method, dtype=im_dtype, **kw
+                center=image_pos, wcs=local_wcs, method=draw_method,
+                dtype=im_dtype, **kw
             )
 
             b = stamp.bounds & image.bounds
