@@ -665,7 +665,7 @@ def _draw_objects(
             ang = theta0 * galsim.radians
             # rotation on intrinsic galaxies comes before shear distortion
             obj = obj.rotate(ang)
-            shift = _rotae_pos(shift, theta0)
+            shift = _rotate_pos(shift, theta0)
 
         if shear_obj is not None:
             distor_res = shear_obj.distort_galaxy(obj, shift, z)
