@@ -549,7 +549,6 @@ def make_exp(
         )
 
     if draw_noise:
-        image.array[:, :] += rng.normal(scale=noise, size=dims).astype(im_dtype)
     if sky_n_sigma is not None:
         image.array[:, :] += sky_n_sigma * noise
 
