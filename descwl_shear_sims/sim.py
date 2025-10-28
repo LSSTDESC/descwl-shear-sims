@@ -173,14 +173,14 @@ def make_sim(
             image_x, image_y: image position of input galaxies
         se_wcs: a dict keyed by band name, holding a list of se_wcs
     """
-    
+ 
     if im_precision == "float":
         im_dtype = np.float32
     elif im_precision == "double":
         im_dtype = np.float64
     else:
         raise ValueError("im_precision must be 'float' or 'double'")
-    
+ 
     # Get the pixel scale using a default band from the survey
     _bd = deepcopy(DEFAULT_SURVEY_BANDS)[survey_name]
     pixel_scale = get_survey(
@@ -587,7 +587,7 @@ def make_exp(
 
     variance = image.copy()
     variance.array[:, :] = noise**2
-    
+ 
     masked_image = afw_image.MaskedImage(dim, dim, dtype=im_dtype)
     masked_image.image.array[:, :] = image.array
     masked_image.variance.array[:, :] = variance.array
