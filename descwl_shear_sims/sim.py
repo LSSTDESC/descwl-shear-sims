@@ -462,7 +462,9 @@ def make_exp(
         list of indexes in the input galaxy catalog, default: None
     se_wcs: galsim WCS
         wcs for single exposure, default: None
-    im_dtype: numpy dtype for images
+    im_dtype: numpy dtype
+        numpy dtype for images
+
     Returns
     -------
     exp: lsst.afw.image.ExposureF
