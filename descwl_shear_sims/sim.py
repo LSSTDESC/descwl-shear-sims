@@ -463,7 +463,7 @@ def make_exp(
     se_wcs: galsim WCS
         wcs for single exposure, default: None
     im_dtype: np.float32 or np.float64. default: np.float32
-        Numerical precision for images. 
+        Numerical precision for images.
 
     Returns
     -------
