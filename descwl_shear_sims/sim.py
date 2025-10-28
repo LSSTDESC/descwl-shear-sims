@@ -388,7 +388,7 @@ def make_exp(
     draw_noise=True,
     indexes=None,
     se_wcs=None,
-    im_dtype=None,
+    im_dtype=np.float32,
 ):
     """
     Make an Signle Exposure (SE) observation
@@ -462,8 +462,8 @@ def make_exp(
         list of indexes in the input galaxy catalog, default: None
     se_wcs: galsim WCS
         wcs for single exposure, default: None
-    im_dtype: numpy dtype
-        numpy dtype for images
+    im_dtype: np.float32 or np.float64. default: np.float32
+        Numerical precision for images. 
 
     Returns
     -------
