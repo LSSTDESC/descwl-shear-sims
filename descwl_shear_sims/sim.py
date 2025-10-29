@@ -629,7 +629,7 @@ def _draw_objects(
     shear_obj=None,
     theta0=None,
     indexes=None,
-    im_dtype=None,
+    im_dtype=np.float32,
 ):
     """
     draw objects and return the input galaxy catalog.
