@@ -83,7 +83,7 @@ def make_sim(
     coadd_dim=None,
     simple_coadd_bbox=False,
     draw_noise=True,
-    im_precision="float"
+    im_precision="float",
 ):
     """
     Make simulation data
