@@ -796,6 +796,7 @@ def test_make_exp():
         coadd_bbox_cen_gs_skypos=world_origin,
     )
 
+
 @pytest.mark.parametrize("im_dtype", [np.float32, np.float64])
 def test_sim_im_dtype(im_dtype):
     """
