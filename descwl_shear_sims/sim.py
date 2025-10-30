@@ -174,6 +174,8 @@ def make_sim(
         se_wcs: a dict keyed by band name, holding a list of se_wcs
     """
 
+    if isinstance(im_dtype, str):
+        im_dtype = np.dtype(im_dtype)
     # Get the pixel scale using a default band from the survey
     _bd = deepcopy(DEFAULT_SURVEY_BANDS)[survey_name]
     pixel_scale = get_survey(
