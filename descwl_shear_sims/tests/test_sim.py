@@ -796,6 +796,41 @@ def test_make_exp():
         coadd_bbox_cen_gs_skypos=world_origin,
     )
 
+@pytest.mark.parametrize("im_dtype", [np.float32, np.float64])
+def test_sim_im_dtype(im_dtype):
+    """
+    test sim can run with different image dtypes
+    """
+    seed = 74321
+    rng = np.random.RandomState(seed)
+
+    coadd_dim = 351
+    psf_dim = 51
+    bands = ["i"]
+    galaxy_catalog = make_galaxy_catalog(
+        rng=rng,
+        gal_type="fixed",
+        coadd_dim=coadd_dim,
+        buff=30,
+        layout="grid",
+    )
+
+    psf = make_fixed_psf(psf_type="gauss")
+    data = make_sim(
+        rng=rng,
+        galaxy_catalog=galaxy_catalog,
+        coadd_dim=coadd_dim,
+        psf_dim=psf_dim,
+        bands=bands,
+        shear_obj=shear_obj,
+        psf=psf,
+        im_dtype=im_dtype,
+    )
+
+    for band, bdata in data['band_data'].items():
+        for exp in bdata:
+            assert exp.image.array.dtype == im_dtype
+
 
 if __name__ == '__main__':
     # test_sim_layout("hex", "wldeblend")
