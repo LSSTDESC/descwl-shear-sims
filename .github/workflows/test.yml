@@ -16,14 +16,15 @@ jobs:
     runs-on: "ubuntu-latest"
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v5
 
-      - uses: conda-incubator/setup-miniconda@v2
+      - uses: conda-incubator/setup-miniconda@v3.2.0
         with:
           python-version: ${{ matrix.pyver }}
           channels: conda-forge
           channel-priority: strict
           show-channel-urls: true
+          miniforge-version: latest          
 
       - name: configure conda and install code
         shell: bash -l {0}
