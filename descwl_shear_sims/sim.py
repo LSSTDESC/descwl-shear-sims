@@ -83,7 +83,7 @@ def make_sim(
     coadd_dim=None,
     simple_coadd_bbox=False,
     draw_noise=True,
-    im_precision="float"
+    im_dtype=np.float32,
 ):
     """
     Make simulation data
@@ -150,8 +150,8 @@ def make_sim(
         center single exposure) at the world_origin
     draw_noise: optional, bool
         Whether draw image noise
-    im_precision: optional, str
-        Image precision, 'float' or 'double'.  Default 'float'
+    im_dtype: optional, numpy dtype
+        Image numerical precision np.float32 or np.float64. Default: np.float32
 
     Returns
     -------
