@@ -28,13 +28,15 @@ def make_galaxy_catalog(
     layout: Layout | str | None = None,
     gal_config=None,
     sep=None,
+    gal_list=None,
+    uv_shift=None,
     simple_coadd_bbox=False,
 ):
     """
     rng: numpy.random.RandomState
         Numpy random state
     gal_type: string
-        'fixed', 'varying' or 'wldeblend'
+        'fixed', 'varying', 'custom', or 'wldeblend' 
     coadd_dim: int
         Dimensions of coadd
     buff: int, optional
@@ -43,13 +45,17 @@ def make_galaxy_catalog(
     pixel_scale: float
         pixel scale in arcsec
     layout: string, optional
-        'grid' or 'random'.  Ignored for gal_type "wldeblend", otherwise
+        'grid', 'random', or 'custom'.  Ignored for gal_type "wldeblend", otherwise
         required.
     gal_config: dict or None
         Can be sent for fixed galaxy catalog.  See DEFAULT_FIXED_GAL_CONFIG
         for defaults mag, hlr and morph
     sep: float, optional
         Separation of pair in arcsec for layout='pair', 'grid' or 'hex'
+    gal_list: list of Galsim objects, optional
+        List of galsim objects to use for layout='custom'
+    uv_shift: list of tuple, optional
+        List of (u,v) shifts to apply to each galaxy for layout='custom'.  Units of arcsec
     simple_coadd_bbox: optional, bool. Default: False
         Whether to force the center of coadd boundary box (which is the default
         center single exposure) at the world_origin
@@ -88,6 +94,18 @@ def make_galaxy_catalog(
             morph=gal_config['morph'],
             sep=sep,
         )
+
+    elif layout.layout_name == 'custom':
+        assert gal_type == 'custom', "layout 'custom' requires gal_type 'custom'"
+
+        if gal_list is not None:
+        # Require explicit positions for determinism and count matching.
+        if uv_shift is None:
+            raise ValueError("When using gal_list, you must also provide uv_shift "
+                             "(list of (u, v) arcsec with same length).")
+        
+        assert len(gal_list) == len(uv_shift), ("gal_list and uv_shift must have the same length.")
+        galaxy_catalog = ListGalaxyCatalog(gal_list=gal_list, uv_shift=uv_shift, layout=layout)
 
     else:
         if gal_type == 'wldeblend':
@@ -858,3 +876,43 @@ def read_wldeblend_cat(
                 mask = mask & (cat[nn] <= ul)
         cat = cat[mask]
     return cat
+
+class ListGalaxyCatalog:
+    """
+    Catalog that uses an explicit list of galsim objects and (u, v) shifts.
+
+    Parameters
+    ----------
+    gal_list : list[galsim.GSObject]
+        The galaxies to place.
+    uv_shift : list[tuple[float, float]]
+        Per-galaxy (u, v) shifts in arcsec, same length as gal_list.
+    layout : Layout | None
+        Optional; only used to carry coadd bbox/world origin metadata.
+        Positions are taken strictly from `uv_shift`.
+    """
+    def __init__(self, *, gal_list, uv_shift, layout=None):
+        if gal_list is None or len(gal_list) == 0:
+            raise ValueError("gal_list must be a non-empty list of galsim objects")
+        if uv_shift is None or len(uv_shift) != len(gal_list):
+            raise ValueError("uv_shift must be provided and match len(gal_list)")
+        self.gal_type = 'list'
+        self._gal_list = list(gal_list)
+        self._shifts = [galsim.PositionD(u, v) for (u, v) in uv_shift]
+        self.layout = layout  # may be useful downstream (e.g., bbox/world origin)
+
+    def __len__(self):
+        return len(self._gal_list)
+
+    def get_objlist(self, *, survey):
+        """
+        Returns a dict with the same structure as other catalogs.
+        The provided GSObjects are used verbatim (no flux remapping).
+        """
+        indexes = list(range(len(self._gal_list)))
+        return {
+            "objlist": list(self._gal_list),
+            "shifts": list(self._shifts),
+            "redshifts": None,
+            "indexes": indexes,
+        }
