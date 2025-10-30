@@ -797,7 +797,7 @@ def test_make_exp():
     )
 
 
-@pytest.mark.parametrize("im_dtype", [np.float32, np.float64])
+@pytest.mark.parametrize("im_dtype", [np.float32, np.float64, "f4", ">f8"])
 def test_sim_im_dtype(im_dtype):
     """
     test sim can run with different image dtypes
