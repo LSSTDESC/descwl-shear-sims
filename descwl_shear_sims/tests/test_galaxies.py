@@ -12,17 +12,25 @@ from ..psfs import make_fixed_psf
 from ..sim import make_sim
 from ..shear import ShearConstant
 
+import galsim
+
 shear_obj = ShearConstant(g1=0.02, g2=0.)
 
 
-@pytest.mark.parametrize('layout', ('pair', 'random', 'hex'))
-@pytest.mark.parametrize('gal_type', ('fixed', 'varying'))
+@pytest.mark.parametrize('layout', ('pair', 'random', 'hex', 'custom'))
+@pytest.mark.parametrize('gal_type', ('fixed', 'varying', 'custom'))
 @pytest.mark.parametrize('morph', ('exp', 'dev', 'bd', 'bdk'))
 def test_galaxies_smoke(layout, gal_type, morph):
     """
     test sim can run and is repeatable.  This is relevant as we now support
     varying galaxies
     """
+
+    if gal_type == 'custom' and layout != 'custom':
+        pytest.skip("gal_type='custom' requires layout='custom'")
+    if layout == 'custom' and gal_type != 'custom':
+        pytest.skip("layout='custom' requires gal_type='custom'")
+
     seed = 74321
 
     for trial in (1, 2):
@@ -40,15 +48,32 @@ def test_galaxies_smoke(layout, gal_type, morph):
             'morph': morph,
         }
 
-        galaxy_catalog = make_galaxy_catalog(
+        kwargs = dict(
             rng=rng,
             coadd_dim=coadd_dim,
             buff=buff,
             gal_type=gal_type,
-            gal_config=gal_config,
             layout=layout,
             sep=sep,
         )
+
+        # For the custom path, supply explicit gal_list + uv_shift
+        if gal_type == 'custom':
+            gal_list = [
+                galsim.Exponential(half_light_radius=0.8, flux=1200.0),
+                galsim.DeVaucouleurs(half_light_radius=0.5, flux=800.0),
+                galsim.Exponential(half_light_radius=0.6, flux=600.0),
+            ]
+            uv_shift = [(0.0, 0.0), (8.0, -5.0), (-6.0, 3.0)]  # arcsec
+            kwargs.update(gal_list=gal_list, uv_shift=uv_shift)
+        else:
+            kwargs.update(gal_config=gal_config)
+            
+        galaxy_catalog = make_galaxy_catalog(
+            **kwargs
+        )
+
+
         if layout == 'pair':
             if gal_type == 'fixed':
                 assert isinstance(galaxy_catalog, FixedPairGalaxyCatalog)

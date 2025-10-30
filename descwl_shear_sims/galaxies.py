@@ -98,14 +98,13 @@ def make_galaxy_catalog(
     elif layout.layout_name == 'custom':
         assert gal_type == 'custom', "layout 'custom' requires gal_type 'custom'"
 
-        if gal_list is not None:
+        if gal_list is None or uv_shift is None:
         # Require explicit positions for determinism and count matching.
-        if uv_shift is None:
             raise ValueError("When using gal_list, you must also provide uv_shift "
                              "(list of (u, v) arcsec with same length).")
         
         assert len(gal_list) == len(uv_shift), ("gal_list and uv_shift must have the same length.")
-        galaxy_catalog = ListGalaxyCatalog(gal_list=gal_list, uv_shift=uv_shift, layout=layout)
+        galaxy_catalog = CustomGalaxyCatalog(gal_list=gal_list, uv_shift=uv_shift, layout=layout)
 
     else:
         if gal_type == 'wldeblend':
@@ -877,7 +876,7 @@ def read_wldeblend_cat(
         cat = cat[mask]
     return cat
 
-class ListGalaxyCatalog:
+class CustomGalaxyCatalog:
     """
     Catalog that uses an explicit list of galsim objects and (u, v) shifts.
 
@@ -896,7 +895,7 @@ class ListGalaxyCatalog:
             raise ValueError("gal_list must be a non-empty list of galsim objects")
         if uv_shift is None or len(uv_shift) != len(gal_list):
             raise ValueError("uv_shift must be provided and match len(gal_list)")
-        self.gal_type = 'list'
+        self.gal_type = 'custom'
         self._gal_list = list(gal_list)
         self._shifts = [galsim.PositionD(u, v) for (u, v) in uv_shift]
         self.layout = layout  # may be useful downstream (e.g., bbox/world origin)
