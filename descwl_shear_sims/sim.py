@@ -150,7 +150,7 @@ def make_sim(
         center single exposure) at the world_origin
     draw_noise: optional, bool
         Whether draw image noise
-    im_dtype: optional, numpy dtype
+    im_dtype: optional, numpy dtype or str
         Image numerical precision np.float32 or np.float64. Default: np.float32
 
     Returns
@@ -173,6 +173,9 @@ def make_sim(
             image_x, image_y: image position of input galaxies
         se_wcs: a dict keyed by band name, holding a list of se_wcs
     """
+
+    if isinstance(im_dtype, str):
+        im_dtype = np.dtype(im_dtype).type
 
     # Get the pixel scale using a default band from the survey
     _bd = deepcopy(DEFAULT_SURVEY_BANDS)[survey_name]

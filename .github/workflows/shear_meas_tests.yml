@@ -7,6 +7,10 @@ on:
   # turn this on to run for PRs
   # pull_request: null
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   shear-meas-tests:
     name: shear-meas-tests
