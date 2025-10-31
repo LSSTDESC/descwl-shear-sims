@@ -5,9 +5,11 @@
 setupRequired(afw)
 setupRequired(base)
 setupRequired(daf_base)
-setupRequired(descwl)
 setupRequired(geom)
 setupRequired(meas_algorithms)
+
+# Marking a required dependency as optional, to enable clean build and dists
+setupOptional(descwl)
 
 # Optional dependencies, for testing only
 setupOptional(descwl_coadd)
