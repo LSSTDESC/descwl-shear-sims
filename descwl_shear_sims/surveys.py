@@ -1,5 +1,4 @@
 import numpy as np
-import descwl
 from .constants import SCALE, ZERO_POINT
 
 DEFAULT_SURVEY_BANDS = {
@@ -98,6 +97,7 @@ class WLDeblendSurvey(object):
         The name of the survey, e.g., LSST, HSC
     """
     def __init__(self, *, band, survey_name):
+        import descwl  # noqa
 
         pars = descwl.survey.Survey.get_defaults(
             survey_name=survey_name,
