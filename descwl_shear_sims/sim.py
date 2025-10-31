@@ -150,7 +150,7 @@ def make_sim(
         center single exposure) at the world_origin
     draw_noise: optional, bool
         Whether draw image noise
-    im_dtype: optional, numpy dtype
+    im_dtype: optional, numpy dtype or str
         Image numerical precision np.float32 or np.float64. Default: np.float32
 
     Returns
@@ -175,7 +175,8 @@ def make_sim(
     """
 
     if isinstance(im_dtype, str):
-        im_dtype = np.dtype(im_dtype)
+        im_dtype = np.dtype(im_dtype).type
+
     # Get the pixel scale using a default band from the survey
     _bd = deepcopy(DEFAULT_SURVEY_BANDS)[survey_name]
     pixel_scale = get_survey(
