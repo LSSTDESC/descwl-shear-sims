@@ -828,6 +828,9 @@ def test_sim_im_dtype(im_dtype):
         im_dtype=im_dtype,
     )
 
+    if isinstance(im_dtype, str):
+        im_dtype = np.dtype(im_dtype).type
+
     for band, bdata in data['band_data'].items():
         for exp in bdata:
             assert exp.image.array.dtype == im_dtype
