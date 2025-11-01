@@ -31,7 +31,7 @@ def get_survey(*, gal_type, band, survey_name="LSST"):
     """
     if gal_type == 'wldeblend':
         survey = WLDeblendSurvey(band=band, survey_name=survey_name)
-    elif gal_type in ['fixed', 'varying']:
+    elif gal_type in ['fixed', 'varying', 'custom']:
         survey = BasicSurvey(band=band)
     else:
         raise ValueError("bad gal_type: '%s'" % gal_type)

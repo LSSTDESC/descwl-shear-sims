@@ -85,9 +85,11 @@ class Layout(object):
             self.area = 0
         elif layout_name == "pair":
             return
+        elif layout_name == "custom":
+            return
         else:
             raise ValueError("layout_name can only be 'random', 'random_disk' \
-                    'hex', 'grid' or 'pair'!")
+                    'hex', 'grid', 'custom'  or 'pair'!")
         self.coadd_dim = coadd_dim
         self.buff = buff
 
@@ -183,6 +185,11 @@ class Layout(object):
                     buff=self.buff,
                     pixel_scale=self.pixel_scale,
                     size=nobj,
+                )
+            elif self.layout_name == "custom":
+                raise NotImplementedError(
+                    "get_shifts is not implemented for layout 'custom'. "
+                    "Please provide explicit positions via uv_shift."
                 )
             else:
                 raise ValueError("bad layout: '%s'" % self.layout_name)
