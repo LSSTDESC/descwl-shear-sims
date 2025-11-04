@@ -876,6 +876,7 @@ def read_wldeblend_cat(
         cat = cat[mask]
     return cat
 
+
 class CustomGalaxyCatalog:
     """
     Catalog that uses an explicit list of galsim objects and (u, v) shifts.
