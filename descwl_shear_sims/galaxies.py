@@ -35,7 +35,7 @@ def make_galaxy_catalog(
     rng: numpy.random.RandomState
         Numpy random state
     gal_type: string
-        'fixed', 'varying', 'custom', or 'wldeblend' 
+        'fixed', 'varying', 'custom', or 'wldeblend'
     coadd_dim: int
         Dimensions of coadd
     buff: int, optional
@@ -54,7 +54,8 @@ def make_galaxy_catalog(
     gal_list: list of Galsim objects, optional
         List of galsim objects to use for layout='custom'
     uv_shift: list of tuple, optional
-        List of (u,v) shifts to apply to each galaxy for layout='custom'.  Units of arcsec
+        List of (u,v) shifts to apply to each galaxy for layout='custom'.
+        Units of arcsec
     simple_coadd_bbox: optional, bool. Default: False
         Whether to force the center of coadd boundary box (which is the default
         center single exposure) at the world_origin
@@ -101,9 +102,12 @@ def make_galaxy_catalog(
             # Require explicit positions for determinism and count matching.
             raise ValueError("When using gal_list, you must also provide uv_shift "
                              "(list of (u, v) arcsec with same length).")
-        
-        assert len(gal_list) == len(uv_shift), ("gal_list and uv_shift must have the same length.")
-        galaxy_catalog = CustomGalaxyCatalog(gal_list=gal_list, uv_shift=uv_shift, layout=layout)
+
+        assert len(gal_list) == len(uv_shift), (
+            "gal_list and uv_shift must have the same length."
+        )
+        galaxy_catalog = CustomGalaxyCatalog(gal_list=gal_list,
+                                             uv_shift=uv_shift, layout=layout)
 
     else:
         if gal_type == 'wldeblend':
