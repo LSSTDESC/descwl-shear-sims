@@ -218,7 +218,7 @@ def test_custom_layout_position_recovery():
     # Shifts in the uv plane (arcsec)
     uv_shift = [
         (0.0, 0.0),
-        (8.0, -5.0),
+        (8.05, -5.0),
         (-6.0, 3.0),
     ]
 
@@ -268,7 +268,7 @@ def test_custom_layout_position_recovery():
 
     img = sim['band_data']['i'][0].image.array
 
-    peak_uv_pix = _top_n_peaks(img, n=len(uv_shift))
+    peak_pix = _top_n_peaks(img, n=len(uv_shift))
 
     # Convert to numpy indexing (0-based)
     image_pos_list = np.array(
@@ -278,18 +278,20 @@ def test_custom_layout_position_recovery():
     # Match each truth to its closest peak
     used = set()
     for i in range(len(image_pos_list)):
-        d2 = np.sum((peak_uv_pix - image_pos_list[i])**2, axis=1)
+        d2 = np.sum((peak_pix - image_pos_list[i])**2, axis=1)
         j = int(np.argmin(d2))
         assert j not in used, "Duplicate peak assignment"
         used.add(j)
-        dy = image_pos_list[i, 0] - peak_uv_pix[j, 0]
-        dx = image_pos_list[i, 1] - peak_uv_pix[j, 1]
+        dy = image_pos_list[i, 0] - peak_pix[j, 0]
+        dx = image_pos_list[i, 1] - peak_pix[j, 1]
         dr = np.hypot(dx, dy)
         # if False:
         #     import matplotlib.pyplot as plt
         #     plt.figure(figsize=(12,12))
-        #     plt.imshow(img, origin='lower', cmap='Greys', interpolation='nearest')
-        #     plt.scatter(peak_uv_pix[:,1], peak_uv_pix[:,0], marker='x', color='red')
+        #     plt.imshow(img, origin='lower', cmap='Greys',
+        # interpolation='nearest')
+        #     plt.scatter(peak_pix[:,1], peak_pix[:,0], marker='x',
+        # color='red')
         #     plt.scatter(image_pos_list[:,1], image_pos_list[:,0],
         #                 marker='o', facecolors='none', edgecolors='blue')
         #     plt.title('Red X: detected peaks; Blue O: truth positions')
