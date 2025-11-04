@@ -73,7 +73,6 @@ def test_galaxies_smoke(layout, gal_type, morph):
             **kwargs
         )
 
-
         if layout == 'pair':
             if gal_type == 'fixed':
                 assert isinstance(galaxy_catalog, FixedPairGalaxyCatalog)
