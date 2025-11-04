@@ -99,7 +99,7 @@ def make_galaxy_catalog(
         assert gal_type == 'custom', "layout 'custom' requires gal_type 'custom'"
 
         if gal_list is None or uv_shift is None:
-        # Require explicit positions for determinism and count matching.
+            # Require explicit positions for determinism and count matching.
             raise ValueError("When using gal_list, you must also provide uv_shift "
                              "(list of (u, v) arcsec with same length).")
         
