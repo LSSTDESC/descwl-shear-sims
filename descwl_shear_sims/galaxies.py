@@ -107,7 +107,11 @@ def make_galaxy_catalog(
             "gal_list and uv_shift must have the same length."
         )
         galaxy_catalog = CustomGalaxyCatalog(gal_list=gal_list,
-                                             uv_shift=uv_shift, layout=layout)
+                                             uv_shift=uv_shift,
+                                             coadd_dim=coadd_dim,
+                                             pixel_scale=pixel_scale,
+                                             simple_coadd_bbox=simple_coadd_bbox,
+                                             layout=layout)
 
     else:
         if gal_type == 'wldeblend':
@@ -284,6 +288,8 @@ class FixedGalaxyCatalog(object):
             gal = _generate_bd(hlr=self.hlr, flux=flux)
         elif self.morph == 'bdk':
             gal = _generate_bdk(hlr=self.hlr, flux=flux)
+        elif self.morph == 'delta':
+            gal = galsim.DeltaFunction(flux=flux)
         else:
             raise ValueError(f"bad gal type '{self.morph}'")
 
@@ -603,7 +609,7 @@ class FixedPairGalaxyCatalog(FixedGalaxyCatalog):
     sep: float
         Separation of pair in arcsec
     morph: str
-        Galaxy morphology, 'exp', 'dev' or 'bd', 'bdk'.  Default 'exp'
+        Galaxy morphology, 'exp', 'dev', 'delta' or 'bd', 'bdk'.  Default 'exp'
     simple_coadd_bbox: optional, bool. Default: False
         Whether to force the center of coadd boundary box (which is the default
         center single exposure) at the world_origin
@@ -882,7 +888,7 @@ def read_wldeblend_cat(
     return cat
 
 
-class CustomGalaxyCatalog:
+class CustomGalaxyCatalog(object):
     """
     Catalog that uses an explicit list of galsim objects and (u, v) shifts.
 
@@ -896,7 +902,8 @@ class CustomGalaxyCatalog:
         Optional; only used to carry coadd bbox/world origin metadata.
         Positions are taken strictly from `uv_shift`.
     """
-    def __init__(self, *, gal_list, uv_shift, layout=None):
+    def __init__(self, *, gal_list, uv_shift, coadd_dim, pixel_scale,
+                 simple_coadd_bbox, layout=None):
         if gal_list is None or len(gal_list) == 0:
             raise ValueError("gal_list must be a non-empty list of galsim objects")
         if uv_shift is None or len(uv_shift) != len(gal_list):
@@ -904,7 +911,17 @@ class CustomGalaxyCatalog:
         self.gal_type = 'custom'
         self._gal_list = list(gal_list)
         self._shifts = [galsim.PositionD(u, v) for (u, v) in uv_shift]
-        self.layout = layout  # may be useful downstream (e.g., bbox/world origin)
+
+        buff = 0  # ignored since positions are explicit
+
+        if isinstance(layout, str):
+            self.layout = Layout(layout, coadd_dim, buff, pixel_scale,
+                                 simple_coadd_bbox=simple_coadd_bbox)
+        else:
+            assert isinstance(layout, Layout)
+            self.layout = layout
+
+        # self.layout = layout  # may be useful downstream (e.g., bbox/world origin)
 
     def __len__(self):
         return len(self._gal_list)

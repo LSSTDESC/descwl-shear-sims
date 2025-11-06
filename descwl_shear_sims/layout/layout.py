@@ -84,9 +84,9 @@ class Layout(object):
         elif layout_name == "grid":
             self.area = 0
         elif layout_name == "pair":
-            return
+            pass
         elif layout_name == "custom":
-            return
+            pass
         else:
             raise ValueError("layout_name can only be 'random', 'random_disk' \
                     'hex', 'grid', 'custom'  or 'pair'!")
