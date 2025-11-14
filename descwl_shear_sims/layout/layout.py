@@ -84,7 +84,7 @@ class Layout(object):
         elif layout_name == "grid":
             self.area = 0
         elif layout_name == "pair":
-            pass
+            return
         elif layout_name == "custom":
             pass
         else:

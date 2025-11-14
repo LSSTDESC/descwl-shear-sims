@@ -93,6 +93,7 @@ def make_galaxy_catalog(
             hlr=gal_config['hlr'],
             morph=gal_config['morph'],
             sep=sep,
+            layout=layout,
         )
 
     elif layout.layout_name == 'custom':
@@ -608,19 +609,25 @@ class FixedPairGalaxyCatalog(FixedGalaxyCatalog):
         Half light radius of all objects
     sep: float
         Separation of pair in arcsec
+    layout: Layout | None, optional
+        The layout of objects
     morph: str
         Galaxy morphology, 'exp', 'dev', 'delta' or 'bd', 'bdk'.  Default 'exp'
     simple_coadd_bbox: optional, bool. Default: False
         Whether to force the center of coadd boundary box (which is the default
         center single exposure) at the world_origin
     """
-    def __init__(self, *, rng, mag, hlr, sep, morph='exp', simple_coadd_bbox=False):
+    def __init__(self, *, rng, mag, hlr, sep, layout=None, morph='exp', simple_coadd_bbox=False):
         self.gal_type = 'fixed'
         self.morph = morph
         self.mag = mag
         self.hlr = hlr
         self.rng = rng
-        self.layout = Layout("pair", simple_coadd_bbox=simple_coadd_bbox)
+        if layout is None:
+            self.layout = Layout("pair")
+        else:
+            assert isinstance(layout, Layout)
+            self.layout = layout
         self.shifts_array = self.layout.get_shifts(
             rng=rng,
             sep=sep,
@@ -648,10 +655,12 @@ class PairGalaxyCatalog(GalaxyCatalog):
         Half light radius of all objects
     sep: float
         Separation of pair in arcsec
+    layout: Layout | None, optional
+        The layout of objects
     morph: str
         Galaxy morphology, 'exp', 'dev' or 'bd', 'bdk'.  Default 'exp'
     """
-    def __init__(self, *, rng, mag, hlr, sep, morph='exp'):
+    def __init__(self, *, rng, mag, hlr, sep, layout=None, morph='exp', simple_coadd_bbox=False):
         self.gal_type = 'varying'
         self.morph = morph
         self.mag = mag
@@ -661,7 +670,10 @@ class PairGalaxyCatalog(GalaxyCatalog):
         self.morph_seed = rng.randint(0, 2**31)
         self.gs_morph_seed = rng.randint(0, 2**31)
 
-        self.layout = Layout("pair")
+        if layout is None:
+            self.layout = Layout("pair")
+        else:
+            self.layout = layout
         self.shifts_array = self.layout.get_shifts(
             rng=rng,
             sep=sep,
