@@ -617,7 +617,8 @@ class FixedPairGalaxyCatalog(FixedGalaxyCatalog):
         Whether to force the center of coadd boundary box (which is the default
         center single exposure) at the world_origin
     """
-    def __init__(self, *, rng, mag, hlr, sep, layout=None, morph='exp', simple_coadd_bbox=False):
+    def __init__(self, *, rng, mag, hlr, sep, layout=None,
+                 morph='exp', simple_coadd_bbox=False):
         self.gal_type = 'fixed'
         self.morph = morph
         self.mag = mag
@@ -660,7 +661,8 @@ class PairGalaxyCatalog(GalaxyCatalog):
     morph: str
         Galaxy morphology, 'exp', 'dev' or 'bd', 'bdk'.  Default 'exp'
     """
-    def __init__(self, *, rng, mag, hlr, sep, layout=None, morph='exp', simple_coadd_bbox=False):
+    def __init__(self, *, rng, mag, hlr, sep, layout=None,
+                 morph='exp', simple_coadd_bbox=False):
         self.gal_type = 'varying'
         self.morph = morph
         self.mag = mag
