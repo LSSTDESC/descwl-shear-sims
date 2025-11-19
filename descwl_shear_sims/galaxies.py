@@ -935,8 +935,6 @@ class CustomGalaxyCatalog(object):
             assert isinstance(layout, Layout)
             self.layout = layout
 
-        # self.layout = layout  # may be useful downstream (e.g., bbox/world origin)
-
     def __len__(self):
         return len(self._gal_list)
 
