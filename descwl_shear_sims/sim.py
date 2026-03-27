@@ -83,6 +83,7 @@ def make_sim(
     coadd_dim=None,
     simple_coadd_bbox=False,
     draw_noise=True,
+    im_dtype=np.float32,
 ):
     """
     Make simulation data
@@ -149,6 +150,8 @@ def make_sim(
         center single exposure) at the world_origin
     draw_noise: optional, bool
         Whether draw image noise
+    im_dtype: optional, numpy dtype or str
+        Image numerical precision np.float32 or np.float64. Default: np.float32
 
     Returns
     -------
@@ -170,6 +173,10 @@ def make_sim(
             image_x, image_y: image position of input galaxies
         se_wcs: a dict keyed by band name, holding a list of se_wcs
     """
+
+    if isinstance(im_dtype, str):
+        im_dtype = np.dtype(im_dtype).type
+
     # Get the pixel scale using a default band from the survey
     _bd = deepcopy(DEFAULT_SURVEY_BANDS)[survey_name]
     pixel_scale = get_survey(
@@ -294,6 +301,7 @@ def make_sim(
                 calib_mag_zero=calib_mag_zero,
                 draw_noise=draw_noise,
                 indexes=lists["indexes"],
+                im_dtype=im_dtype,
             )
             if epoch == 0:
                 bright_info += this_bright_info
@@ -376,6 +384,7 @@ def make_exp(
     draw_noise=True,
     indexes=None,
     se_wcs=None,
+    im_dtype=np.float32,
 ):
     """
     Make an Signle Exposure (SE) observation
@@ -449,6 +458,9 @@ def make_exp(
         list of indexes in the input galaxy catalog, default: None
     se_wcs: galsim WCS
         wcs for single exposure, default: None
+    im_dtype: np.float32 or np.float64. default: np.float32
+        Numerical precision for images.
+
     Returns
     -------
     exp: lsst.afw.image.ExposureF
@@ -497,7 +509,7 @@ def make_exp(
         if not (pixel_area - pixel_scale ** 2.0) < pixel_scale ** 2.0 / 100.0:
             raise ValueError("The input se_wcs has wrong pixel scale")
 
-    image = galsim.Image(dim, dim, wcs=se_wcs)
+    image = galsim.Image(dim, dim, wcs=se_wcs, dtype=im_dtype)
 
     if objlist is not None and draw_gals:
         assert shifts is not None
@@ -513,6 +525,7 @@ def make_exp(
             shear_obj=shear_obj,
             theta0=theta0,
             indexes=indexes,
+            im_dtype=im_dtype,
         )
     else:
         truth_info = []
@@ -528,6 +541,7 @@ def make_exp(
             draw_method,
             coadd_bbox_cen_gs_skypos,
             rng,
+            im_dtype=im_dtype,
         )
 
     if draw_noise:
@@ -560,6 +574,7 @@ def make_exp(
             rng=rng,
             star_bleeds=star_bleeds,
             draw_stars=draw_stars,
+            im_dtype=im_dtype,
         )
     else:
         bright_info = []
@@ -570,12 +585,12 @@ def make_exp(
     variance = image.copy()
     variance.array[:, :] = noise**2
 
-    masked_image = afw_image.MaskedImageF(dim, dim)
+    masked_image = afw_image.MaskedImage(dim, dim, dtype=im_dtype)
     masked_image.image.array[:, :] = image.array
     masked_image.variance.array[:, :] = variance.array
     masked_image.mask.array[:, :] = bmask.array
 
-    exp = afw_image.ExposureF(masked_image)
+    exp = afw_image.Exposure(masked_image, dtype=im_dtype)
 
     # Prepare the frc, and save it to the DM exposure
     # It can be retrieved as follow
@@ -610,6 +625,7 @@ def _draw_objects(
     shear_obj=None,
     theta0=None,
     indexes=None,
+    im_dtype=np.float32,
 ):
     """
     draw objects and return the input galaxy catalog.
@@ -646,7 +662,7 @@ def _draw_objects(
             ang = theta0 * galsim.radians
             # rotation on intrinsic galaxies comes before shear distortion
             obj = obj.rotate(ang)
-            shift = _roate_pos(shift, theta0)
+            shift = _rotate_pos(shift, theta0)
 
         if shear_obj is not None:
             distor_res = shear_obj.distort_galaxy(obj, shift, z)
@@ -683,7 +699,8 @@ def _draw_objects(
             local_wcs = wcs.local(image_pos=image_pos)
             convolved_object = get_convolved_object(obj, psf, image_pos)
             stamp = convolved_object.drawImage(
-                center=image_pos, wcs=local_wcs, method=draw_method, **kw
+                center=image_pos, wcs=local_wcs, method=draw_method,
+                dtype=im_dtype, **kw
             )
 
             b = stamp.bounds & image.bounds
@@ -730,6 +747,7 @@ def _draw_bright_objects(
     rng,
     star_bleeds,
     draw_stars,
+    im_dtype,
 ):
     """
     draw bright objects and return bright object information.
@@ -790,6 +808,7 @@ def _draw_bright_objects(
             poisson_flux=True,
             maxN=1_000_000,  # shoot in batches this size
             rng=grng,
+            dtype=im_dtype,
         )
         b = stamp.bounds & image.bounds
         if b.isDefined():
@@ -800,6 +819,7 @@ def _draw_bright_objects(
             stamp_fft = convolved_object.drawImage(
                 center=image_pos,
                 wcs=local_wcs,
+                dtype=im_dtype,
             )
 
             timage[b] += stamp_fft[b]
@@ -988,7 +1008,7 @@ def get_truth_info_struct():
     return np.zeros(1, dtype=dt)
 
 
-def _roate_pos(pos, theta):
+def _rotate_pos(pos, theta):
     """Rotates coordinates by an angle theta
 
     Args:

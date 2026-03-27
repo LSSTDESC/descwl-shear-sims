@@ -4,7 +4,6 @@ import copy
 import galsim
 from galsim import DeVaucouleurs
 from galsim import Exponential
-import descwl
 
 from .layout import Layout
 from .constants import SCALE
@@ -750,6 +749,8 @@ class WLDeblendGalaxyCatalog(object):
         -------
         [galsim objects], [shifts], [redshifts], [indexes]
         """
+
+        import descwl  # noqa
 
         builder = descwl.model.GalaxyBuilder(
             survey=survey.descwl_survey,
