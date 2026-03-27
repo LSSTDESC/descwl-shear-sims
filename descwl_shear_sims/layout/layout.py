@@ -36,7 +36,9 @@ class Layout(object):
         Parameters
         ----------
         layout_name: string
-            'grid', 'pair', 'hex', or 'random'
+            'grid', 'pair', 'hex', 'no_layout', or 'random',
+            'no_layout' needs users to specify the shifts
+            when constructing the galaxy catalog.
         coadd_dim: int | None
             Dimensions of final coadd
         buff: int, optional
