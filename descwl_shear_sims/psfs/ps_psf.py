@@ -1,7 +1,7 @@
 """
 Copied from https://github.com/beckermr/metadetect-sims under BSD
 """
-from ..constants import SCALE
+from ..constants import SCALE, FIXED_PSF_FWHM
 
 import numpy as np
 import galsim
@@ -10,7 +10,14 @@ import galsim.table
 import galsim.utilities
 
 
-def make_ps_psf(*, rng, dim, pixel_scale=SCALE, variation_factor=1):
+def make_ps_psf(
+    *,
+    rng,
+    dim,
+    pixel_scale=SCALE,
+    psf_fwhm=FIXED_PSF_FWHM,
+    variation_factor=1,
+):
     """
     get a power spectrum psf
 
@@ -22,6 +29,8 @@ def make_ps_psf(*, rng, dim, pixel_scale=SCALE, variation_factor=1):
         Dimensions of image
     pixel_scale: float
         pixel scale
+    psf_fwhm: float
+       Median FWHM of PSF in units of arcsec
     variation_factor : float, optional
         This factor is used internally to scale the overall variance in the
         PSF shape power spectra and the change in the PSF size across the
@@ -37,6 +46,7 @@ def make_ps_psf(*, rng, dim, pixel_scale=SCALE, variation_factor=1):
         im_width=dim,
         buff=dim/2,
         scale=pixel_scale,
+        median_seeing=psf_fwhm,
         variation_factor=variation_factor,
     )
 
