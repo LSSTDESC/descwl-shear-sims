@@ -27,6 +27,10 @@ DEFAULT_SIM_CONFIG = {
     "gal_type": "fixed",  # note "exp" also means "fixed" for back compat
     "psf_type": "gauss",
     "psf_dim": 51,
+    # constant FWHM value for fixed PSF
+    # mean for random PSF
+    # median for PS psf
+    "psf_fwhm": 0.8,
     "psf_variation_factor": 1,  # for power spectrum psf
     # randomize the psf fwhm and shape for each trial.  PSF is still same
     # for all epochs/bands
