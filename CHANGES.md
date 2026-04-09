@@ -1,3 +1,12 @@
+# 0.4.6 (not yet released)
+
+### new features
+
+    - Can now set psf_fwhm to make_ps_psf
+    - Can specify variation parameters for make_rand_psf
+    - add psf_fwhm to default sim config (a convenience for users)
+    - add tests
+
 # 0.4.5
 ### new features
     - allow users to set separation distance for grid and hex layout
