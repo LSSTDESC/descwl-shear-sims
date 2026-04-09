@@ -39,8 +39,7 @@ jobs:
 
           conda config --set always_yes yes
 
-          conda install gdk-pixbuf==2.42.12
-          cat /home/runner/miniconda3/envs/test/bin/.gdk-pixbuf-post-link.sh
+          mkdir -p ${CONDA_PREFIX}/conda-meta
           conda install -q --file requirements.txt || echo ${CONDA_PREFIX}/.messages.txt
           conda install -q \
             flake8 \
