@@ -39,8 +39,7 @@ jobs:
 
           conda config --set always_yes yes
 
-          touch ${CONDA_PREFIX}/.messages.txt
-          conda install -q --file requirements.txt
+          mamba install -q --file requirements.txt
           conda install -q \
             flake8 \
             pytest \
