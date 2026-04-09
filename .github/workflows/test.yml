@@ -39,7 +39,9 @@ jobs:
 
           conda config --set always_yes yes
 
-          PYTHONHASHSEED=42 conda install -q --file requirements.txt || cat /home/runner/miniconda3/envs/test/bin/.gdk-pixbuf-post-link.sh # echo ${CONDA_PREFIX}/.messages.txt
+          conda install gdk-pixbuf
+          cat /home/runner/miniconda3/envs/test/bin/.gdk-pixbuf-post-link.sh
+          conda install -q --file requirements.txt || echo ${CONDA_PREFIX}/.messages.txt
           conda install -q \
             flake8 \
             pytest \
