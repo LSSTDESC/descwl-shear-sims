@@ -39,7 +39,11 @@ jobs:
 
           conda config --set always_yes yes
 
-          mkdir -p ${CONDA_PREFIX}/conda-meta
+          patchfile=`pwd`/conda.patch
+          pushd /home/runner/miniconda3/lib/python3.12/site-packages/conda/
+          patch -p2 -R < ${conda.patch}
+          popd
+          
           conda install -q --file requirements.txt || echo ${CONDA_PREFIX}/.messages.txt
           conda install -q \
             flake8 \
