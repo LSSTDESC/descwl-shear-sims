@@ -39,6 +39,7 @@ jobs:
 
           conda config --set always_yes yes
 
+          touch ${PREFIX}/.messages.txt
           conda install -q --file requirements.txt
           conda install -q \
             flake8 \
