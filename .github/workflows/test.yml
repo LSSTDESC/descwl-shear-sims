@@ -45,7 +45,7 @@ jobs:
           conda config --set always_yes yes
 
           # patchfile=`pwd`/conda.patch
-          patchfile=`pwd`/conda_debug_0003.patch
+          patchfile=`pwd`/conda_debug_0004.patch
           pushd /home/runner/miniconda3/lib/python3.13/site-packages/conda/
           patch -p2 < ${patchfile}
           popd
