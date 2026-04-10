@@ -11,7 +11,16 @@ from ..constants import (
 )
 
 
-def make_rand_psf(psf_type, rng):
+def make_rand_psf(
+    psf_type,
+    rng,
+    psf_fwhm_mean=RAND_PSF_FWHM_MEAN,
+    psf_fwhm_std=RAND_PSF_FWHM_STD,
+    psf_fwhm_min=RAND_PSF_FWHM_MIN,
+    psf_fwhm_max=RAND_PSF_FWHM_MAX,
+    psf_e_std=RAND_PSF_E_STD,
+    psf_e_max=RAND_PSF_E_MAX,
+):
     """
     A simple PSF object with random FWHM and shape
 
@@ -25,8 +34,18 @@ def make_rand_psf(psf_type, rng):
     Gaussian or Moffat
     """
 
-    fwhm = _get_fwhm(rng)
-    e1, e2 = _get_e1e2(rng)
+    fwhm = _get_fwhm(
+        rng,
+        fwhm_mean=psf_fwhm_mean,
+        fwhm_std=psf_fwhm_std,
+        fwhm_min=psf_fwhm_min,
+        fwhm_max=psf_fwhm_max,
+    )
+    e1, e2 = _get_e1e2(
+        rng,
+        e_std=psf_e_std,
+        e_max=psf_e_max,
+    )
 
     if psf_type == "gauss":
         psf = galsim.Gaussian(fwhm=fwhm)
@@ -40,28 +59,28 @@ def make_rand_psf(psf_type, rng):
     return psf
 
 
-def _get_fwhm(rng):
+def _get_fwhm(rng, fwhm_mean, fwhm_std, fwhm_min, fwhm_max):
     ln_mean = log(
-        RAND_PSF_FWHM_MEAN**2 / sqrt(RAND_PSF_FWHM_MEAN**2 + RAND_PSF_FWHM_STD**2)
+        fwhm_mean**2 / sqrt(fwhm_mean**2 + fwhm_std**2)
     )  # noqa
-    ln_sigma = sqrt(log(1+(RAND_PSF_FWHM_STD/RAND_PSF_FWHM_MEAN)**2))
+    ln_sigma = sqrt(log(1+(fwhm_std/fwhm_mean)**2))
 
     while True:
         fwhm = rng.lognormal(
             mean=ln_mean,
             sigma=ln_sigma,
         )
-        if RAND_PSF_FWHM_MIN < fwhm < RAND_PSF_FWHM_MAX:
+        if fwhm_min < fwhm < fwhm_max:
             break
 
     return fwhm
 
 
-def _get_e1e2(rng):
+def _get_e1e2(rng, e_std, e_max):
     while True:
-        e1, e2 = rng.normal(scale=RAND_PSF_E_STD, size=2)
+        e1, e2 = rng.normal(scale=e_std, size=2)
         e = sqrt(e1**2 + e2**2)
-        if e < RAND_PSF_E_MAX:
+        if e < e_max:
             break
 
     return e1, e2

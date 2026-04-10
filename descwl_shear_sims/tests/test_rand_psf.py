@@ -4,6 +4,7 @@ Copied from https://github.com/beckermr/metadetect-sims under BSD
 
 import numpy as np
 import galsim
+import pytest
 
 # import pytest
 import lsst.geom as geom
@@ -11,7 +12,7 @@ import lsst.afw.image as afw_image
 
 from ..psfs import make_rand_psf, make_dm_psf
 from ._wcs import make_sim_wcs, SCALE
-from ..constants import RAND_PSF_FWHM_STD, RAND_PSF_E_STD
+from ..constants import RAND_PSF_FWHM_MEAN, RAND_PSF_FWHM_STD, RAND_PSF_E_STD
 
 
 def _get_fwhm_g1g2(psf_im):
@@ -27,18 +28,34 @@ def test_rand_psf_smoke():
     rng = np.random.RandomState(seed=10)
     psf = make_rand_psf(
         psf_type='gauss',
+        psf_fwhm_mean=0.85,
+        psf_fwhm_std=0.12,
+        psf_fwhm_min=0.6,
+        psf_fwhm_max=1.5,
+        psf_e_std=0.03,
+        psf_e_max=0.2,
         rng=rng,
     )
     assert isinstance(psf, galsim.GSObject)
 
 
-def test_rand_dmpsf_smoke():
+@pytest.mark.parametrize('defaults', [True, False])
+def test_rand_dmpsf_smoke(defaults):
+
+    if defaults:
+        fwhm_mean = RAND_PSF_FWHM_MEAN
+        fwhm_std = RAND_PSF_FWHM_STD
+        e_std = RAND_PSF_E_STD
+    else:
+        fwhm_mean = 0.85
+        fwhm_std = 0.12
+        e_std = 0.03
 
     dim = 20
     psf_dim = 31
     rng = np.random.RandomState(seed=999)
 
-    ntrial = 100
+    ntrial = 500
     fwhmvals = np.zeros(ntrial)
     e1vals = np.zeros(ntrial)
     e2vals = np.zeros(ntrial)
@@ -48,6 +65,13 @@ def test_rand_dmpsf_smoke():
 
         gspsf = make_rand_psf(
             psf_type='gauss',
+            rng=rng,
+        )
+        gspsf = make_rand_psf(
+            psf_type='gauss',
+            psf_fwhm_mean=fwhm_mean,
+            psf_fwhm_std=fwhm_std,
+            psf_e_std=e_std,
             rng=rng,
         )
 
@@ -74,9 +98,18 @@ def test_rand_dmpsf_smoke():
         e1vals[i] = e1
         e2vals[i] = e2
 
-    fwhmstd = fwhmvals.std()
-    e1std = e1vals.std()
-    e2std = e2vals.std()
-    assert fwhmstd/RAND_PSF_FWHM_STD - 1 < 0.05
-    assert e1std/RAND_PSF_E_STD - 1 < 0.05
-    assert e2std/RAND_PSF_E_STD - 1 < 0.05
+    afwhm_mean = fwhmvals.mean()
+    afwhm_std = fwhmvals.std()
+
+    ae1std = e1vals.std()
+    ae2std = e2vals.std()
+
+    fwhm_fracdiff = afwhm_mean / fwhm_mean - 1
+    fwhm_std_fracdiff = afwhm_std / fwhm_std - 1
+    e1std_fracdiff = ae1std / e_std - 1
+    e2std_fracdiff = ae2std / e_std - 1
+
+    assert fwhm_fracdiff < 0.05
+    assert fwhm_std_fracdiff < 0.05
+    assert e1std_fracdiff < 0.05
+    assert e2std_fracdiff < 0.05
