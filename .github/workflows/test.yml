@@ -28,7 +28,12 @@ jobs:
           channels: conda-forge
           channel-priority: strict
           show-channel-urls: true
-          miniforge-version: latest          
+          miniforge-version: latest
+          
+      - name: configure conda and install code
+        shell: bash -l {0}
+        run: |
+          conda install -n base conda=23.6.1
 
       - name: configure conda and install code
         shell: bash -l {0}
@@ -40,7 +45,7 @@ jobs:
           conda config --set always_yes yes
 
           # patchfile=`pwd`/conda.patch
-          patchfile=`pwd`/conda_debug_0002.patch
+          patchfile=`pwd`/conda_debug_0003.patch
           pushd /home/runner/miniconda3/lib/python3.13/site-packages/conda/
           patch -p2 < ${patchfile}
           popd
