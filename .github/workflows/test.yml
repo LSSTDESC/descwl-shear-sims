@@ -42,7 +42,7 @@ jobs:
           # patchfile=`pwd`/conda.patch
           patchfile=`pwd`/conda_debug_0001.patch
           pushd /home/runner/miniconda3/lib/python3.13/site-packages/conda/
-          patch -p2 -R < ${patchfile}
+          patch -p2 < ${patchfile}
           popd
           
           conda install -q --file requirements.txt || echo ${CONDA_PREFIX}/.messages.txt
