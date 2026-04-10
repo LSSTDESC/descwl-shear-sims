@@ -1,0 +1,324 @@
+diff --git a/conda/activate.py b/conda/activate.py
+index 8556c5e9a21..77a01ee10d4 100644
+--- a/conda/activate.py
++++ b/conda/activate.py
+@@ -1026,20 +1026,6 @@ def _resolve_prefix(self, env_name_or_prefix: str) -> str:
+         return prefix
+ 
+ 
+-class CmdExeRunActivator(CmdExeActivator):
+-    # CmdExeActivator writes an .env file by default; let's force in-memory output here
+-    # so that we can embed the activation output directly into our wrapper script.
+-    tempfile_extension = None
+-
+-    unset_var_tmpl = 'SET "%s="'
+-    export_var_tmpl = 'SET "%s=%s"'
+-    path_var_tmpl = export_var_tmpl
+-    set_var_tmpl = export_var_tmpl
+-    # If any of these calls to the activation hook scripts fail, we want
+-    # to exit the wrapper immediately and abort `conda run` right away.
+-    run_script_tmpl = 'CALL "%s"\nIF %%ERRORLEVEL%% NEQ 0 EXIT /b %%ERRORLEVEL%%'
+-
+-
+ class FishActivator(_Activator):
+     pathsep_join = '" "'.join
+     sep = "/"
+@@ -1159,7 +1145,6 @@ def _yield_commands(self, cmds_dict):
+     "tcsh": CshActivator,
+     "xonsh": XonshActivator,
+     "cmd.exe": CmdExeActivator,
+-    "cmd.exe.run": CmdExeRunActivator,
+     "fish": FishActivator,
+     "powershell": PowerShellActivator,
+ }
+diff --git a/conda/base/context.py b/conda/base/context.py
+index 4114c270b2b..a4114bd796e 100644
+--- a/conda/base/context.py
++++ b/conda/base/context.py
+@@ -2208,8 +2208,8 @@ def env_name(prefix: PathType) -> PathType | str | None:
+ 
+ 
+ def locate_prefix_by_name(name: str, envs_dirs: PathsType | None = None) -> PathType:
+-    """Find the location of a prefix given a conda env name. If the location does not exist, an
+-    error is raised. If the prefix is the base or root env, the root prefix is returned.
++    """Find the location of a prefix given a conda env name.  If the location does not exist, an
++    error is raised.
+     """
+     if not name:
+         raise ValueError("'name' cannot be empty.")
+diff --git a/conda/utils.py b/conda/utils.py
+index f6abb811020..6e5b8471057 100644
+--- a/conda/utils.py
++++ b/conda/utils.py
+@@ -5,18 +5,16 @@
+ from __future__ import annotations
+ 
+ import logging
+-import os
+ import re
+ import sys
+ from functools import cache, wraps
+ from os import environ
+-from os.path import basename, dirname, isfile, join
++from os.path import abspath, basename, dirname, isfile, join
+ from pathlib import Path
+ from shutil import which
+ from typing import TYPE_CHECKING
+ 
+ from . import CondaError
+-from .activate import _build_activator_cls
+ from .auxlib.compat import Utf8NamedTemporaryFile, shlex_split_unicode
+ from .common.compat import isiterable, on_win
+ from .common.url import path_to_url
+@@ -192,7 +190,14 @@ def wrap_subprocess_call(
+         multiline = True
+     if on_win:
+         comspec = get_comspec()  # fail early with KeyError if undefined
++        if dev_mode:
++            from . import CONDA_PACKAGE_ROOT
+ 
++            conda_bat = join(CONDA_PACKAGE_ROOT, "shell", "condabin", "conda.bat")
++        else:
++            conda_bat = environ.get(
++                "CONDA_BAT", abspath(join(root_prefix, "condabin", "conda.bat"))
++            )
+         with Utf8NamedTemporaryFile(mode="w", suffix=".bat", delete=False) as fh:
+             silencer = "" if debug_wrapper_scripts else "@"
+             fh.write(f"{silencer}ECHO OFF\n")
+@@ -220,34 +225,7 @@ def wrap_subprocess_call(
+             # after all!
+             # fh.write("@FOR /F \"tokens=100\" %%F IN ('chcp') DO @SET CONDA_OLD_CHCP=%%F\n")
+             # fh.write('@chcp 65001>NUL\n')
+-
+-            # We pursue activation inline here, which allows us to avoid
+-            # spawning a `conda activate` process at wrapper runtime.
+-            activator_cls = _build_activator_cls("cmd.exe.run")
+-            activator_args = ["activate"]
+-            if dev_mode:
+-                activator_args.append("--dev")
+-            activator_args.append(prefix)
+-
+-            # Ensure that nested `conda` commands will work
+-            # without the shell hook function. This needs to
+-            # be on PATH before the activator itself computes
+-            # PATH so that nested conda commands work without
+-            # the shell hook.
+-            condabin_dir = join(root_prefix, "condabin")
+-            old_path = environ.get("PATH", "")
+-            if condabin_dir not in old_path.split(os.pathsep):
+-                environ["PATH"] = f"{condabin_dir}{os.pathsep}{old_path}"
+-            try:
+-                activator = activator_cls(activator_args)
+-                activator._parse_and_set_args()
+-                activate_script = activator.activate()
+-            finally:
+-                environ["PATH"] = old_path
+-
+-            for line in activate_script.splitlines():
+-                fh.write(f"{silencer}{line}\n")
+-
++            fh.write(f'{silencer}CALL "{conda_bat}" activate "{prefix}"\n')
+             fh.write(f"{silencer}IF %ERRORLEVEL% NEQ 0 EXIT /b %ERRORLEVEL%\n")
+             if debug_wrapper_scripts:
+                 fh.write("echo *** environment after *** 1>&2\n")
+@@ -293,49 +271,32 @@ def wrap_subprocess_call(
+         if shell_path is None:
+             raise Exception("No compatible shell found!")
+ 
++        # During tests, we sometimes like to have a temp env with e.g. an old python in it
++        # and have it run tests against the very latest development sources. For that to
++        # work we need extra smarts here, we want it to be instead:
++        if dev_mode:
++            conda_exe = [abspath(join(root_prefix, "bin", "python")), "-m", "conda"]
++            dev_arg = "--dev"
++            dev_args = [dev_arg]
++        else:
++            conda_exe = [
++                environ.get("CONDA_EXE", abspath(join(root_prefix, "bin", "conda")))
++            ]
++            dev_arg = ""
++            dev_args = []
+         with Utf8NamedTemporaryFile(mode="w", delete=False) as fh:
+-            # If any of these calls to the activation hook scripts fail, we want
+-            # to exit the wrapper immediately and abort `conda run` right away.
+-            fh.write("set -e\n")
+             if dev_mode:
+                 from . import CONDA_SOURCE_ROOT
+ 
+-                fh.write(f">&2 export PYTHONPATH={CONDA_SOURCE_ROOT}\n")
++                fh.write(">&2 export PYTHONPATH=" + CONDA_SOURCE_ROOT + "\n")
++            hook_quoted = quote_for_shell(*conda_exe, "shell.posix", "hook", *dev_args)
+             if debug_wrapper_scripts:
+                 fh.write(">&2 echo '*** environment before ***'\n>&2 env\n")
+-
+-            # We pursue activation inline here, which allows us to avoid
+-            # spawning a `conda activate` subprocess at wrapper runtime.
+-            # The inline activator sets all necessary environment variables
+-            # (CONDA_EXE, PATH, CONDA_PREFIX, etc.) directly.
+-            activator_cls = _build_activator_cls("posix")
+-            activator_args = ["activate"]
+-            if dev_mode:
+-                activator_args.append("--dev")
+-            activator_args.append(prefix)
+-
+-            # Ensure that nested `conda` commands will work
+-            # without the shell hook function. This needs to
+-            # be on PATH before the activator itself computes
+-            # PATH so that nested conda commands work without
+-            # the shell hook.
+-            condabin_dir = join(root_prefix, "condabin")
+-            old_path = environ.get("PATH", "")
+-            if condabin_dir not in old_path.split(os.pathsep):
+-                environ["PATH"] = f"{condabin_dir}{os.pathsep}{old_path}"
+-            try:
+-                activator = activator_cls(activator_args)
+-                activator._parse_and_set_args()
+-                activate_code = activator.activate()
+-            finally:
+-                environ["PATH"] = old_path
+-
+-            fh.write(activate_code)
+-
++                fh.write(f'>&2 echo "$({hook_quoted})"\n')
++            fh.write(f'eval "$({hook_quoted})"\n')
++            fh.write(f"conda activate {dev_arg} {quote_for_shell(prefix)}\n")
+             if debug_wrapper_scripts:
+                 fh.write(">&2 echo '*** environment after ***'\n>&2 env\n")
+-            # Disable exit-on-error for the user's command so we can capture its exit code.
+-            fh.write("set +e\n")
+             if multiline:
+                 # The ' '.join() is pointless since mutliline is only True when there's 1 arg
+                 # still, if that were to change this would prevent breakage.
+diff --git a/news/15896-revert-conda-run-optimizations b/news/15896-revert-conda-run-optimizations
+new file mode 100644
+index 00000000000..69acfcd770d
+--- /dev/null
++++ b/news/15896-revert-conda-run-optimizations
+@@ -0,0 +1,19 @@
++### Enhancements
++
++* <news item>
++
++### Bug fixes
++
++* Revert inline environment activation for and subsequent optimizations to `conda run` (#15534, #15672), due to regressions with post-link scripts. (#15896)
++
++### Deprecations
++
++* <news item>
++
++### Docs
++
++* <news item>
++
++### Other
++
++* <news item>
+diff --git a/tests/cli/test_main_run.py b/tests/cli/test_main_run.py
+index 327b0fcbd98..d1fdaa03f0e 100644
+--- a/tests/cli/test_main_run.py
++++ b/tests/cli/test_main_run.py
+@@ -504,60 +504,6 @@ def test_run_preserves_exit_code_despite_deactivation_failure(
+         assert deactivation_marker_file.exists()
+ 
+ 
+-def test_run_wrapper_has_condabin_on_path(
+-    request: pytest.FixtureRequest,
+-    tmp_env: TmpEnvFixture,
+-    monkeypatch: pytest.MonkeyPatch,
+-):
+-    """Test to ensure condabin is on PATH in the wrapper script.
+-    See https://github.com/conda/conda/pull/15672 for context.
+-
+-    Without the shell hook, the conda shell functions are not defined,
+-    so nested conda commands rely on the conda executable in ``condabin``
+-    being discoverable via PATH.
+-    """
+-    monkeypatch.setenv("CONDA_TEST_SAVE_TEMPS", "1")
+-
+-    with tmp_env() as prefix:
+-        script_path, _ = wrap_subprocess_call(
+-            root_prefix=context.root_prefix,
+-            prefix=str(prefix),
+-            dev_mode=False,
+-            debug_wrapper_scripts=False,
+-            arguments=["echo", "test"],
+-        )
+-
+-        request.addfinalizer(lambda: Path(script_path).unlink(missing_ok=True))
+-
+-        script_content = Path(script_path).read_text()
+-        condabin_dir = os.path.join(context.root_prefix, "condabin")
+-        assert condabin_dir in script_content
+-
+-
+-def test_run_allows_nested_conda_cli_command(
+-    tmp_env: TmpEnvFixture,
+-    conda_cli: CondaCLIFixture,
+-    monkeypatch: pytest.MonkeyPatch,
+-):
+-    """
+-    Test to ensure that nested `conda` CLI commands work under `conda run` without
+-    the shell hook. See https://github.com/conda/conda/pull/15672 for context.
+-    """
+-    monkeypatch.setenv("CONDA_TEST_SAVE_TEMPS", "1")
+-
+-    with tmp_env() as prefix:
+-        stdout, stderr, rc = conda_cli(
+-            "run",
+-            "--prefix",
+-            str(prefix),
+-            "conda",
+-            "--version",
+-        )
+-
+-        assert rc == 0, (stdout, stderr)
+-        assert stdout.strip().startswith("conda ")
+-
+-
+ def test_run_with_empty_command_will_raise(
+     conda_cli: CondaCLIFixture,
+ ):
+diff --git a/tests/core/test_initialize.py b/tests/core/test_initialize.py
+index 27c9a35dfe1..abb1150cd47 100644
+--- a/tests/core/test_initialize.py
++++ b/tests/core/test_initialize.py
+@@ -457,7 +457,6 @@ def test_install_conda_sh(verbose):
+ def test_install_conda_fish(verbose):
+     with tempdir() as conda_temp_prefix:
+         target_path = join(conda_temp_prefix, "etc", "fish", "conf.d", "conda.fish")
+-        context.dev = False
+         result = install_conda_fish(target_path, context.conda_prefix)
+         assert result == Result.MODIFIED
+ 
+@@ -501,7 +500,6 @@ def test_install_conda_xsh(verbose):
+ 
+     with tempdir() as conda_temp_prefix:
+         target_path = join(conda_temp_prefix, "Lib", "site-packages", "conda.xsh")
+-        context.dev = False
+         result = install_conda_xsh(target_path, context.conda_prefix)
+         assert result == Result.MODIFIED
+ 
+@@ -535,7 +533,6 @@ def test_install_conda_xsh(verbose):
+ def test_install_conda_csh(verbose):
+     with tempdir() as conda_temp_prefix:
+         target_path = join(conda_temp_prefix, "etc", "profile.d", "conda.csh")
+-        context.dev = False
+         result = install_conda_csh(target_path, context.conda_prefix)
+         assert result == Result.MODIFIED
+ 
+diff --git a/tests/core/test_path_actions.py b/tests/core/test_path_actions.py
+index 7a47a7ab933..d45d4043190 100644
+--- a/tests/core/test_path_actions.py
++++ b/tests/core/test_path_actions.py
+@@ -186,10 +186,6 @@ def test_CompileMultiPycAction_noarch_python(prefix: Path):
+     mkdir_p(dirname(python_full_path))
+     create_link(sys.executable, python_full_path, LinkType.softlink)
+ 
+-    # create conda-meta directory like _execute_actions does in real installation
+-    conda_meta_dir = join(prefix, "conda-meta")
+-    mkdir_p(conda_meta_dir)
+-
+     axn.execute()
+     assert isfile(target_full_path0)
+     assert isfile(target_full_path1)
