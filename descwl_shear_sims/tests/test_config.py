@@ -8,9 +8,10 @@ def test_config_smoke():
 
 
 def test_config_input():
-    cin = {'psf_type': 'moffat'}
+    cin = {'psf_type': 'moffat', 'psf_fwhm': 0.9}
     config = get_sim_config(config=cin)
     assert config['psf_type'] == cin['psf_type']
+    assert config['psf_fwhm'] == cin['psf_fwhm']
 
 
 def test_config_pure():

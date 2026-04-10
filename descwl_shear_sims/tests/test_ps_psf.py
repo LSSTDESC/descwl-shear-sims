@@ -34,7 +34,17 @@ def test_ps_psf_smoke():
     psf_im = psf.drawImage(scale=PIXEL_SCALE)
     assert psf_im.calculateFWHM() > 0.5
 
-    ps = make_ps_psf(rng=rng, dim=120)
+    fwhm = 0.9
+    varfac = 1.2
+    ps = make_ps_psf(
+        rng=rng,
+        dim=120,
+        psf_fwhm=fwhm,
+        variation_factor=varfac,
+    )
+    assert ps._median_seeing == 0.9
+    assert ps._variation_factor == varfac
+
     psf = ps.getPSF(galsim.PositionD(x=10, y=10))
     assert isinstance(psf, galsim.GSObject)
     psf_im = psf.drawImage(scale=PIXEL_SCALE)
