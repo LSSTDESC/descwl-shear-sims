@@ -3,7 +3,6 @@ import galsim
 import lsst.afw.image as afw_image
 import lsst.geom as geom
 from lsst.meas.algorithms import ImagePsf
-from .ps_psf import PowerSpectrumPSF
 
 
 def make_dm_psf(psf, psf_dim, wcs):
@@ -12,7 +11,7 @@ def make_dm_psf(psf, psf_dim, wcs):
 
     Parameters
     ----------
-    psf: GSObject or PowerSpectrumPSF
+    psf: GSObject or object with getPSF method such as PowerSpectrumPSF
         The sim psf
     psf_dim: int
         Dimension of the psfs to draw, must be odd
@@ -21,14 +20,12 @@ def make_dm_psf(psf, psf_dim, wcs):
 
     Returns
     -------
-    Either a FixedDMPSF or a PowerSpectrumDMPSF
+    Either a FixedDMPSF or a DMPSF
     """
     if isinstance(psf, galsim.GSObject):
         return FixedDMPSF(psf, psf_dim, wcs)
-    elif isinstance(psf, PowerSpectrumPSF):
-        return PowerSpectrumDMPSF(psf, psf_dim, wcs)
     else:
-        raise ValueError('bad psf: %s' % type(psf))
+        return DMPSF(psf, psf_dim, wcs)
 
 
 class FixedDMPSF(ImagePsf):
@@ -149,7 +146,7 @@ class FixedDMPSF(ImagePsf):
             wcs=self._wcs.local(image_pos=gs_pos),
         )
 
-        dims = [dim]*2
+        dims = [dim] * 2
 
         off = -(dim // 2)
         if is_kernel:
@@ -168,19 +165,19 @@ class FixedDMPSF(ImagePsf):
         return aimage
 
 
-class PowerSpectrumDMPSF(FixedDMPSF):
+class DMPSF(FixedDMPSF):
     """
     A class representing a power spectrum psf
 
     When offsetting no image interpolation is done.  Real psfs have an
     interpolation to offset (different from interpolating coefficients)
     """
-    def __init__(self, pspsf, psf_dim, wcs):
+    def __init__(self, psf, psf_dim, wcs):
         """
         Parameters
         ----------
-        pspsf: PowerSpectrumPSF
-            The power spectrum psf
+        psf: psf object
+            Object with getPSF method that returns a galsim objet
         psf_dim: int
             Dimension of the psfs to draw, must be odd
         wcs: galsim WCS
@@ -193,7 +190,7 @@ class PowerSpectrumDMPSF(FixedDMPSF):
 
         self._psf_dim = psf_dim
         self._wcs = wcs
-        self._pspsf = pspsf
+        self._psf = psf
 
     def _get_gspsf(self, pos):
         """
@@ -206,4 +203,7 @@ class PowerSpectrumDMPSF(FixedDMPSF):
             The position at which to evaluate the psf.
         """
 
-        return self._pspsf.getPSF(pos)
+        return self._psf.getPSF(pos)
+
+
+PowerSpectrumDMPSF = DMPSF

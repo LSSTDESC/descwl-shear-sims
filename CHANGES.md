@@ -6,6 +6,8 @@
     - Can specify variation parameters for make_rand_psf
     - add psf_fwhm to default sim config (a convenience for users)
     - add tests
+    - Generalize to support any PSF that has the getPSF method.  
+      Rename PowerSpectrumDMPSF to DMPSF (but keep an alias)
 
 # 0.4.5
 ### new features
