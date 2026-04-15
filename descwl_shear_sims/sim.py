@@ -115,8 +115,8 @@ def make_sim(
     dither_size: float, optional
         The amplitude of dithering in unit of a fraction of a pixel
         for testing pixel interpolation.
-        All SE WCS will be given random dithers with this amplitude in both image
-        x and y direction.
+        All SE WCS will be given random dithers with this amplitude in both
+        image x and y direction.
         Value must be between 0 and 1.  default 0.5.
     rotate: bool, optional
         Whether to randomly rotate the image exposures randomly [not the
@@ -252,7 +252,9 @@ def make_sim(
             survey_name=survey_name,
         )
         noise_for_gsparams = survey.noise * noise_factor
-        noise_per_epoch = survey.noise * np.sqrt(epochs_per_band) * noise_factor
+        noise_per_epoch = (
+            survey.noise * np.sqrt(epochs_per_band) * noise_factor
+        )
 
         # go down to coadd depth in this band, not dividing by sqrt(nbands)
         # but we could if we want to be more conservative
