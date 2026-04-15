@@ -5,7 +5,7 @@ import lsst.geom as geom
 from lsst.meas.algorithms import ImagePsf
 
 
-def make_dm_psf(psf, psf_dim, wcs):
+def make_dm_psf(psf, psf_dim, wcs, draw_method='auto'):
     """
     convert a sim PSF to a DM Stack PSF
 
@@ -17,15 +17,17 @@ def make_dm_psf(psf, psf_dim, wcs):
         Dimension of the psfs to draw, must be odd
     wcs: galsim WCS
         WCS for drawing
+    draw_method: str, optional
+        Galsim draw method, Defaults to 'auto'
 
     Returns
     -------
     Either a FixedDMPSF or a DMPSF
     """
     if isinstance(psf, galsim.GSObject):
-        return FixedDMPSF(psf, psf_dim, wcs)
+        return FixedDMPSF(psf, psf_dim=psf_dim, wcs=wcs, draw_method=draw_method)
     else:
-        return DMPSF(psf, psf_dim, wcs)
+        return DMPSF(psf, psf_dim=psf_dim, wcs=wcs, draw_method=draw_method)
 
 
 class FixedDMPSF(ImagePsf):
@@ -35,7 +37,7 @@ class FixedDMPSF(ImagePsf):
     When offsetting no image interpolation is done.  Real psfs have an
     interpolation to offset (different from interpolating coefficients)
     """
-    def __init__(self, gspsf, psf_dim, wcs):
+    def __init__(self, gspsf, psf_dim, wcs, draw_method='auto'):
         """
         Parameters
         ----------
@@ -45,6 +47,8 @@ class FixedDMPSF(ImagePsf):
             Dimension of the psfs to draw, must be odd
         wcs: galsim WCS
             WCS for drawing
+        draw_method: str, optional
+            Galsim draw method, Defaults to 'auto'
         """
         ImagePsf.__init__(self)
 
@@ -54,6 +58,7 @@ class FixedDMPSF(ImagePsf):
         self._psf_dim = psf_dim
         self._wcs = wcs
         self._gspsf = gspsf
+        self._draw_method = draw_method
 
     def computeImage(self, image_pos):  # noqa
         """
@@ -144,6 +149,7 @@ class FixedDMPSF(ImagePsf):
             ny=dim,
             offset=offset,
             wcs=self._wcs.local(image_pos=gs_pos),
+            method=self._draw_method,
         )
 
         dims = [dim] * 2
@@ -172,7 +178,7 @@ class DMPSF(FixedDMPSF):
     When offsetting no image interpolation is done.  Real psfs have an
     interpolation to offset (different from interpolating coefficients)
     """
-    def __init__(self, psf, psf_dim, wcs):
+    def __init__(self, psf, psf_dim, wcs, draw_method='auto'):
         """
         Parameters
         ----------
@@ -182,6 +188,8 @@ class DMPSF(FixedDMPSF):
             Dimension of the psfs to draw, must be odd
         wcs: galsim WCS
             WCS for drawing
+        draw_method: str, optional
+            Galsim draw method, Defaults to 'auto'
         """
         ImagePsf.__init__(self)
 
@@ -191,6 +199,7 @@ class DMPSF(FixedDMPSF):
         self._psf_dim = psf_dim
         self._wcs = wcs
         self._psf = psf
+        self._draw_method = draw_method
 
     def _get_gspsf(self, pos):
         """

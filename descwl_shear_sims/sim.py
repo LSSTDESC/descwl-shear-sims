@@ -586,7 +586,12 @@ def make_exp(
         bright_info = []
 
     dm_wcs = make_dm_wcs(se_wcs)
-    dm_psf = make_dm_psf(psf=psf, psf_dim=psf_dim, wcs=se_wcs)
+    dm_psf = make_dm_psf(
+        psf=psf,
+        psf_dim=psf_dim,
+        wcs=se_wcs,
+        draw_method=draw_method,
+    )
 
     variance = image.copy()
     variance.array[:, :] = noise**2
