@@ -60,6 +60,10 @@ class FixedDMPSF(ImagePsf):
         self._gspsf = gspsf
         self._draw_method = draw_method
 
+    @property
+    def draw_method(self):
+        return self._draw_method
+
     def computeImage(self, image_pos):  # noqa
         """
         compute an image at the specified image position, centered in the
