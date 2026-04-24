@@ -139,7 +139,8 @@ def make_sim(
         mock up a sky oversubtraction.  Default None.
     draw_method: string, optional
         Draw method for galaxy galsim objects, default 'auto'.  Set to
-        'phot' to get poisson noise.  Note this is much slower.
+        'phot' to get poisson noise, or use 'no_pixel' if the PSF
+        already has the  pixel in it.
     theta0: float, optional
         rotation angle of intrinsic galaxy shapes and positions on the sky,
         default 0, in units of radians
@@ -590,7 +591,7 @@ def make_exp(
         psf=psf,
         psf_dim=psf_dim,
         wcs=se_wcs,
-        draw_method=draw_method,
+        draw_method=draw_method if draw_method != 'phot' else 'auto',
     )
 
     variance = image.copy()
