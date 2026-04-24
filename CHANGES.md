@@ -9,6 +9,11 @@
     - Generalize to support any PSF that has the getPSF method.  
       Rename PowerSpectrumDMPSF to DMPSF (but keep an alias)
 
+### Bug Fixes
+
+    - draw_method was not passed on to DM PSFs.  Only passed on
+      if not equal to 'phot'
+
 # 0.4.5
 ### new features
     - allow users to set separation distance for grid and hex layout
