@@ -1,0 +1,89 @@
+diff --git a/conda/activate.py b/conda/activate.py
+index 8556c5e9a..675703018 100644
+--- a/conda/activate.py
++++ b/conda/activate.py
+@@ -1035,9 +1035,7 @@ class CmdExeRunActivator(CmdExeActivator):
+     export_var_tmpl = 'SET "%s=%s"'
+     path_var_tmpl = export_var_tmpl
+     set_var_tmpl = export_var_tmpl
+-    # If any of these calls to the activation hook scripts fail, we want
+-    # to exit the wrapper immediately and abort `conda run` right away.
+-    run_script_tmpl = 'CALL "%s"\nIF %%ERRORLEVEL%% NEQ 0 EXIT /b %%ERRORLEVEL%%'
++    run_script_tmpl = 'CALL "%s"'
+ 
+ 
+ class FishActivator(_Activator):
+diff --git a/conda/utils.py b/conda/utils.py
+index 39f6a26c1..bbf98a45b 100644
+--- a/conda/utils.py
++++ b/conda/utils.py
+@@ -238,17 +238,26 @@ def wrap_subprocess_call(
+             old_path = environ.get("PATH", "")
+             if condabin_dir not in old_path.split(os.pathsep):
+                 environ["PATH"] = f"{condabin_dir}{os.pathsep}{old_path}"
++
++            # Clear activation state so the activator sees a clean
++            # environment (CONDA_SHLVL=0). Otherwise it inherits the
++            # conda process's own activation state and (my hunch: may) compute
++            # wrong PATH entries or emit spurious deactivate scripts.
++            saved_env = {}
++            for key in ("CONDA_SHLVL", "CONDA_PREFIX", "CONDA_DEFAULT_ENV"):
++                if key in environ:
++                    saved_env[key] = environ.pop(key)
++
+             try:
+                 activator = activator_cls(activator_args)
+                 activator._parse_and_set_args()
+                 activate_script = activator.activate()
+             finally:
+                 environ["PATH"] = old_path
++                environ.update(saved_env)
+ 
+             for line in activate_script.splitlines():
+                 fh.write(f"{silencer}{line}\n")
+-
+-            fh.write(f"{silencer}IF %ERRORLEVEL% NEQ 0 EXIT /b %ERRORLEVEL%\n")
+             if debug_wrapper_scripts:
+                 fh.write("echo *** environment after *** 1>&2\n")
+                 fh.write("SET 1>&2\n")
+@@ -294,9 +303,6 @@ def wrap_subprocess_call(
+             raise Exception("No compatible shell found!")
+ 
+         with Utf8NamedTemporaryFile(mode="w", delete=False) as fh:
+-            # If any of these calls to the activation hook scripts fail, we want
+-            # to exit the wrapper immediately and abort `conda run` right away.
+-            fh.write("set -e\n")
+             if dev_mode:
+                 from . import CONDA_SOURCE_ROOT
+ 
+@@ -323,19 +329,28 @@ def wrap_subprocess_call(
+             old_path = environ.get("PATH", "")
+             if condabin_dir not in old_path.split(os.pathsep):
+                 environ["PATH"] = f"{condabin_dir}{os.pathsep}{old_path}"
++
++            # Clear activation state so the activator sees a clean
++            # environment (CONDA_SHLVL=0). Otherwise it inherits the
++            # conda process's own activation state and (my hunch: may) compute
++            # wrong PATH entries or emit spurious deactivate scripts.
++            saved_env = {}
++            for key in ("CONDA_SHLVL", "CONDA_PREFIX", "CONDA_DEFAULT_ENV"):
++                if key in environ:
++                    saved_env[key] = environ.pop(key)
++
+             try:
+                 activator = activator_cls(activator_args)
+                 activator._parse_and_set_args()
+                 activate_code = activator.activate()
+             finally:
+                 environ["PATH"] = old_path
++                environ.update(saved_env)
+ 
+             fh.write(activate_code)
+ 
+             if debug_wrapper_scripts:
+                 fh.write(">&2 echo '*** environment after ***'\n>&2 env\n")
+-            # Disable exit-on-error for the user's command so we can capture its exit code.
+-            fh.write("set +e\n")
+             if multiline:
+                 # The ' '.join() is pointless since mutliline is only True when there's 1 arg
+                 # still, if that were to change this would prevent breakage.
