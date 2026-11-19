@@ -52,7 +52,7 @@ generate galaxies, as well as some data for generating stars and star masks and
 bleeds.  You can skip this if you only plan to work with simpler simulations
 
 ```bash
-wget https://www.cosmo.bnl.gov/www/esheldon/data/catsim.tar.gz
+wget https://github.com/LSSTDESC/descwl-shear-sims/releases/download/catsim-data-v1/catsim.tar.gz
 tar xvfz catsim.tar.gz
 
 # for bash users

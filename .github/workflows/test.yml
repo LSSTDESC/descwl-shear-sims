@@ -22,6 +22,18 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      - name: get catsim data
+        shell: bash -l {0}
+        env:
+          CATSIM_URL: https://github.com/LSSTDESC/descwl-shear-sims/releases/download/catsim-data-v1/catsim.tar.gz
+          CATSIM_SHA256: 97306c8251072f44408720f32e8d3bdab45fa54259070003347369c9fcc5be99
+        run: |
+          cd "$RUNNER_TEMP"
+          wget -q "$CATSIM_URL"
+          echo "$CATSIM_SHA256  catsim.tar.gz" | sha256sum -c -
+          tar xfz catsim.tar.gz
+          echo "CATSIM_DIR=$RUNNER_TEMP/catsim" >> "$GITHUB_ENV"
+
       - uses: conda-incubator/setup-miniconda@v3.2.0
         with:
           python-version: ${{ matrix.pyver }}
@@ -33,10 +45,6 @@ jobs:
       - name: configure conda and install code
         shell: bash -l {0}
         run: |
-          wget https://www.cosmo.bnl.gov/www/esheldon/data/catsim.tar.gz
-          tar xvfz catsim.tar.gz
-          export CATSIM_DIR=$(realpath catsim)
-
           conda config --set always_yes yes
 
           mamba install -q --file requirements.txt
@@ -62,7 +70,4 @@ jobs:
       - name: test
         shell: bash -l {0}
         run: |
-          wget https://www.cosmo.bnl.gov/www/esheldon/data/catsim.tar.gz
-          tar xvfz catsim.tar.gz
-          export CATSIM_DIR=$(realpath catsim)
           pytest -vv --ignore descwl_shear_sims/tests/test_correlated_noise.py descwl_shear_sims
