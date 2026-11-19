@@ -4,8 +4,8 @@ on:
   push:
     branches:
       - master
-  # turned on temporarily to debug this workflow
-  pull_request: null
+  # turn this on to run for PRs
+  # pull_request: null
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
