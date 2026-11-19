@@ -21,7 +21,7 @@ jobs:
     runs-on: "ubuntu-latest"
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v5
 
       - name: get catsim data
         shell: bash -l {0}
@@ -35,12 +35,13 @@ jobs:
           tar xfz catsim.tar.gz
           echo "CATSIM_DIR=$RUNNER_TEMP/catsim" >> "$GITHUB_ENV"
 
-      - uses: conda-incubator/setup-miniconda@v2
+      - uses: conda-incubator/setup-miniconda@v3.2.0
         with:
           python-version: ${{ matrix.pyver }}
           channels: conda-forge
           channel-priority: strict
           show-channel-urls: true
+          miniforge-version: latest
 
       - name: configure conda and install code
         shell: bash -l {0}
@@ -53,7 +54,9 @@ jobs:
             pytest \
             fitsio \
             meds \
-            ngmix
+            ngmix \
+            tqdm \
+            joblib
 
           pip install --no-deps -e .
 
