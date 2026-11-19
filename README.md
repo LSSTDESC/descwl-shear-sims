@@ -180,7 +180,7 @@ with descwl-shear-sims.
 
 Do the following to make that data available to descwl-shear-sims
 ```shell
-wget https://www.cosmo.bnl.gov/www/esheldon/data/catsim.tar.gz
+wget https://github.com/LSSTDESC/descwl-shear-sims/releases/download/catsim-data-v1/catsim.tar.gz
 tar xvfz catsim.tar.gz
 export CATSIM_DIR=/path/to/catsim
 
