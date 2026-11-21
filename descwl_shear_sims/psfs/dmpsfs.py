@@ -5,7 +5,7 @@ import lsst.geom as geom
 from lsst.meas.algorithms import ImagePsf
 
 
-def make_dm_psf(psf, psf_dim, wcs, draw_method='auto'):
+def make_dm_psf(psf, psf_dim, wcs, draw_method='auto', im_dtype=np.float32):
     """
     convert a sim PSF to a DM Stack PSF
 
@@ -19,15 +19,20 @@ def make_dm_psf(psf, psf_dim, wcs, draw_method='auto'):
         WCS for drawing
     draw_method: str, optional
         Galsim draw method, Defaults to 'auto'
+    im_dtype: numpy dtype, optional
+        Precision galsim uses to draw the psf stamp, np.float32 or
+        np.float64.  Defaults to np.float32 (galsim's default).
 
     Returns
     -------
     Either a FixedDMPSF or a DMPSF
     """
     if isinstance(psf, galsim.GSObject):
-        return FixedDMPSF(psf, psf_dim=psf_dim, wcs=wcs, draw_method=draw_method)
+        return FixedDMPSF(psf, psf_dim=psf_dim, wcs=wcs, draw_method=draw_method,
+                          im_dtype=im_dtype)
     else:
-        return DMPSF(psf, psf_dim=psf_dim, wcs=wcs, draw_method=draw_method)
+        return DMPSF(psf, psf_dim=psf_dim, wcs=wcs, draw_method=draw_method,
+                     im_dtype=im_dtype)
 
 
 class FixedDMPSF(ImagePsf):
@@ -37,7 +42,8 @@ class FixedDMPSF(ImagePsf):
     When offsetting no image interpolation is done.  Real psfs have an
     interpolation to offset (different from interpolating coefficients)
     """
-    def __init__(self, gspsf, psf_dim, wcs, draw_method='auto'):
+    def __init__(self, gspsf, psf_dim, wcs, draw_method='auto',
+                 im_dtype=np.float32):
         """
         Parameters
         ----------
@@ -49,6 +55,9 @@ class FixedDMPSF(ImagePsf):
             WCS for drawing
         draw_method: str, optional
             Galsim draw method, Defaults to 'auto'
+        im_dtype: numpy dtype, optional
+            Precision galsim uses to draw the psf stamp, np.float32 or
+            np.float64.  Defaults to np.float32 (galsim's default).
         """
         ImagePsf.__init__(self)
 
@@ -59,6 +68,7 @@ class FixedDMPSF(ImagePsf):
         self._wcs = wcs
         self._gspsf = gspsf
         self._draw_method = draw_method
+        self._im_dtype = im_dtype
 
     @property
     def draw_method(self):
@@ -145,7 +155,10 @@ class FixedDMPSF(ImagePsf):
         x = image_pos.getX()
         y = image_pos.getY()
 
-        gs_pos = galsim.PositionD(x=x, y=y)
+        # image_pos is a DM position (zero-based).  The galsim wcs and the
+        # psf field were built in galsim image coordinates (one-based), so
+        # convert before evaluating either of them: DM = galsim - 1
+        gs_pos = galsim.PositionD(x=x + 1, y=y + 1)
         gspsf = self._get_gspsf(gs_pos)
 
         gsimage = gspsf.drawImage(
@@ -154,6 +167,7 @@ class FixedDMPSF(ImagePsf):
             offset=offset,
             wcs=self._wcs.local(image_pos=gs_pos),
             method=self._draw_method,
+            dtype=self._im_dtype,
         )
 
         dims = [dim] * 2
@@ -182,7 +196,8 @@ class DMPSF(FixedDMPSF):
     When offsetting no image interpolation is done.  Real psfs have an
     interpolation to offset (different from interpolating coefficients)
     """
-    def __init__(self, psf, psf_dim, wcs, draw_method='auto'):
+    def __init__(self, psf, psf_dim, wcs, draw_method='auto',
+                 im_dtype=np.float32):
         """
         Parameters
         ----------
@@ -194,6 +209,9 @@ class DMPSF(FixedDMPSF):
             WCS for drawing
         draw_method: str, optional
             Galsim draw method, Defaults to 'auto'
+        im_dtype: numpy dtype, optional
+            Precision galsim uses to draw the psf stamp, np.float32 or
+            np.float64.  Defaults to np.float32 (galsim's default).
         """
         ImagePsf.__init__(self)
 
@@ -204,6 +222,7 @@ class DMPSF(FixedDMPSF):
         self._wcs = wcs
         self._psf = psf
         self._draw_method = draw_method
+        self._im_dtype = im_dtype
 
     def _get_gspsf(self, pos):
         """

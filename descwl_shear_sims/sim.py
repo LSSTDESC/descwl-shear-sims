@@ -88,6 +88,7 @@ def make_sim(
     simple_coadd_bbox=False,
     draw_noise=True,
     im_dtype=np.float32,
+    stamp_size=None,
 ):
     """
     Make simulation data
@@ -157,6 +158,11 @@ def make_sim(
         Whether draw image noise
     im_dtype: optional, numpy dtype or str
         Image numerical precision np.float32 or np.float64. Default: np.float32
+    stamp_size: optional, int
+        If set, draw each object on an explicit stamp_size x stamp_size pixel
+        stamp instead of letting galsim choose the size from folding_threshold.
+        An odd value centers the stamp on the pixel nearest the object, the
+        same convention as the DM PSF stamps. Default None (galsim auto-size).
 
     Returns
     -------
@@ -309,6 +315,7 @@ def make_sim(
                 draw_noise=draw_noise,
                 indexes=lists["indexes"],
                 im_dtype=im_dtype,
+                stamp_size=stamp_size,
             )
             if epoch == 0:
                 bright_info += this_bright_info
@@ -392,6 +399,7 @@ def make_exp(
     indexes=None,
     se_wcs=None,
     im_dtype=np.float32,
+    stamp_size=None,
 ):
     """
     Make an Signle Exposure (SE) observation
@@ -467,6 +475,10 @@ def make_exp(
         wcs for single exposure, default: None
     im_dtype: np.float32 or np.float64. default: np.float32
         Numerical precision for images.
+    stamp_size: int, optional
+        If set, draw each object on an explicit stamp_size x stamp_size pixel
+        stamp (odd values center it on the pixel nearest the object).
+        Default None (galsim auto-size).
 
     Returns
     -------
@@ -533,6 +545,7 @@ def make_exp(
             theta0=theta0,
             indexes=indexes,
             im_dtype=im_dtype,
+            stamp_size=stamp_size,
         )
     else:
         truth_info = []
@@ -549,6 +562,7 @@ def make_exp(
             coadd_bbox_cen_gs_skypos,
             rng,
             im_dtype=im_dtype,
+            stamp_size=stamp_size,
         )
 
     if draw_noise:
@@ -592,6 +606,7 @@ def make_exp(
         psf_dim=psf_dim,
         wcs=se_wcs,
         draw_method=draw_method if draw_method != 'phot' else 'auto',
+        im_dtype=im_dtype,
     )
 
     variance = image.copy()
@@ -638,6 +653,7 @@ def _draw_objects(
     theta0=None,
     indexes=None,
     im_dtype=np.float32,
+    stamp_size=None,
 ):
     """
     draw objects and return the input galaxy catalog.
@@ -657,6 +673,11 @@ def _draw_objects(
     if draw_method == "phot":
         kw["maxN"] = 1_000_000
         kw["rng"] = galsim.BaseDeviate(seed=rng.randint(low=0, high=2**30))
+    if stamp_size is not None:
+        # explicit stamp: galsim centers an odd nx x ny stamp on the pixel
+        # nearest `center`, the same convention as the DM PSF stamps
+        kw["nx"] = stamp_size
+        kw["ny"] = stamp_size
 
     if redshifts is None:
         # set redshifts to -1 if not sepcified

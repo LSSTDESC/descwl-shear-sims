@@ -108,8 +108,10 @@ def test_ps_dmpsf_smoke():
 
     x = 8.5
     y = 10.1
+    # pos is a DM position (zero-based); the by-hand galsim rendering must
+    # use the galsim image position (one-based) for the same point
     pos = geom.Point2D(x=x, y=y)
-    gs_pos = galsim.PositionD(x=x, y=y)
+    gs_pos = galsim.PositionD(x=x + 1, y=y + 1)
 
     # this one is always centered
     msim = psf.computeKernelImage(pos)
@@ -142,8 +144,10 @@ def test_ps_dmpsf_offset_smoke():
 
     x = 8.5
     y = 10.1
+    # pos is a DM position (zero-based); the by-hand galsim rendering must
+    # use the galsim image position (one-based) for the same point
     pos = geom.Point2D(x=x, y=y)
-    gs_pos = galsim.PositionD(x=x, y=y)
+    gs_pos = galsim.PositionD(x=x + 1, y=y + 1)
 
     # this one is shifted
     msim = psf.computeImage(pos)
